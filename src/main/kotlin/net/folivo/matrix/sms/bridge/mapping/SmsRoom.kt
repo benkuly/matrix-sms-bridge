@@ -1,5 +1,7 @@
-package net.folivo.matrix.bot.appservice.room
+package net.folivo.matrix.sms.bridge.mapping
 
+import net.folivo.matrix.bot.appservice.room.AppserviceRoom
+import net.folivo.matrix.bot.appservice.user.AppserviceUser
 import org.neo4j.springframework.data.core.schema.*
 import org.neo4j.springframework.data.core.schema.Relationship.Direction.OUTGOING
 import org.springframework.data.annotation.Version
@@ -7,10 +9,12 @@ import org.springframework.data.annotation.Version
 @Node("SmsRoom")
 data class SmsRoom(
         @Property("mappingToken")
-        val mappingToken: String,
+        val mappingToken: Int,
 
         @Relationship(type = "BRIDGED_TO", direction = OUTGOING)
-        val bridgedRoom: AppserviceRoom
+        val bridgedRoom: AppserviceRoom,
+        @Relationship(type = "OWNED_BY", direction = OUTGOING)
+        val user: AppserviceUser
 ) {
     @Id
     @GeneratedValue

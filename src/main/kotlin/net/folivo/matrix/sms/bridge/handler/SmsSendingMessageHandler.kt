@@ -15,6 +15,10 @@ class SmsSendingMessageHandler(
 
     override fun handleMessage(content: MessageEventContent, context: MessageContext): Mono<Void> {
         logger.debug("handle message in room ${context.roomId}")
-        return smsRoomService.sendSms(roomId = context.roomId, body = content.body)
+        return smsRoomService.sendSms(
+                roomId = context.roomId,
+                body = content.body,
+                sender = context.originalEvent.sender
+        )
     }
 }
