@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: matrix-sms-bridge-testinfra
+  name: matrix-sms-bridge-testinfra
+spec:
+  volumes:
+    - name: matrix-sms-bridge-testinfra-synapse-volume
+      hostPath:
+        path: ./synapse
+        type: DirectoryOrCreate
+    - name: matrix-sms-bridge-testinfra-neo4j-volume
+      hostPath:
+        path: ./neo4j
+        type: DirectoryOrCreate
+  containers:
+    - name: matrix-sms-bridge-testinfra-synapse
+      env:
+        - name: SYNAPSE_REPORT_STATS
+          value: false
+        - name: UID
+          value: 0
+        - name: GID
+          value: 0
+      image: docker.io/matrixdotorg/synapse:latest
+      ports:
+        - containerPort: 8008
+          hostPort: 8008
+          protocol: TCP
+      volumeMounts:
+        - name: matrix-sms-bridge-testinfra-synapse-volume
+          mountPath: /data
+      workingDir: /
+    - name: matrix-sms-bridge-testinfra-neo4j
+      env:
+        - name: NEO4J_AUTH
+          value: neo4j/secret
+      image: neo4j:latest
+      ports:
+        - containerPort: 7474
+          hostPort: 7474
+          protocol: TCP
+        - containerPort: 7687
+          hostPort: 7687
+          protocol: TCP
+      volumeMounts:
+        - name: matrix-sms-bridge-testinfra-neo4j-volume
+          mountPath: /data
+      workingDir: /

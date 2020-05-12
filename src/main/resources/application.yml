@@ -1,0 +1,27 @@
+org:
+  neo4j:
+    driver:
+      uri: bolt://localhost:7687
+      authentication:
+        username: neo4j
+        password: secret
+
+matrix:
+  bot:
+    serverName: matrix-local
+    mode: APPSERVICE
+  client:
+    homeServer:
+      hostname: localhost
+      port: 8008
+      secure: false
+    token: 30c05ae90a248a4188e620216fa72e349803310ec83e2a77b34fe90be6081f46
+  appservice:
+    hsToken: 312df522183efd404ec1cd22d2ffa4bbc76a8c1ccf541dd692eef281356bb74e
+    asUsername: "smsbot"
+    namespaces:
+      users:
+        - exclusive: true
+          regex: "@sms_\+[0-9]{6,15}"
+      aliases: []
+      rooms: []
