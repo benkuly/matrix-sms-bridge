@@ -1,12 +1,12 @@
-org:
-  neo4j:
-    driver:
-      uri: bolt://localhost:7687
-      authentication:
-        username: neo4j
-        password: secret
+logging:
+  level:
+    org.neo4j: TRACE
 
 matrix:
+  sms:
+    bridge:
+      templates:
+        outgoingMessage: "{sender} wrote:\n{body}\n\nTo answer to this message add this token to your message: {token}"
   bot:
     serverName: matrix-local
     mode: APPSERVICE

@@ -4,11 +4,11 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 plugins {
     base
-    id("org.springframework.boot") version "2.2.6.RELEASE"
-    id("io.spring.dependency-management") version "1.0.8.RELEASE"
-    kotlin("jvm") version "1.3.71"
-    kotlin("kapt") version "1.3.71"
-    kotlin("plugin.spring") version "1.3.71"
+    id("org.springframework.boot") version "2.2.7.RELEASE"
+    id("io.spring.dependency-management") version "1.0.9.RELEASE"
+    kotlin("jvm") version "1.3.72"
+    kotlin("kapt") version "1.3.72"
+    kotlin("plugin.spring") version "1.3.72"
 }
 
 allprojects {
@@ -24,18 +24,30 @@ allprojects {
 
 }
 
+//configurations {
+//    all {
+//        exclude("org.slf4j", "slf4j-nop")
+//    }
+//}
+
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    implementation("net.folivo:matrix-spring-boot-bot:0.1.0.RELEASE")
+    implementation("net.folivo:matrix-spring-boot-bot:0.1.2.RELEASE")
 
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     testImplementation("com.ninja-squad:springmockk:2.0.1")
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-test-autoconfigure:1.0.0") {
+        exclude(group = "org.neo4j.test", module = "harness")
+    }
+    testImplementation("org.testcontainers:junit-jupiter:1.14.1")
+    testImplementation("org.testcontainers:neo4j:1.14.1")
+
     testImplementation("com.squareup.okhttp3:mockwebserver")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") {

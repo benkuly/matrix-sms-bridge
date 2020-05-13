@@ -6,12 +6,12 @@ import org.springframework.stereotype.Repository
 import reactor.core.publisher.Mono
 
 @Repository
-interface SmsRoomRepository : ReactiveCrudRepository<SmsRoom, String> {
+interface SmsRoomRepository : ReactiveCrudRepository<SmsRoom, Long> {
 
-    @Query("MATCH (s:SmsRoom) - [:OWNED_BY] -> MATCH (u {userId:\$userId}) RETURN max(s.mappingToken)")
+    @Query("MATCH (s:SmsRoom) - [:OWNED_BY] -> (:AppserviceUser {userId:\$userId}) RETURN max(s.mappingToken)")
     fun findLastMappingTokenByUserId(userId: String): Mono<Int>
 
-    @Query("MATCH (u {userId:\$userId}) <- [:OWNED_BY] - (s:SmsRoom) - [:BRIDGED_TO] -> (r {roomId:\$roomId}) RETURN s")
+    @Query("MATCH (:AppserviceUser {userId:\$userId}) <- [:OWNED_BY] - (s:SmsRoom) - [:BRIDGED_TO] -> (:AppserviceRoom {roomId:\$roomId}) RETURN s")
     fun findByRoomIdAndUserId(roomId: String, userId: String): Mono<SmsRoom>
 
     @Query("MATCH (s:SmsRoom {mappingToken:\$mappingToken}) - [:OWNED_BY] -> MATCH (u {userId:\$userId}) RETURN s")
