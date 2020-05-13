@@ -16,22 +16,24 @@ class SmsRoomService(
     private val logger = LoggerFactory.getLogger(SmsRoomService::class.java)
 
     fun getBridgedSmsRoom(roomId: String, userId: String): Mono<SmsRoom> {
-        return smsRoomRepository.findByRoomIdAndUserId(userId = userId, roomId = roomId)
+        return smsRoomRepository.findByRoomIdAndUserId(roomId = roomId, userId = userId)
                 .switchIfEmpty(
-                        Mono.zip(
-                                smsRoomRepository.findLastMappingTokenByUserId(userId),
-                                appserviceRoomRepository.findById(roomId),
-                                appserviceUserRepository.findById(userId)
-                        )
-                                .flatMap {
-                                    smsRoomRepository.save(
-                                            SmsRoom(
-                                                    it.t1 + 1,
-                                                    it.t2,
-                                                    it.t3
-                                            )
+                        Mono.defer {
+                            Mono.zip(
+                                    smsRoomRepository.findLastMappingTokenByUserId(userId)
+                                            .switchIfEmpty(Mono.just(0)),
+                                    appserviceRoomRepository.findById(roomId),
+                                    appserviceUserRepository.findById(userId)
+                            )
+                        }.flatMap {
+                            smsRoomRepository.save(
+                                    SmsRoom(
+                                            it.t1 + 1,
+                                            it.t2,
+                                            it.t3
                                     )
-                                }
+                            )
+                        }
                 )
     }
 }
