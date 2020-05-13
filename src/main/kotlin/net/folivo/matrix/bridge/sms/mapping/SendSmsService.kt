@@ -24,20 +24,20 @@ class SendSmsService(
                 .flatMap { member ->
                     smsRoomService.getBridgedSmsRoom(roomId, member.userId).map {
                         smsBridgeProperties.templates.outgoingMessage
-                                .replace("{username}", sender)
+                                .replace("{sender}", sender)
                                 .replace("{body}", body)
                                 .replace("{token}", "#" + it.mappingToken.toString())
                     }.flatMap { body ->
-                        val receiver = Regex("\\+[0-9]{6,15}").find(member.userId)?.value
-                        if (receiver == null) {
+                        val receiver = member.userId.trimStart(*"@sms_".toCharArray()).substringBefore(":")
+                        if (receiver.matches(Regex("\\+[0-9]{6,15}"))) {
+                            logger.debug("send SMS from $roomId to $receiver")
+                            smsProvider.sendSms(receiver = receiver, body = body)
+                        } else {
                             logger.warn(
                                     "Could not send SMS because the sender ${member.userId} didn't contain a valid telephone number." +
                                     "Usually this should never happen because the Homeserver uses the same regex."
                             )
                             Mono.empty()
-                        } else {
-                            logger.debug("send SMS from $roomId to $receiver")
-                            smsProvider.sendSms(receiver = receiver, body = body)
                         }
                     }
                 }.then()
