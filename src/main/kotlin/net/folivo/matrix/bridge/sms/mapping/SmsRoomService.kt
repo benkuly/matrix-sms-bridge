@@ -1,4 +1,4 @@
-package net.folivo.matrix.sms.bridge.mapping
+package net.folivo.matrix.bridge.sms.mapping
 
 import net.folivo.matrix.bot.appservice.room.AppserviceRoomRepository
 import net.folivo.matrix.bot.appservice.user.AppserviceUserRepository
@@ -23,7 +23,15 @@ class SmsRoomService(
                                 appserviceRoomRepository.findById(roomId),
                                 appserviceUserRepository.findById(userId)
                         )
-                                .flatMap { smsRoomRepository.save(SmsRoom(it.t1 + 1, it.t2, it.t3)) }
+                                .flatMap {
+                                    smsRoomRepository.save(
+                                            SmsRoom(
+                                                    it.t1 + 1,
+                                                    it.t2,
+                                                    it.t3
+                                            )
+                                    )
+                                }
                 )
     }
 }

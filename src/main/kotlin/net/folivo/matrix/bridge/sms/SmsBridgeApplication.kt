@@ -1,4 +1,4 @@
-package net.folivo.matrix.sms.bridge
+package net.folivo.matrix.bridge.sms
 
 import org.neo4j.springframework.data.repository.config.EnableReactiveNeo4jRepositories
 import org.springframework.boot.autoconfigure.SpringBootApplication

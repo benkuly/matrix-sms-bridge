@@ -1,7 +1,8 @@
-package net.folivo.matrix.sms.bridge.mapping
+package net.folivo.matrix.bridge.sms.mapping
 
 import net.folivo.matrix.bot.appservice.room.AppserviceRoomRepository
-import net.folivo.matrix.sms.bridge.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.provider.SmsService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux

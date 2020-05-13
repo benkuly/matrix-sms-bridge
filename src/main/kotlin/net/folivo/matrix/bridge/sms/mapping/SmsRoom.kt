@@ -1,4 +1,4 @@
-package net.folivo.matrix.sms.bridge.mapping
+package net.folivo.matrix.bridge.sms.mapping
 
 import net.folivo.matrix.bot.appservice.room.AppserviceRoom
 import net.folivo.matrix.bot.appservice.user.AppserviceUser

@@ -1,4 +1,4 @@
-package net.folivo.matrix.sms.bridge.mapping
+package net.folivo.matrix.bridge.sms.mapping
 
 import org.neo4j.springframework.data.repository.query.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository

@@ -1,4 +1,4 @@
-package net.folivo.matrix.sms.bridge.mapping
+package net.folivo.matrix.bridge.sms.provider
 
 import reactor.core.publisher.Mono
 
