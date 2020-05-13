@@ -3,11 +3,11 @@ package net.folivo.matrix.bridge.sms.mapping
 import net.folivo.matrix.bot.appservice.room.AppserviceRoom
 import net.folivo.matrix.bot.appservice.user.AppserviceUser
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.neo4j.driver.springframework.boot.test.autoconfigure.Neo4jTestHarnessAutoConfiguration
 import org.neo4j.springframework.boot.test.autoconfigure.data.ReactiveDataNeo4jTest
+import org.neo4j.springframework.data.core.ReactiveNeo4jClient
 import org.neo4j.springframework.data.core.ReactiveNeo4jTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -40,6 +40,9 @@ class SmsRoomRepositoryIT {
     lateinit var cut: SmsRoomRepository
 
     @Autowired
+    lateinit var reactiveNeo4jClient: ReactiveNeo4jClient
+
+    @Autowired
     lateinit var template: ReactiveNeo4jTemplate
 
 
@@ -61,18 +64,18 @@ class SmsRoomRepositoryIT {
         user1 = template.save(AppserviceUser("someUserId1", mutableSetOf(room1, room2))).block()
                 ?: throw RuntimeException()
         user2 = template.save(AppserviceUser("someUserId2", mutableSetOf(room1))).block() ?: throw RuntimeException()
-
-    }
-
-    @AfterEach
-    fun afterEach() {
-
     }
 
     @Test
     fun `should findLastMappingTokenByUserId`() {
         cut.save(SmsRoom(1, room1, user1)).block()
         cut.save(SmsRoom(24, room2, user1)).block()
+
+        println(
+                reactiveNeo4jClient.query("MATCH (s:SmsRoom) - [:OWNED_BY] -> (:AppserviceUser {userId:'someUserId'}) RETURN max(s.mappingToken)")
+                        .fetchAs(Int::class.java).one().block()
+        )
+
         StepVerifier
                 .create(cut.findLastMappingTokenByUserId("someUserId"))
                 .assertNext { assertThat(it).isEqualTo(24) }
