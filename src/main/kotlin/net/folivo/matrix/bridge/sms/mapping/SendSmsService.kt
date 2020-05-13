@@ -2,7 +2,7 @@ package net.folivo.matrix.bridge.sms.mapping
 
 import net.folivo.matrix.bot.appservice.room.AppserviceRoomRepository
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.provider.SmsService
+import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -13,7 +13,7 @@ class SendSmsService(
         private val appserviceRoomRepository: AppserviceRoomRepository,
         private val smsRoomService: SmsRoomService,
         private val smsBridgeProperties: SmsBridgeProperties,
-        private val smsService: SmsService
+        private val smsProvider: SmsProvider
 ) {
 
     private val logger = LoggerFactory.getLogger(SendSmsService::class.java)
@@ -37,7 +37,7 @@ class SendSmsService(
                             Mono.empty()
                         } else {
                             logger.debug("send SMS from $roomId to $receiver")
-                            smsService.sendSms(receiver = receiver, body = body)
+                            smsProvider.sendSms(receiver = receiver, body = body)
                         }
                     }
                 }.then()

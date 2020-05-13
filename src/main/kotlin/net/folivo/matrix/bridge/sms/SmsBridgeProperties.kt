@@ -1,5 +1,6 @@
 package net.folivo.matrix.bridge.sms
 
+import net.folivo.matrix.bridge.sms.SmsBridgeProperties.SmsProviderName.KANNEL
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.ConstructorBinding
 
@@ -7,13 +8,17 @@ import org.springframework.boot.context.properties.ConstructorBinding
 @ConstructorBinding
 data class SmsBridgeProperties(
         val templates: SmsBridgeTemplateProperties,
-        val defaultRoomId: String?
+        val defaultRoomId: String?,
+        val provider: SmsProviderName = KANNEL
 ) {
     data class SmsBridgeTemplateProperties(
             val outgoingMessage: String = "{sender} wrote:\n{body}\n\nTo answer to this message add this token to " +
                                           "your message: {token}",
-            val wrongToken: String = "Your message did not contain a valid token. If the admin of this bridge to matrix " +
-                                     "enabled a default room for messages without a valid token you have nothing to do. " +
-                                     "Someone will read your message."
+            val missingTokenWithDefaultRoom: String? = "Your message did not contain any valid token. Your messages will be forwarded to a default matrix room.",
+            val missingTokenWithoutDefaultRoom: String? = "Your message did not contain any valid token. Nobody can and will read your message."
     )
+
+    enum class SmsProviderName {
+        KANNEL
+    }
 }

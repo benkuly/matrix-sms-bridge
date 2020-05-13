@@ -18,14 +18,14 @@ import reactor.test.StepVerifier
 class SmsSendingMessageHandlerTest {
 
     @MockK
-    lateinit var sendSmsService: SendSmsService
+    lateinit var sendSmsServiceMock: SendSmsService
 
     @InjectMockKs
     lateinit var cut: SmsSendingMessageHandler
 
     @Test
     fun `should delegate messages to service`() {
-        every { sendSmsService.sendSms(any(), any(), any()) } returns Mono.empty()
+        every { sendSmsServiceMock.sendSms(any(), any(), any()) } returns Mono.empty()
 
         val messageContext = mockk<MessageContext>(relaxed = true)
         every { messageContext.roomId } returns "someRoomId"
@@ -35,6 +35,6 @@ class SmsSendingMessageHandlerTest {
                 .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
                 .verifyComplete()
 
-        verify { sendSmsService.sendSms("someRoomId", "someBody", "someSender") }
+        verify { sendSmsServiceMock.sendSms("someRoomId", "someBody", "someSender") }
     }
 }
