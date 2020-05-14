@@ -53,8 +53,9 @@ class ReceiveSmsServiceTest() {
                         Mono.just(
                                 SmsRoom(
                                         123,
-                                        AppserviceRoom("someRoomId"),
-                                        AppserviceUser("@sms_+0123456789:someServerName")
+                                        AppserviceUser("@sms_+0123456789:someServerName"),
+                                        AppserviceRoom("someRoomId")
+
                                 )
                         )
                 )

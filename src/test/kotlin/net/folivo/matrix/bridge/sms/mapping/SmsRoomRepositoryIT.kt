@@ -54,9 +54,9 @@ class SmsRoomRepositoryIT {
 
     @BeforeEach
     fun beforeEach() {
-        template.deleteAll(AppserviceRoom::class.java)
-        template.deleteAll(AppserviceUser::class.java)
-        template.deleteAll(SmsRoom::class.java)
+        template.deleteAll(AppserviceRoom::class.java).block()
+        template.deleteAll(AppserviceUser::class.java).block()
+        template.deleteAll(SmsRoom::class.java).block()
 
         room1 = template.save(AppserviceRoom("someRoomId1")).block() ?: throw RuntimeException()
         room2 = template.save(AppserviceRoom("someRoomId2")).block() ?: throw RuntimeException()
@@ -68,8 +68,8 @@ class SmsRoomRepositoryIT {
 
     @Test
     fun `should findLastMappingTokenByUserId`() {
-        cut.save(SmsRoom(1, room1, user1)).block()
-        cut.save(SmsRoom(24, room2, user1)).block()
+        cut.save(SmsRoom(1, user1, room1)).block()
+        cut.save(SmsRoom(24, user1, room2)).block()
 
         StepVerifier
                 .create(cut.findLastMappingTokenByUserId("someUserId1"))
@@ -79,7 +79,7 @@ class SmsRoomRepositoryIT {
 
     @Test
     fun `should not findLastMappingTokenByUserId`() {
-        cut.save(SmsRoom(1, room1, user1)).block()
+        cut.save(SmsRoom(1, user1, room1)).block()
 
         StepVerifier
                 .create(cut.findLastMappingTokenByUserId("notExistingUserId"))
@@ -88,8 +88,8 @@ class SmsRoomRepositoryIT {
 
     @Test
     fun `should findByRoomIdAndUserId`() {
-        val expectedResult = cut.save(SmsRoom(4, room1, user1)).block()
-        cut.save(SmsRoom(24, room2, user2)).block()
+        val expectedResult = cut.save(SmsRoom(4, user1, room1)).block()
+        cut.save(SmsRoom(24, user2, room2)).block()
         StepVerifier
                 .create(cut.findByRoomIdAndUserId("someRoomId1", "someUserId1"))
                 .assertNext { assertThat(it).isEqualTo(expectedResult) }
@@ -98,7 +98,7 @@ class SmsRoomRepositoryIT {
 
     @Test
     fun `should not findByRoomIdAndUserId`() {
-        cut.save(SmsRoom(4, room1, user1)).block()
+        cut.save(SmsRoom(4, user1, room1)).block()
         StepVerifier
                 .create(cut.findByRoomIdAndUserId("someRoomId2", "someUserId2"))
                 .verifyComplete()
@@ -106,8 +106,8 @@ class SmsRoomRepositoryIT {
 
     @Test
     fun `should findByMappingTokenAndUserId`() {
-        val expectedResult = cut.save(SmsRoom(4, room1, user1)).block()
-        cut.save(SmsRoom(24, room2, user2)).block()
+        val expectedResult = cut.save(SmsRoom(4, user1, room1)).block()
+        cut.save(SmsRoom(24, user2, room2)).block()
         StepVerifier
                 .create(cut.findByMappingTokenAndUserId(4, "someUserId1"))
                 .assertNext { assertThat(it).isEqualTo(expectedResult) }
@@ -116,7 +116,7 @@ class SmsRoomRepositoryIT {
 
     @Test
     fun `should not findByMappingTokenAndUserId`() {
-        cut.save(SmsRoom(4, room1, user1)).block()
+        cut.save(SmsRoom(4, user1, room1)).block()
         StepVerifier
                 .create(cut.findByMappingTokenAndUserId(24, "someUserId1"))
                 .verifyComplete()

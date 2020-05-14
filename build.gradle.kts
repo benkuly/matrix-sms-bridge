@@ -24,12 +24,6 @@ allprojects {
 
 }
 
-//configurations {
-//    all {
-//        exclude("org.slf4j", "slf4j-nop")
-//    }
-//}
-
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")

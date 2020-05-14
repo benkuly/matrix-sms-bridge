@@ -11,10 +11,10 @@ data class SmsRoom(
         @Property("mappingToken")
         val mappingToken: Int,
 
-        @Relationship(type = "BRIDGED_TO", direction = OUTGOING)
-        val bridgedRoom: AppserviceRoom,
         @Relationship(type = "OWNED_BY", direction = OUTGOING)
-        val user: AppserviceUser
+        val user: AppserviceUser,
+        @Relationship(type = "BRIDGED_TO", direction = OUTGOING)
+        val bridgedRoom: AppserviceRoom
 ) {
     @Id
     @GeneratedValue
@@ -23,4 +23,5 @@ data class SmsRoom(
 
     @Version
     var version: Long = 0
+        private set
 }

@@ -62,7 +62,7 @@ class SmsRoomServiceTest {
                 .expectNext(smsRoom)
                 .verifyComplete()
 
-        verify { smsRoomRepositoryMock.save<SmsRoom>(SmsRoom(3, room, user)) }
+        verify { smsRoomRepositoryMock.save<SmsRoom>(SmsRoom(3, user, room)) }
     }
 
     @Test
@@ -86,6 +86,6 @@ class SmsRoomServiceTest {
                 .expectNext(smsRoom)
                 .verifyComplete()
 
-        verify { smsRoomRepositoryMock.save<SmsRoom>(SmsRoom(1, room, user)) }
+        verify { smsRoomRepositoryMock.save<SmsRoom>(SmsRoom(1, user, room)) }
     }
 }

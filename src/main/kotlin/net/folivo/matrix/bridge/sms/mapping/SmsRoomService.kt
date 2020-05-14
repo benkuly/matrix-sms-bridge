@@ -22,8 +22,9 @@ class SmsRoomService(
                             Mono.zip(
                                     smsRoomRepository.findLastMappingTokenByUserId(userId)
                                             .switchIfEmpty(Mono.just(0)),
-                                    appserviceRoomRepository.findById(roomId),
-                                    appserviceUserRepository.findById(userId)
+                                    appserviceUserRepository.findById(userId),
+                                    appserviceRoomRepository.findById(roomId)
+
                             )
                         }.flatMap {
                             smsRoomRepository.save(
