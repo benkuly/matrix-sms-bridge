@@ -10,7 +10,6 @@ import org.springframework.data.annotation.Version
 data class SmsRoom(
         @Property("mappingToken")
         val mappingToken: Int,
-
         @Relationship(type = "OWNED_BY", direction = OUTGOING)
         val user: AppserviceUser,
         @Relationship(type = "BRIDGED_TO", direction = OUTGOING)

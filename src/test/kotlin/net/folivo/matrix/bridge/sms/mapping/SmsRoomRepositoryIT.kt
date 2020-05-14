@@ -88,11 +88,15 @@ class SmsRoomRepositoryIT {
 
     @Test
     fun `should findByRoomIdAndUserId`() {
-        val expectedResult = cut.save(SmsRoom(4, user1, room1)).block()
+        val expectedResult = cut.save(SmsRoom(4, user1, room1)).block() ?: throw RuntimeException()
         cut.save(SmsRoom(24, user2, room2)).block()
         StepVerifier
                 .create(cut.findByRoomIdAndUserId("someRoomId1", "someUserId1"))
-                .assertNext { assertThat(it).isEqualTo(expectedResult) }
+                .assertNext {
+                    assertThat(it.mappingToken).isEqualTo(expectedResult.mappingToken)
+                    assertThat(it.user.userId).isEqualTo(expectedResult.user.userId)
+                    assertThat(it.bridgedRoom.roomId).isEqualTo(expectedResult.bridgedRoom.roomId)
+                }
                 .verifyComplete()
     }
 
@@ -106,11 +110,15 @@ class SmsRoomRepositoryIT {
 
     @Test
     fun `should findByMappingTokenAndUserId`() {
-        val expectedResult = cut.save(SmsRoom(4, user1, room1)).block()
+        val expectedResult = cut.save(SmsRoom(4, user1, room1)).block() ?: throw RuntimeException()
         cut.save(SmsRoom(24, user2, room2)).block()
         StepVerifier
                 .create(cut.findByMappingTokenAndUserId(4, "someUserId1"))
-                .assertNext { assertThat(it).isEqualTo(expectedResult) }
+                .assertNext {
+                    assertThat(it.mappingToken).isEqualTo(expectedResult.mappingToken)
+                    assertThat(it.user.userId).isEqualTo(expectedResult.user.userId)
+                    assertThat(it.bridgedRoom.roomId).isEqualTo(expectedResult.bridgedRoom.roomId)
+                }
                 .verifyComplete()
     }
 
