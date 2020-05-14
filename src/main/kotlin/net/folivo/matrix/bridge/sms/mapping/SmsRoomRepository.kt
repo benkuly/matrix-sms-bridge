@@ -11,9 +11,7 @@ interface SmsRoomRepository : ReactiveCrudRepository<SmsRoom, Long> {
     @Query("MATCH (s:SmsRoom) - [:OWNED_BY] -> (:AppserviceUser {userId:\$userId}) WITH max(s.mappingToken) as maxi WHERE NOT maxi IS NULL RETURN maxi")
     fun findLastMappingTokenByUserId(userId: String): Mono<Int>
 
-    @Query("MATCH (au:AppserviceUser {userId:\$userId}) <- [rau:OWNED_BY] - (s:SmsRoom) - [rar:BRIDGED_TO] -> (ar:AppserviceRoom {roomId:\$roomId}) RETURN s, collect(ar), collect(au), collect(rar), collect(rau)")
-    fun findByRoomIdAndUserId(roomId: String, userId: String): Mono<SmsRoom>
+    fun findByBridgedRoomRoomIdAndUserUserId(roomId: String, userId: String): Mono<SmsRoom>
 
-    @Query("MATCH (au:AppserviceUser {userId:\$userId}) <- [rau:OWNED_BY] - (s:SmsRoom {mappingToken:\$mappingToken}) - [rar:BRIDGED_TO] -> (ar:AppserviceRoom) RETURN s, collect(ar), collect(au), collect(rar), collect(rau)")
-    fun findByMappingTokenAndUserId(mappingToken: Int, userId: String): Mono<SmsRoom>
+    fun findByMappingTokenAndUserUserId(mappingToken: Int, userId: String): Mono<SmsRoom>
 }

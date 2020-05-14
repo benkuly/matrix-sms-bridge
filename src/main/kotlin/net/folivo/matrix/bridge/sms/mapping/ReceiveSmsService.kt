@@ -50,7 +50,7 @@ class ReceiveSmsService(
         }
         return Mono.zip(userIdMono, mappingTokenMono)
                 .flatMap {
-                    smsRoomRepository.findByMappingTokenAndUserId(userId = it.t1, mappingToken = it.t2)
+                    smsRoomRepository.findByMappingTokenAndUserUserId(userId = it.t1, mappingToken = it.t2)
                 }.flatMap {
                     val roomId = it.bridgedRoom.roomId
                     val userId = it.user.userId

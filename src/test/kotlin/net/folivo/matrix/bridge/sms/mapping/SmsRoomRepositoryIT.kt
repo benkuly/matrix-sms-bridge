@@ -87,11 +87,11 @@ class SmsRoomRepositoryIT {
     }
 
     @Test
-    fun `should findByRoomIdAndUserId`() {
+    fun `should findByBridgedRoomRoomIdAndUserUserId`() {
         val expectedResult = cut.save(SmsRoom(4, user1, room1)).block() ?: throw RuntimeException()
         cut.save(SmsRoom(24, user2, room2)).block()
         StepVerifier
-                .create(cut.findByRoomIdAndUserId("someRoomId1", "someUserId1"))
+                .create(cut.findByBridgedRoomRoomIdAndUserUserId("someRoomId1", "someUserId1"))
                 .assertNext {
                     assertThat(it.mappingToken).isEqualTo(expectedResult.mappingToken)
                     assertThat(it.user.userId).isEqualTo(expectedResult.user.userId)
@@ -101,19 +101,19 @@ class SmsRoomRepositoryIT {
     }
 
     @Test
-    fun `should not findByRoomIdAndUserId`() {
+    fun `should not findByBridgedRoomRoomIdAndUserUserId`() {
         cut.save(SmsRoom(4, user1, room1)).block()
         StepVerifier
-                .create(cut.findByRoomIdAndUserId("someRoomId2", "someUserId2"))
+                .create(cut.findByBridgedRoomRoomIdAndUserUserId("someRoomId2", "someUserId2"))
                 .verifyComplete()
     }
 
     @Test
-    fun `should findByMappingTokenAndUserId`() {
+    fun `should findByMappingTokenAndUserUserId`() {
         val expectedResult = cut.save(SmsRoom(4, user1, room1)).block() ?: throw RuntimeException()
         cut.save(SmsRoom(24, user2, room2)).block()
         StepVerifier
-                .create(cut.findByMappingTokenAndUserId(4, "someUserId1"))
+                .create(cut.findByMappingTokenAndUserUserId(4, "someUserId1"))
                 .assertNext {
                     assertThat(it.mappingToken).isEqualTo(expectedResult.mappingToken)
                     assertThat(it.user.userId).isEqualTo(expectedResult.user.userId)
@@ -123,10 +123,10 @@ class SmsRoomRepositoryIT {
     }
 
     @Test
-    fun `should not findByMappingTokenAndUserId`() {
+    fun `should not findByMappingTokenAndUserUserId`() {
         cut.save(SmsRoom(4, user1, room1)).block()
         StepVerifier
-                .create(cut.findByMappingTokenAndUserId(24, "someUserId1"))
+                .create(cut.findByMappingTokenAndUserUserId(24, "someUserId1"))
                 .verifyComplete()
     }
 }

@@ -16,7 +16,7 @@ class SmsRoomService(
     private val logger = LoggerFactory.getLogger(SmsRoomService::class.java)
 
     fun getBridgedSmsRoom(roomId: String, userId: String): Mono<SmsRoom> {
-        return smsRoomRepository.findByRoomIdAndUserId(roomId = roomId, userId = userId)
+        return smsRoomRepository.findByBridgedRoomRoomIdAndUserUserId(roomId = roomId, userId = userId)
                 .switchIfEmpty(
                         Mono.defer {
                             Mono.zip(

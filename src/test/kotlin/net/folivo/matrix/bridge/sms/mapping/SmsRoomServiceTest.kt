@@ -33,7 +33,7 @@ class SmsRoomServiceTest {
     @Test
     fun `should return SmsRoom`() {
         val smsRoom = mockk<SmsRoom>()
-        every { smsRoomRepositoryMock.findByRoomIdAndUserId("someRoomId", "someUserId") }
+        every { smsRoomRepositoryMock.findByBridgedRoomRoomIdAndUserUserId("someRoomId", "someUserId") }
                 .returns(Mono.just(smsRoom))
         StepVerifier
                 .create(cut.getBridgedSmsRoom("someRoomId", "someUserId"))
@@ -46,7 +46,7 @@ class SmsRoomServiceTest {
         val room = mockk<AppserviceRoom>()
         val user = mockk<AppserviceUser>()
         val smsRoom = mockk<SmsRoom>()
-        every { smsRoomRepositoryMock.findByRoomIdAndUserId("someRoomId", "someUserId") }
+        every { smsRoomRepositoryMock.findByBridgedRoomRoomIdAndUserUserId("someRoomId", "someUserId") }
                 .returns(Mono.empty())
         every { smsRoomRepositoryMock.save<SmsRoom>(any()) }
                 .returns(Mono.just(smsRoom))
@@ -70,7 +70,7 @@ class SmsRoomServiceTest {
         val room = mockk<AppserviceRoom>()
         val user = mockk<AppserviceUser>()
         val smsRoom = mockk<SmsRoom>()
-        every { smsRoomRepositoryMock.findByRoomIdAndUserId("someRoomId", "someUserId") }
+        every { smsRoomRepositoryMock.findByBridgedRoomRoomIdAndUserUserId("someRoomId", "someUserId") }
                 .returns(Mono.empty())
         every { smsRoomRepositoryMock.save<SmsRoom>(any()) }
                 .returns(Mono.just(smsRoom))
