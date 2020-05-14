@@ -1,6 +1,6 @@
 logging:
   level:
-    org.neo4j: TRACE
+    org.neo4j: DEBUG
 
 matrix:
   sms:

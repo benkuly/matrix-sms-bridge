@@ -71,19 +71,19 @@ class SmsRoomRepositoryIT {
         cut.save(SmsRoom(1, room1, user1)).block()
         cut.save(SmsRoom(24, room2, user1)).block()
 
-        println(
-                reactiveNeo4jClient.query("MATCH (s:SmsRoom) - [:OWNED_BY] -> (:AppserviceUser {userId:'someUserId'}) RETURN max(s.mappingToken)")
-                        .fetchAs(Int::class.java).one().block()
-        )
-
         StepVerifier
-                .create(cut.findLastMappingTokenByUserId("someUserId"))
+                .create(cut.findLastMappingTokenByUserId("someUserId1"))
                 .assertNext { assertThat(it).isEqualTo(24) }
                 .verifyComplete()
     }
 
     @Test
     fun `should not findLastMappingTokenByUserId`() {
+        cut.save(SmsRoom(1, room1, user1)).block()
+
+        StepVerifier
+                .create(cut.findLastMappingTokenByUserId("notExistingUserId"))
+                .verifyComplete()
     }
 
     @Test
@@ -93,6 +93,32 @@ class SmsRoomRepositoryIT {
         StepVerifier
                 .create(cut.findByRoomIdAndUserId("someRoomId1", "someUserId1"))
                 .assertNext { assertThat(it).isEqualTo(expectedResult) }
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should not findByRoomIdAndUserId`() {
+        cut.save(SmsRoom(4, room1, user1)).block()
+        StepVerifier
+                .create(cut.findByRoomIdAndUserId("someRoomId2", "someUserId2"))
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should findByMappingTokenAndUserId`() {
+        val expectedResult = cut.save(SmsRoom(4, room1, user1)).block()
+        cut.save(SmsRoom(24, room2, user2)).block()
+        StepVerifier
+                .create(cut.findByMappingTokenAndUserId(4, "someUserId1"))
+                .assertNext { assertThat(it).isEqualTo(expectedResult) }
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should not findByMappingTokenAndUserId`() {
+        cut.save(SmsRoom(4, room1, user1)).block()
+        StepVerifier
+                .create(cut.findByMappingTokenAndUserId(24, "someUserId1"))
                 .verifyComplete()
     }
 }
