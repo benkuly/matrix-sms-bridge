@@ -1,0 +1,31 @@
+org:
+  neo4j:
+    driver:
+      uri: bolt://neo4j:7687
+      authentication:
+        username: neo4j
+        password: secret
+
+logging:
+  level:
+    net.folivo: DEBUG
+
+matrix:
+  bridge:
+    sms:
+      provider:
+        kannel:
+          enabled: true
+          sendBaseUrl: "http://localhost:13013/cgi-bin/sendsms"
+          username: matrix
+          password: knockknockneo
+  bot:
+    serverName: matrix-local
+  client:
+    homeServer:
+      hostname: matrix-synapse
+      port: 8008
+      secure: false
+    token: 30c05ae90a248a4188e620216fa72e349803310ec83e2a77b34fe90be6081f46
+  appservice:
+    hsToken: 312df522183efd404ec1cd22d2ffa4bbc76a8c1ccf541dd692eef281356bb74e

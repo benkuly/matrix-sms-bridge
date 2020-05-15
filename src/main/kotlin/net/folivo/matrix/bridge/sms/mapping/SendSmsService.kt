@@ -29,9 +29,9 @@ class SendSmsService(
                                 .replace("{token}", "#" + it.mappingToken.toString())
                     }.flatMap { body ->
                         val receiver = member.userId.trimStart(*"@sms_".toCharArray()).substringBefore(":")
-                        if (receiver.matches(Regex("\\+[0-9]{6,15}"))) {
-                            logger.debug("send SMS from $roomId to $receiver")
-                            smsProvider.sendSms(receiver = receiver, body = body)
+                        if (receiver.matches(Regex("[0-9]{6,15}"))) {
+                            logger.debug("send SMS from $roomId to +$receiver")
+                            smsProvider.sendSms(receiver = "+$receiver", body = body)
                         } else {
                             logger.warn(
                                     "Could not send SMS because the sender ${member.userId} didn't contain a valid telephone number." +
@@ -40,6 +40,14 @@ class SendSmsService(
                             Mono.empty()
                         }
                     }
-                }.then()
+                }.onErrorResume {
+                    // TODO
+                    logger.error(
+                            "Could not send sms from room $roomId and $sender with body '$body'. " +
+                            "This should be handled, e.g. by invite smsbot and queuing messages.", it
+                    )
+                    Mono.empty()
+                }
+                .then()
     }
 }

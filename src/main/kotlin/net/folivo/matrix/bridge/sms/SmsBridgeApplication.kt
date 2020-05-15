@@ -7,6 +7,7 @@ import org.springframework.boot.runApplication
 
 @SpringBootApplication
 @EnableReactiveNeo4jRepositories
+//@EnableTransactionManagement // FIXME
 @EnableConfigurationProperties(SmsBridgeProperties::class)
 class SmsBridgeApplication
 

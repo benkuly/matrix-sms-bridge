@@ -5,8 +5,10 @@ import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.mapping.SendSmsService
 import net.folivo.matrix.core.model.events.m.room.message.MessageEvent.MessageEventContent
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 
+@Component
 class SmsSendingMessageHandler(
         private val sendSmsService: SendSmsService
 ) : MatrixMessageContentHandler {

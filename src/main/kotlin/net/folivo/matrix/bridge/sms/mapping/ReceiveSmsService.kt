@@ -30,7 +30,7 @@ class ReceiveSmsService(
             sender.matches(Regex("\\+[0-9]{6,15}"))
         }.flatMap {
             if (it) {
-                Mono.just("@sms_$sender:${matrixBotProperties.serverName}")
+                Mono.just("@sms_${sender.substringAfter('+')}:${matrixBotProperties.serverName}")
             } else {
                 Mono.error(
                         MatrixServerException(
@@ -78,5 +78,13 @@ class ReceiveSmsService(
                                 )
                 )
                 .filter { it != NO_ANSWER }
+                .onErrorResume {
+                    // TODO
+                    logger.error(
+                            "Could not receive sms from room $sender with body '$body'. " +
+                            "This should be handled, e.g. by queuing messages.", it
+                    )
+                    Mono.empty()
+                }
     }
 }

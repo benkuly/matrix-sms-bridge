@@ -1,6 +1,5 @@
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 plugins {
     base
@@ -29,7 +28,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    implementation("net.folivo:matrix-spring-boot-bot:0.1.2.RELEASE")
+    implementation("net.folivo:matrix-spring-boot-bot:0.1.3.RELEASE")
 
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
@@ -55,19 +54,6 @@ the<DependencyManagementExtension>().apply {
     imports {
         mavenBom(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
     }
-}
-
-tasks.getByName<Jar>("jar") {
-    enabled = true
-}
-
-java {
-    withSourcesJar()
-    withJavadocJar()
-}
-
-tasks.withType<BootJar> {
-    enabled = false
 }
 
 tasks.withType<Test> {
@@ -110,4 +96,20 @@ tasks {
         group = "infrastructure"
         commandLine("podman", "pod", "stop", "matrix-spring-boot-bot-examples")
     }
+}
+
+tasks.register<Exec>("docker") {
+    group = "build"
+    commandLine(
+            "docker",
+            "build",
+            "--build-arg",
+            "JAR_FILE=./build/libs/*.jar",
+            "-t",
+            "net.folivo/matrix-sms-bridge",
+            "-f",
+            "./src/main/docker/Dockerfile",
+            "."
+    )
+    dependsOn("bootJar")
 }
