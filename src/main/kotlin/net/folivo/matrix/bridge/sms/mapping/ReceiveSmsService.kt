@@ -78,13 +78,5 @@ class ReceiveSmsService(
                                 )
                 )
                 .filter { it != NO_ANSWER }
-                .onErrorResume {
-                    // TODO
-                    logger.error(
-                            "Could not receive sms from room $sender with body '$body'. " +
-                            "This should be handled, e.g. by queuing messages.", it
-                    )
-                    Mono.empty()
-                }
     }
 }

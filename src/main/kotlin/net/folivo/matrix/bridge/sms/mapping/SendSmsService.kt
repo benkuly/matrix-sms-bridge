@@ -21,6 +21,7 @@ class SendSmsService(
     fun sendSms(roomId: String, body: String, sender: String): Mono<Void> {
         return appserviceRoomRepository.findById(roomId)
                 .flatMapMany { Flux.fromIterable(it.members) }
+                .filter { it.userId != sender }
                 .flatMap { member ->
                     smsRoomService.getBridgedSmsRoom(roomId, member.userId).map {
                         smsBridgeProperties.templates.outgoingMessage

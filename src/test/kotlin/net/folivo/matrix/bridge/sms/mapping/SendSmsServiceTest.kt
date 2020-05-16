@@ -42,8 +42,8 @@ class SendSmsServiceTest {
                         AppserviceRoom(
                                 "someRoomId",
                                 members = mutableSetOf(
-                                        AppserviceUser("@sms_+0123456789:someServerName"),
-                                        AppserviceUser("@sms_+9876543210:someServerName")
+                                        AppserviceUser("@sms_0123456789:someServerName"),
+                                        AppserviceUser("@sms_9876543210:someServerName")
                                 )
                         )
                 )
@@ -67,14 +67,42 @@ class SendSmsServiceTest {
     }
 
     @Test
+    fun `should not send sms back to sender (no loop)`() {
+        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(
+                Mono.just(
+                        AppserviceRoom(
+                                "someRoomId",
+                                members = mutableSetOf(
+                                        AppserviceUser("@sms_0123456789:someServerName"),
+                                        AppserviceUser("@sms_9876543210:someServerName")
+                                )
+                        )
+                )
+        )
+        every { smsRoomServiceMock.getBridgedSmsRoom(any(), any()) }.returnsMany(
+                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 1 }),
+                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 2 })
+        )
+        every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
+        every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
+
+        StepVerifier
+                .create(cut.sendSms("someRoomId", "someBody", "@sms_0123456789:someServerName"))
+                .verifyComplete()
+
+        verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", "someTemplate") }
+        verify { smsProviderMock.sendSms("+9876543210", "someTemplate") }
+    }
+
+    @Test
     fun `should inject variables to template string`() {
         every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(
                 Mono.just(
                         AppserviceRoom(
                                 "someRoomId",
                                 members = mutableSetOf(
-                                        AppserviceUser("@sms_+0123456789:someServerName"),
-                                        AppserviceUser("@sms_+9876543210:someServerName")
+                                        AppserviceUser("@sms_0123456789:someServerName"),
+                                        AppserviceUser("@sms_9876543210:someServerName")
                                 )
                         )
                 )
@@ -104,8 +132,8 @@ class SendSmsServiceTest {
                         AppserviceRoom(
                                 "someRoomId",
                                 members = mutableSetOf(
-                                        AppserviceUser("@sms_+0123456789-24:someServerName"),
-                                        AppserviceUser("@sms_+9876543210:someServerName")
+                                        AppserviceUser("@sms_0123456789-24:someServerName"),
+                                        AppserviceUser("@sms_9876543210:someServerName")
                                 )
                         )
                 )
