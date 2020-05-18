@@ -17,7 +17,7 @@ services:
         source: ./kannel/log
         target: /var/log/kannel
     devices:
-      - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/ttyACM1:/dev/ttyModem"
     depends_on:
       - neo4j
     environment:
