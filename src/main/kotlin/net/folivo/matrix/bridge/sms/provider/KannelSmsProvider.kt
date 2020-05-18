@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 
+// FIXME Test!!! Also 400 response!
 @RestController
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @ConditionalOnProperty(prefix = "matrix.bridge.sms.provider.kannel", name = ["enabled"], havingValue = "true")
