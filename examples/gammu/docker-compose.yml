@@ -20,8 +20,8 @@ services:
       - type: bind
         source: ./gammu/log
         target: /var/log/gammu
-    devices:
-      - "/dev/ttyUSB1:/dev/ttyModem"
+      #devices:
+      #- "/dev/ttyUSB1:/dev/ttyModem"
     depends_on:
       - neo4j
     environment:

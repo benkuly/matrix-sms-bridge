@@ -1,8 +1,6 @@
 # matrix-sms-bridge
 
-This is a matrix bridge, which allows you to bridge matrix rooms to SMS with one telephone number only.
-
-It is build on top of [matrix-spring-boot-sdk](https://github.com/benkuly/matrix-spring-boot-sdk) and written in kotlin.
+This is a matrix bridge, which allows you to bridge matrix rooms to SMS with one telephone number only. It is build on top of [matrix-spring-boot-sdk](https://github.com/benkuly/matrix-spring-boot-sdk) and written in kotlin.
 
 ## User Guide
 ### Invite telephone number to matrix room
@@ -14,10 +12,10 @@ The number `49123456789` represents the international german telephone number `+
 
 You can invite these users to every room, independently of the room members. So you can also invite more than one SMS number to rooms with more than one real matrix users.
 
-### Write with telephone numbers
+### Write to telephone numbers
 After a room invite the virtual matrix users automatically join the room and every message to this room will be sent as SMS to the telephone number. The SMS contains a token (e.g. "#3"), which can be used in the answer of the SMS to route it back to the matrix room.
 
-### What if the SMS user has no token.
+### What if the SMS user has no token?
 The bridge can be configured to route all SMS without a valid token to a default matrix room.
 
 ## Admin Guide
