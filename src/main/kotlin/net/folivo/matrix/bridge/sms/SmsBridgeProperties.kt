@@ -14,7 +14,7 @@ data class SmsBridgeProperties(
                                           "your message: {token}",
             val answerInvalidTokenWithDefaultRoom: String? = null,
             val answerInvalidTokenWithoutDefaultRoom: String? = "Your message did not contain any valid token. Nobody can and will read your message.",
-            val sendSmsError: String = "Could not send SMS to this user. Please try it later again.",
+            val sendSmsError: String = "Could not send SMS to this user. Please try it again later.",
             val defaultRoomIncomingMessage: String = "{sender} wrote:\n{body}"
     )
 }

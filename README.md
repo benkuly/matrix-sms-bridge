@@ -47,7 +47,7 @@ matrix:
         # and no default room is configured.
         answerInvalidTokenWithoutDefaultRoom: "Your message did not contain any valid token. Nobody will read your message.",
         # (optional) The message, that will be sent to a matrix room, when sending a bridged message via SMS failed.
-        sendSmsError: "Could not send SMS to this user. Please try it later again."
+        sendSmsError: "Could not send SMS to this user. Please try it again later."
         # (optional) The content of bridged SMS message into the default room. Valid placeholders are {sender} and {body}.
         defaultRoomIncomingMessage: "{sender} wrote:\n{body}"
   bot:
