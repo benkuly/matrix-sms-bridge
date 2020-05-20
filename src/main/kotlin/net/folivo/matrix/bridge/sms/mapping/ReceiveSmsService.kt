@@ -74,11 +74,11 @@ class ReceiveSmsService(
                                             .doOnError { logger.error("could not send SMS message to default room $defaultRoomId as user appservice user") }
                                 }
                                 .map {
-                                    smsBridgeProperties.templates.answerMissingTokenWithDefaultRoom ?: NO_ANSWER
+                                    smsBridgeProperties.templates.answerInvalidTokenWithDefaultRoom ?: NO_ANSWER
                                 }
                                 .switchIfEmpty(
                                         Mono.just(
-                                                smsBridgeProperties.templates.answerMissingTokenWithoutDefaultRoom
+                                                smsBridgeProperties.templates.answerInvalidTokenWithoutDefaultRoom
                                                 ?: NO_ANSWER
                                         )
                                 )

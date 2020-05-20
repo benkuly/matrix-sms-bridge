@@ -78,7 +78,7 @@ class ReceiveSmsServiceTest() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
-        every { smsBridgePropertiesMock.templates.answerMissingTokenWithDefaultRoom }.returns("someMissingTokenWithDefaultRoom")
+        every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns("someMissingTokenWithDefaultRoom")
         every { smsRoomRepositoryMock.findByMappingTokenAndUserUserId(123, "@sms_0123456789:someServerName") }
                 .returns(Mono.empty())
         every { smsBridgePropertiesMock.templates.defaultRoomIncomingMessage }.returns("{sender}: {body}")
@@ -102,7 +102,7 @@ class ReceiveSmsServiceTest() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
-        every { smsBridgePropertiesMock.templates.answerMissingTokenWithDefaultRoom }.returns(null)
+        every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns(null)
         every { smsBridgePropertiesMock.templates.defaultRoomIncomingMessage }.returns("{sender}: {body}")
 
         StepVerifier
@@ -123,7 +123,7 @@ class ReceiveSmsServiceTest() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
         every { smsBridgePropertiesMock.defaultRoomId }.returns(null)
-        every { smsBridgePropertiesMock.templates.answerMissingTokenWithoutDefaultRoom }.returns("someMissingTokenWithoutDefaultRoom")
+        every { smsBridgePropertiesMock.templates.answerInvalidTokenWithoutDefaultRoom }.returns("someMissingTokenWithoutDefaultRoom")
         every { smsRoomRepositoryMock.findByMappingTokenAndUserUserId(123, "@sms_0123456789:someServerName") }
                 .returns(Mono.empty())
         StepVerifier
@@ -139,7 +139,7 @@ class ReceiveSmsServiceTest() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
-        every { smsBridgePropertiesMock.templates.answerMissingTokenWithDefaultRoom }.returns(null)
+        every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns(null)
         StepVerifier
                 .create(cut.receiveSms("#someBody", "+0123456789"))
                 .verifyComplete()
@@ -150,7 +150,7 @@ class ReceiveSmsServiceTest() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
         every { smsBridgePropertiesMock.defaultRoomId }.returns(null)
-        every { smsBridgePropertiesMock.templates.answerMissingTokenWithoutDefaultRoom }.returns(null)
+        every { smsBridgePropertiesMock.templates.answerInvalidTokenWithoutDefaultRoom }.returns(null)
         StepVerifier
                 .create(cut.receiveSms("#someBody", "+0123456789"))
                 .verifyComplete()
@@ -168,7 +168,7 @@ class ReceiveSmsServiceTest() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.error(MatrixServerException(I_AM_A_TEAPOT, ErrorResponse("TEA"))))
         every { smsBridgePropertiesMock.defaultRoomId }.returns("someRoomId")
-        every { smsBridgePropertiesMock.templates.answerMissingTokenWithoutDefaultRoom }.returns(null)
+        every { smsBridgePropertiesMock.templates.answerInvalidTokenWithoutDefaultRoom }.returns(null)
         StepVerifier
                 .create(cut.receiveSms("#someBody", "+0123456789"))
                 .verifyError(MatrixServerException::class.java)
