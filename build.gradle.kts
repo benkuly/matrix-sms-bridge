@@ -14,7 +14,7 @@ allprojects {
     apply(plugin = "kotlin")
 
     group = "net.folivo"
-    version = "0.0.1.RELEASE"
+    version = "0.1.0.RELEASE"
     java.sourceCompatibility = JavaVersion.VERSION_11
 
     repositories {
@@ -28,14 +28,14 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    implementation("net.folivo:matrix-spring-boot-bot:0.1.4.RELEASE")
+    implementation("net.folivo:matrix-spring-boot-bot:0.1.5.RELEASE")
 
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     testImplementation("com.ninja-squad:springmockk:2.0.1")
     testImplementation("io.projectreactor:reactor-test")
-    testImplementation("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-test-autoconfigure:1.0.0") {
+    testImplementation("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-test-autoconfigure:1.0.1") {
         exclude(group = "org.neo4j.test", module = "harness")
     }
     testImplementation("org.testcontainers:junit-jupiter:1.14.1")
@@ -106,7 +106,7 @@ tasks.register<Exec>("docker-gammu") {
             "--build-arg",
             "JAR_FILE=./build/libs/*.jar",
             "-t",
-            "net.folivo/matrix-sms-bridge",
+            "net.folivo/matrix-sms-bridge:$version",
             "-f",
             "./src/main/docker/gammu/Dockerfile",
             "."
