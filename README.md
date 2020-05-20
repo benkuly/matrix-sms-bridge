@@ -85,7 +85,7 @@ sender_localpart: "smsbot"
 namespaces:
   users:
     - exclusive: true
-      regex: "@sms_[0-9]{6,15}:yourHomeServerDomain"
+      regex: "^@sms_.+:yourHomeServerDomain"
   aliases: []
   rooms: []
 ```

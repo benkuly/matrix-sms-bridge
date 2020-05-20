@@ -1,11 +1,14 @@
 package net.folivo.matrix.bridge.sms.handler
 
 import io.mockk.every
+import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import reactor.test.StepVerifier
 
+@ExtendWith(MockKExtension::class)
 class AutoJoinCustomizerTest {
     private val cut = AutoJoinCustomizer(mockk {
         every { defaultRoomId }.returns("defaultRoomId")

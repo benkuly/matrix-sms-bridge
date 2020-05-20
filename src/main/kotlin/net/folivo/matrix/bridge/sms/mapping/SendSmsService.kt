@@ -33,7 +33,7 @@ class SendSmsService(
                                 .replace("{body}", body)
                                 .replace("{token}", "#" + it.mappingToken.toString())
                     }.flatMap { body ->
-                        val receiver = member.userId.trimStart(*"@sms_".toCharArray()).substringBefore(":")
+                        val receiver = member.userId.removePrefix("@sms_").substringBefore(":")
                         if (receiver.matches(Regex("[0-9]{6,15}"))) {
                             logger.debug("send SMS from $roomId to +$receiver")
                             smsProvider.sendSms(receiver = "+$receiver", body = body)

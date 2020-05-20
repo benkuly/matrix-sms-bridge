@@ -6,6 +6,6 @@ sender_localpart: "smsbot"
 namespaces:
   users:
     - exclusive: true
-      regex: "@sms_[0-9]{6,15}:matrix-local"
+      regex: "^@sms_.+:matrix-local"
   aliases: []
   rooms: []
