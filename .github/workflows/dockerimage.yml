@@ -13,11 +13,11 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 11
-      - name: build image
-        run: gradle docker-gammu
       - uses: azure/docker-login@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: build image
+        run: gradle docker-gammu
       - name: Publish image to DockerHub
         run: docker push folivonet/matrix-sms-bridge:latest
