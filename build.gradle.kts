@@ -107,6 +107,8 @@ tasks.register<Exec>("docker-gammu") {
             "JAR_FILE=./build/libs/*.jar",
             "-t",
             "net.folivo/matrix-sms-bridge:$version",
+            "-t",
+            "net.folivo/matrix-sms-bridge:latest",
             "-f",
             "./src/main/docker/gammu/Dockerfile",
             "."

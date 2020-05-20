@@ -20,4 +20,4 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: Publish image to DockerHub
-        run: docker push folivonet/matrix-sms-bridge
+        run: docker push folivonet/matrix-sms-bridge:latest
