@@ -135,6 +135,6 @@ CheckBattery = 0
 ```
 
 ### Using Docker container
-As long as there is only one Provider, Gammu is integrated into the Docker-container.
+As long as there is only one Provider, Gammu is integrated into the Docker-container: `docker pull folivonet/matrix-sms-bridge`
 
 To see, how a docker setup of the bridge could look like, have a look at the [example](./examples/gammu).
