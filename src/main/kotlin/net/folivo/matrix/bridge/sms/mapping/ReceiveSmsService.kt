@@ -67,18 +67,18 @@ class ReceiveSmsService(
                         }
                                 .flatMap { defaultRoomId ->
                                     logger.debug("receive SMS without or wrong mappingToken from $sender to default room $defaultRoomId")
-                                    val message = smsBridgeProperties.templates.defaultRoomNewMessage
+                                    val message = smsBridgeProperties.templates.defaultRoomIncomingMessage
                                             .replace("{sender}", sender)
                                             .replace("{body}", body)
                                     matrixClient.roomsApi.sendRoomEvent(defaultRoomId, TextMessageEventContent(message))
                                             .doOnError { logger.error("could not send SMS message to default room $defaultRoomId as user appservice user") }
                                 }
                                 .map {
-                                    smsBridgeProperties.templates.missingTokenWithDefaultRoom ?: NO_ANSWER
+                                    smsBridgeProperties.templates.answerMissingTokenWithDefaultRoom ?: NO_ANSWER
                                 }
                                 .switchIfEmpty(
                                         Mono.just(
-                                                smsBridgeProperties.templates.missingTokenWithoutDefaultRoom
+                                                smsBridgeProperties.templates.answerMissingTokenWithoutDefaultRoom
                                                 ?: NO_ANSWER
                                         )
                                 )

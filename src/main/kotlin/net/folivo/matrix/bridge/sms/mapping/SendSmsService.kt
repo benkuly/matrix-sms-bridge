@@ -43,20 +43,19 @@ class SendSmsService(
                                     "Usually this should never happen because the Homeserver uses the same regex."
                             )
                             Mono.empty()
+                        }.onErrorResume {
+                            logger.error(
+                                    "Could not send sms from room $roomId and $sender with body '$body'. " +
+                                    "This should be handled, e.g. by queuing messages.", it
+                            )
+                            matrixClient.roomsApi.sendRoomEvent(
+                                    roomId = roomId,
+                                    eventContent = NoticeMessageEventContent(
+                                            smsBridgeProperties.templates.sendSmsError
+                                    ),
+                                    asUserId = member.userId
+                            ).then()
                         }
-                                .onErrorResume {
-                                    logger.error(
-                                            "Could not send sms from room $roomId and $sender with body '$body'. " +
-                                            "This should be handled, e.g. by queuing messages.", it
-                                    )
-                                    matrixClient.roomsApi.sendRoomEvent(
-                                            roomId = roomId,
-                                            eventContent = NoticeMessageEventContent(
-                                                    smsBridgeProperties.templates.sendSmsError
-                                            ),
-                                            asUserId = member.userId
-                                    ).then()
-                                }
                     }
                 }
                 .then()

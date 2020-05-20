@@ -12,9 +12,9 @@ data class SmsBridgeProperties(
     data class SmsBridgeTemplateProperties(
             val outgoingMessage: String = "{sender} wrote:\n\n{body}\n\nTo answer to this message add this token to " +
                                           "your message: {token}",
-            val missingTokenWithDefaultRoom: String? = "Your message did not contain any valid token. Your messages will be forwarded to a default matrix room.",
-            val missingTokenWithoutDefaultRoom: String? = "Your message did not contain any valid token. Nobody can and will read your message.",
+            val answerMissingTokenWithDefaultRoom: String? = null,
+            val answerMissingTokenWithoutDefaultRoom: String? = "Your message did not contain any valid token. Nobody can and will read your message.",
             val sendSmsError: String = "Could not send sms to this user. Please try it later again.",
-            val defaultRoomNewMessage: String = "{sender} wrote:\n\n{body}"
+            val defaultRoomIncomingMessage: String = "{sender} wrote:\n{body}"
     )
 }

@@ -12,6 +12,8 @@ import net.folivo.matrix.bot.appservice.room.AppserviceRoomRepository
 import net.folivo.matrix.bot.appservice.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
+import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
+import net.folivo.matrix.restclient.MatrixClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import reactor.core.publisher.Mono
@@ -31,6 +33,9 @@ class SendSmsServiceTest {
 
     @MockK
     lateinit var smsProviderMock: SmsProvider
+
+    @MockK
+    lateinit var matrixClientMock: MatrixClient
 
     @InjectMockKs
     lateinit var cut: SendSmsService
@@ -151,5 +156,44 @@ class SendSmsServiceTest {
 
         verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", "someTemplate") }
         verify { smsProviderMock.sendSms("+9876543210", "someTemplate") }
+    }
+
+    @Test
+    fun `should answer with error message in room when something went wrong`() {
+        every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
+                .returns(Mono.just("someId"))
+        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(
+                Mono.just(
+                        AppserviceRoom(
+                                "someRoomId",
+                                members = mutableSetOf(
+                                        AppserviceUser("@sms_0123456789:someServerName")
+                                )
+                        )
+                )
+        )
+        every { smsRoomServiceMock.getBridgedSmsRoom(any(), any()) }.returns(
+                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 1 })
+        )
+        every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
+        every { smsBridgePropertiesMock.templates.sendSmsError }.returns("sendSmsError")
+
+        every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.error(RuntimeException()))
+
+        StepVerifier
+                .create(cut.sendSms("someRoomId", "someBody", "someSender"))
+                .verifyComplete()
+
+
+        verifyAll {
+            smsProviderMock.sendSms("+0123456789", "someTemplate")
+            matrixClientMock.roomsApi.sendRoomEvent(
+                    roomId = "someRoomId",
+                    eventContent = match<NoticeMessageEventContent> { it.body == "sendSmsError" },
+                    eventType = any(),
+                    txnId = any(),
+                    asUserId = "@sms_0123456789:someServerName"
+            )
+        }
     }
 }

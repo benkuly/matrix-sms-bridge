@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 
-// FIXME test
 @Component
 class SmsSendingMessageHandler(
         private val sendSmsService: SendSmsService,
