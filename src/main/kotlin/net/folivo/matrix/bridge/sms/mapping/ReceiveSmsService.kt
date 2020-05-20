@@ -67,7 +67,10 @@ class ReceiveSmsService(
                         }
                                 .flatMap { defaultRoomId ->
                                     logger.debug("receive SMS without or wrong mappingToken from $sender to default room $defaultRoomId")
-                                    matrixClient.roomsApi.sendRoomEvent(defaultRoomId, TextMessageEventContent(body))
+                                    val message = smsBridgeProperties.templates.defaultRoomNewMessage
+                                            .replace("{sender}", sender)
+                                            .replace("{body}", body)
+                                    matrixClient.roomsApi.sendRoomEvent(defaultRoomId, TextMessageEventContent(message))
                                             .doOnError { logger.error("could not send SMS message to default room $defaultRoomId as user appservice user") }
                                 }
                                 .map {

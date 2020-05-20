@@ -3,17 +3,21 @@ package net.folivo.matrix.bridge.sms.mapping
 import net.folivo.matrix.bot.appservice.room.AppserviceRoomRepository
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
+import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
+import net.folivo.matrix.restclient.MatrixClient
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+// FIXME test
 @Service
 class SendSmsService(
         private val appserviceRoomRepository: AppserviceRoomRepository,
         private val smsRoomService: SmsRoomService,
         private val smsBridgeProperties: SmsBridgeProperties,
-        private val smsProvider: SmsProvider
+        private val smsProvider: SmsProvider,
+        private val matrixClient: MatrixClient
 ) {
 
     private val logger = LoggerFactory.getLogger(SendSmsService::class.java)
@@ -40,14 +44,20 @@ class SendSmsService(
                             )
                             Mono.empty()
                         }
+                                .onErrorResume {
+                                    logger.error(
+                                            "Could not send sms from room $roomId and $sender with body '$body'. " +
+                                            "This should be handled, e.g. by queuing messages.", it
+                                    )
+                                    matrixClient.roomsApi.sendRoomEvent(
+                                            roomId = roomId,
+                                            eventContent = NoticeMessageEventContent(
+                                                    smsBridgeProperties.templates.sendSmsError
+                                            ),
+                                            asUserId = member.userId
+                                    ).then()
+                                }
                     }
-                }.onErrorResume {
-                    // TODO
-                    logger.error(
-                            "Could not send sms from room $roomId and $sender with body '$body'. " +
-                            "This should be handled, e.g. by invite smsbot and queuing messages.", it
-                    )
-                    Mono.empty()
                 }
                 .then()
     }

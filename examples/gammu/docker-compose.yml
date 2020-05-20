@@ -7,17 +7,21 @@ services:
         source: ./bridge
         target: /config
       - type: bind
-        source: ./kannel/config
-        target: /etc/kannel
+        source: ./gammu/config/gammu-smsdrc
+        target: /etc/gammu-smsdrc
         read_only: true
       - type: bind
-        source: ./kannel/spool
-        target: /var/spool/kannel
+        source: ./gammu/config/gammu-smsdrc
+        target: /etc/gammurc
+        read_only: true
       - type: bind
-        source: ./kannel/log
-        target: /var/log/kannel
+        source: ./gammu/spool
+        target: /var/spool/gammu
+      - type: bind
+        source: ./gammu/log
+        target: /var/log/gammu
     devices:
-      - "/dev/ttyACM1:/dev/ttyModem"
+      - "/dev/ttyUSB1:/dev/ttyModem"
     depends_on:
       - neo4j
     environment:
@@ -26,7 +30,6 @@ services:
       - local-kannel
     expose:
       - 8080
-      - 13013
     restart: on-failure
   neo4j:
     image: neo4j:latest

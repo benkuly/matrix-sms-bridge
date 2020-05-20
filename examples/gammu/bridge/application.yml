@@ -14,11 +14,9 @@ matrix:
   bridge:
     sms:
       provider:
-        kannel:
+        gammu:
           enabled: true
-          sendBaseUrl: "http://localhost:13013/cgi-bin/sendsms"
-          username: matrix
-          password: knockknockneo
+      defaultRoomId: "!jNkGzAFIPWxxXLmhso:matrix-local"
   bot:
     serverName: matrix-local
   client:

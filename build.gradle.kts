@@ -28,7 +28,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    implementation("net.folivo:matrix-spring-boot-bot:0.1.3.RELEASE")
+    implementation("net.folivo:matrix-spring-boot-bot:0.1.4.RELEASE")
 
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
@@ -98,7 +98,7 @@ tasks {
     }
 }
 
-tasks.register<Exec>("docker") {
+tasks.register<Exec>("docker-gammu") {
     group = "build"
     commandLine(
             "docker",
@@ -108,7 +108,7 @@ tasks.register<Exec>("docker") {
             "-t",
             "net.folivo/matrix-sms-bridge",
             "-f",
-            "./src/main/docker/Dockerfile",
+            "./src/main/docker/gammu/Dockerfile",
             "."
     )
     dependsOn("bootJar")

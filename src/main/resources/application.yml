@@ -1,9 +1,9 @@
 matrix:
   bot:
     mode: APPSERVICE
+    username: "smsbot"
   client:
   appservice:
-    asUsername: "smsbot"
     namespaces:
       users:
         - exclusive: true
