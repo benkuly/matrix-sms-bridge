@@ -19,5 +19,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: build image
         run: gradle docker-gammu
-      - name: Publish image to DockerHub
+      - name: Publish version tagged image to DockerHub
+        run: docker push folivonet/matrix-sms-bridge:${{ github.ref }}
+      - name: Publish latest image to DockerHub
         run: docker push folivonet/matrix-sms-bridge:latest
