@@ -21,10 +21,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.TimeUnit
-import kotlin.text.Charsets.UTF_16
+import kotlin.text.Charsets.UTF_8
 
 
-// FIXME Test!!!
+// TODO Tests!
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @ConditionalOnProperty(prefix = "matrix.bridge.sms.provider.gammu", name = ["enabled"], havingValue = "true")
@@ -47,42 +47,27 @@ class GammuSmsProvider(
         disposable = Mono.just(true) // TODO is there a less hacky way? Without that line, repeat does not call getBatchToken
                 .flatMapMany { Flux.fromStream(Files.list(Path.of(properties.inboxPath))) }
                 .map { it.toFile() }
-                .sort(compareBy { it.name })
-                .collectList()
-                .map { files ->
-                    val messages = mutableMapOf<String, MutableList<String>>()
-                    files.forEach { file ->
-                        val name = file.name
-                        val sequence = name.substringAfterLast('_').substringBefore('.')
-                        val sender = name.substringBeforeLast('_').substringAfterLast('_')
-                        val body = file.readText(UTF_16)
-                        if (sequence == "00") {
-                            messages.getOrPut(sender, { mutableListOf() }).add(body)
-                        } else {
-                            messages[sender]?.also { senderMessages ->
-                                val newMessage = senderMessages[senderMessages.count() - 1] + body
-                                senderMessages[senderMessages.count() - 1] = newMessage
-                            } ?: messages.put(sender, mutableListOf(body))
-                        }
-                        Files.move(file.toPath(), Path.of(properties.inboxProcessedPath, file.name))
-                    }
-                    messages
-                }.flatMapMany { allMessages ->
-                    Flux.concat(allMessages.flatMap { messagesBySender ->
-                        messagesBySender.value.map {
-                            receiveSms(messagesBySender.key, it)
-                        }
-                    })
+                .flatMap { file ->
+                    val name = file.name
+                    val sender = name.substringBeforeLast('_').substringAfterLast('_')
+                    Flux.fromStream(Files.lines(file.toPath(), UTF_8))
+                            .skipUntil { it.startsWith("[SMSBackup000]") }
+                            .filter { it.startsWith("; ") }
+                            .map { it.removePrefix("; ") }
+                            .collectList()
+                            .map { Pair(sender, it.joinToString()) }
+                            .doOnSuccess {
+                                Files.move(file.toPath(), Path.of(properties.inboxProcessedPath, file.name))
+                            }
+                }.flatMap { message ->
+                    receiveSms(message.first, message.second)
                 }
+                .doOnComplete { logger.debug("read inbox") }
                 .doOnError { logger.error("something happened while scanning directories for new sms", it) }
                 .delaySubscription(Duration.ofSeconds(10))
                 .repeat()
                 .retry()
-                .subscribe(
-                        { logger.debug("read inbox") },
-                        { logger.error("some error while reading inbox", it) }
-                )
-
+                .subscribe()
     }
 
     override fun sendSms(receiver: String, body: String): Mono<Void> {
