@@ -103,31 +103,31 @@ matrix:
         gammu:
           # (optional) default is disabled
           enabled: true
-          # (optional) Path to the Gammu-Inbox directory. Default is "/var/spool/gammu/inbox".
-          inboxPath: "/var/spool/gammu/inbox"
-          # (optional) Path to the directory, where to put processed messages. Default is "/var/spool/gammu/inbox_processed".
-          inboxProcessedPath: "/var/spool/gammu/inbox_processed"
+          # (optional) Path to the Gammu-Inbox directory. Default is "/data/spool/inbox".
+          inboxPath: "/data/spool/inbox"
+          # (optional) Path to the directory, where to put processed messages. Default is "/data/spool/inbox_processed".
+          inboxProcessedPath: "/data/spool/inbox_processed"
 ```
 
 Your `gammu-smsdrc` should look like this:
 ```text
 [gammu]
 Device = /dev/ttyModem
-LogFile = /var/log/gammu/gammu.log
+LogFile = /data/log/gammu.log
 debugLevel = 1
 
 [smsd]
 Service = files
 LoopSleep = 3
-InboxPath = /var/spool/gammu/inbox/
-OutboxPath = /var/spool/gammu/outbox/
-SentSMSPath = /var/spool/gammu/sent/
-ErrorSMSPath = /var/spool/gammu/error/
+InboxPath = /data/spool/inbox/
+OutboxPath = /data/spool/outbox/
+SentSMSPath = /data/spool/sent/
+ErrorSMSPath = /data/spool/error/
 InboxFormat = detail
 OutboxFormat = detail
 TransmitFormat = auto
 debugLevel = 1
-LogFile = /var/log/gammu/smsd.log
+LogFile = /data/log/smsd.log
 DeliveryReport = log
 DeliveryReportDelay = 7200
 HangupCalls = 1

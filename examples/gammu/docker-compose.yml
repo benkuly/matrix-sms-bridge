@@ -1,31 +1,21 @@
 version: '3.3'
 services:
   matrix-sms-bridge:
-    image: net.folivo/matrix-sms-bridge
+    image: folivonet/matrix-sms-bridge:latest
     volumes:
       - type: bind
-        source: ./bridge
+        source: ./config
         target: /config
       - type: bind
-        source: ./gammu/config/gammu-smsdrc
-        target: /etc/gammu-smsdrc
-        read_only: true
-      - type: bind
-        source: ./gammu/config/gammu-smsdrc
-        target: /etc/gammurc
-        read_only: true
-      - type: bind
-        source: ./gammu/spool
-        target: /var/spool/gammu
-      - type: bind
-        source: ./gammu/log
-        target: /var/log/gammu
+        source: ./data
+        target: /data
       #devices:
       #- "/dev/ttyUSB1:/dev/ttyModem"
     depends_on:
       - neo4j
     environment:
       - CONFIG_LOCATION=/config/application.yml
+      - GAMMU_CONFIG=/config/gammu-smsdrc
     networks:
       - local-kannel
     expose:

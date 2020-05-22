@@ -2,7 +2,7 @@ FROM ubuntu:focal
 
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
-VOLUME ["/var/spool/gammu", "/var/log/gammu"]
+VOLUME ["/data", "/config"]
 
 RUN apt-get update && apt-get install -y \
         locales \
@@ -23,5 +23,6 @@ EXPOSE 8080
 ARG JAR_FILE
 COPY ${JAR_FILE} app.jar
 
-ENV CONFIG_LOCATION /config/
+ENV CONFIG_LOCATION /config/application.yml
+ENV GAMMU_CONFIG /config/gammu-smsdrc
 ENTRYPOINT ["/usr/bin/supervisord"]

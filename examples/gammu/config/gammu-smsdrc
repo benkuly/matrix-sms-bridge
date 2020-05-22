@@ -1,20 +1,20 @@
 [gammu]
 Device = /dev/ttyModem
-LogFile = /var/log/gammu/gammu.log
+LogFile = /data/log/gammu.log
 debugLevel = 1
 
 [smsd]
 Service = files
 LoopSleep = 3
-InboxPath = /var/spool/gammu/inbox/
-OutboxPath = /var/spool/gammu/outbox/
-SentSMSPath = /var/spool/gammu/sent/
-ErrorSMSPath = /var/spool/gammu/error/
+InboxPath = /data/spool/inbox/
+OutboxPath = /data/spool/outbox/
+SentSMSPath = /data/spool/sent/
+ErrorSMSPath = /data/spool/error/
 InboxFormat = detail
 OutboxFormat = detail
 TransmitFormat = auto
 debugLevel = 1
-LogFile = /var/log/gammu/smsd.log
+LogFile = /data/log/smsd.log
 DeliveryReport = log
 DeliveryReportDelay = 7200
 HangupCalls = 1

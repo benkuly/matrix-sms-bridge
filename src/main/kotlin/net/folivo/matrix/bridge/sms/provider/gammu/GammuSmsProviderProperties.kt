@@ -7,6 +7,6 @@ import org.springframework.boot.context.properties.ConstructorBinding
 @ConstructorBinding
 data class GammuSmsProviderProperties(
         val enabled: Boolean = false,
-        val inboxPath: String = "/var/spool/gammu/inbox",
-        val inboxProcessedPath: String = "/var/spool/gammu/inbox_processed"
+        val inboxPath: String = "/data/spool/inbox",
+        val inboxProcessedPath: String = "/data/spool/inbox_processed"
 )

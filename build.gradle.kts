@@ -14,7 +14,7 @@ allprojects {
     apply(plugin = "kotlin")
 
     group = "net.folivo"
-    version = "0.1.1.RELEASE"
+    version = "0.1.2.RELEASE"
     java.sourceCompatibility = JavaVersion.VERSION_11
 
     repositories {
@@ -105,8 +105,6 @@ tasks.register<Exec>("docker-gammu") {
             "build",
             "--build-arg",
             "JAR_FILE=./build/libs/*.jar",
-            "--cache-from",
-            "folivonet/matrix-sms-bridge:latest",
             "-t",
             "folivonet/matrix-sms-bridge:$version",
             "-t",
