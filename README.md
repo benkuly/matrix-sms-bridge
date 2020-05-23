@@ -16,7 +16,7 @@ You can invite these users to every room, independently of the room members. So 
 After a room invite the virtual matrix users automatically join the room and every message to this room will be sent as SMS to the telephone number. The SMS contains a token (e.g. "#3"), which can be used in the answer of the SMS to route it back to the matrix room.
 
 ### What if the SMS user has no token?
-The bridge can be configured to route all SMS without a valid token to a default matrix room.
+The bridge can be configured to route all SMS without a valid token to a default matrix room. Note that you must invite `@smsbot:yourHomeServer` to this room.
 
 ## Admin Guide
 ### Configure Application Service
