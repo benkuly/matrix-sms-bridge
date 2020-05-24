@@ -1,7 +1,7 @@
 package net.folivo.matrix.bridge.sms.mapping
 
-import net.folivo.matrix.bot.appservice.room.AppserviceRoomRepository
-import net.folivo.matrix.bot.appservice.user.AppserviceUserRepository
+import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
+import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import org.neo4j.springframework.data.repository.config.ReactiveNeo4jRepositoryConfigurationExtension
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service

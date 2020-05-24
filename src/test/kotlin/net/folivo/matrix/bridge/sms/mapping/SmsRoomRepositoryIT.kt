@@ -1,7 +1,7 @@
 package net.folivo.matrix.bridge.sms.mapping
 
-import net.folivo.matrix.bot.appservice.room.AppserviceRoom
-import net.folivo.matrix.bot.appservice.user.AppserviceUser
+import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

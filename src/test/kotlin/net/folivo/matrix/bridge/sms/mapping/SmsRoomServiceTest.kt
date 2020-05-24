@@ -6,10 +6,10 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.verify
-import net.folivo.matrix.bot.appservice.room.AppserviceRoom
-import net.folivo.matrix.bot.appservice.room.AppserviceRoomRepository
-import net.folivo.matrix.bot.appservice.user.AppserviceUser
-import net.folivo.matrix.bot.appservice.user.AppserviceUserRepository
+import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
+import net.folivo.matrix.bridge.sms.user.AppserviceUser
+import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import reactor.core.publisher.Mono

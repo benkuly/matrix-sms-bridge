@@ -7,11 +7,11 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyAll
-import net.folivo.matrix.bot.appservice.room.AppserviceRoom
-import net.folivo.matrix.bot.appservice.room.AppserviceRoomRepository
-import net.folivo.matrix.bot.appservice.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
+import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
+import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import org.junit.jupiter.api.Test

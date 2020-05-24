@@ -1,8 +1,8 @@
 package net.folivo.matrix.bridge.sms.mapping
 
-import net.folivo.matrix.bot.appservice.room.AppserviceRoomRepository
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
+import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import org.slf4j.LoggerFactory
