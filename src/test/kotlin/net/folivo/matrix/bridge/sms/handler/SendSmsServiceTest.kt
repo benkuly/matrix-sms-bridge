@@ -1,17 +1,18 @@
-package net.folivo.matrix.bridge.sms.mapping
+package net.folivo.matrix.bridge.sms.handler
 
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyAll
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
+import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import org.junit.jupiter.api.Test
@@ -26,7 +27,7 @@ class SendSmsServiceTest {
     lateinit var appserviceRoomRepositoryMock: AppserviceRoomRepository
 
     @MockK
-    lateinit var smsRoomServiceMock: SmsRoomService
+    lateinit var roomServiceMock: SmsMatrixAppserviceRoomService
 
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
@@ -46,16 +47,12 @@ class SendSmsServiceTest {
                 Mono.just(
                         AppserviceRoom(
                                 "someRoomId",
-                                members = mutableSetOf(
-                                        AppserviceUser("@sms_0123456789:someServerName"),
-                                        AppserviceUser("@sms_9876543210:someServerName")
+                                members = mutableMapOf(
+                                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
+                                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
                                 )
                         )
                 )
-        )
-        every { smsRoomServiceMock.getBridgedSmsRoom(any(), any()) }.returnsMany(
-                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 1 }),
-                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 2 })
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
@@ -77,16 +74,12 @@ class SendSmsServiceTest {
                 Mono.just(
                         AppserviceRoom(
                                 "someRoomId",
-                                members = mutableSetOf(
-                                        AppserviceUser("@sms_0123456789:someServerName"),
-                                        AppserviceUser("@sms_9876543210:someServerName")
+                                members = mutableMapOf(
+                                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
+                                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
                                 )
                         )
                 )
-        )
-        every { smsRoomServiceMock.getBridgedSmsRoom(any(), any()) }.returnsMany(
-                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 1 }),
-                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 2 })
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
@@ -105,16 +98,12 @@ class SendSmsServiceTest {
                 Mono.just(
                         AppserviceRoom(
                                 "someRoomId",
-                                members = mutableSetOf(
-                                        AppserviceUser("@sms_0123456789:someServerName"),
-                                        AppserviceUser("@sms_9876543210:someServerName")
+                                members = mutableMapOf(
+                                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
+                                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
                                 )
                         )
                 )
-        )
-        every { smsRoomServiceMock.getBridgedSmsRoom(any(), any()) }.returnsMany(
-                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 1 }),
-                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 2 })
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate {sender} {body} {token}")
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
@@ -136,16 +125,12 @@ class SendSmsServiceTest {
                 Mono.just(
                         AppserviceRoom(
                                 "someRoomId",
-                                members = mutableSetOf(
-                                        AppserviceUser("@sms_0123456789-24:someServerName"),
-                                        AppserviceUser("@sms_9876543210:someServerName")
+                                members = mutableMapOf(
+                                        AppserviceUser("@sms_0123456789-24:someServerName") to MemberOfProperties(1),
+                                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
                                 )
                         )
                 )
-        )
-        every { smsRoomServiceMock.getBridgedSmsRoom(any(), any()) }.returnsMany(
-                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 1 }),
-                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 2 })
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
@@ -166,14 +151,11 @@ class SendSmsServiceTest {
                 Mono.just(
                         AppserviceRoom(
                                 "someRoomId",
-                                members = mutableSetOf(
-                                        AppserviceUser("@sms_0123456789:someServerName")
+                                members = mutableMapOf(
+                                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1)
                                 )
                         )
                 )
-        )
-        every { smsRoomServiceMock.getBridgedSmsRoom(any(), any()) }.returns(
-                Mono.just(mockk<SmsRoom> { every { mappingToken } returns 1 })
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
         every { smsBridgePropertiesMock.templates.sendSmsError }.returns("sendSmsError")

@@ -40,4 +40,14 @@ class SmsMatrixAppserviceUserService(
         return appserviceUserRepository.save(AppserviceUser(userId))
                 .then()
     }
+
+    // FIXME test
+    fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {
+        return appserviceUserRepository.findById(userId)
+                .map { user ->
+                    user.rooms.entries
+                            .find { it.value.mappingToken == mappingToken }
+                            ?.key?.roomId
+                }
+    }
 }

@@ -1,7 +1,6 @@
-package net.folivo.matrix.bridge.sms.mapping
+package net.folivo.matrix.bridge.sms.user
 
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
-import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -20,7 +19,7 @@ import reactor.test.StepVerifier
 
 @ReactiveDataNeo4jTest(excludeAutoConfiguration = [Neo4jTestHarnessAutoConfiguration::class])
 @Testcontainers
-class SmsRoomRepositoryIT {
+class AppserviceUserRepositoryIT {
 
     companion object {
         @Container

@@ -1,6 +1,6 @@
 package net.folivo.matrix.bridge.sms.provider.gammu
 
-import net.folivo.matrix.bridge.sms.mapping.ReceiveSmsService
+import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException

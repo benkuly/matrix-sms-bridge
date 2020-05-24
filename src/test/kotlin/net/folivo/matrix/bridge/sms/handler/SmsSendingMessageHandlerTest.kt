@@ -9,7 +9,6 @@ import io.mockk.mockk
 import io.mockk.verify
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.mapping.SendSmsService
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

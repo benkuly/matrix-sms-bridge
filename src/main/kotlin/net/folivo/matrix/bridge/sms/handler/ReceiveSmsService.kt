@@ -1,7 +1,8 @@
-package net.folivo.matrix.bridge.sms.mapping
+package net.folivo.matrix.bridge.sms.handler
 
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -16,7 +17,7 @@ import reactor.core.publisher.Mono
 @Service
 class ReceiveSmsService(
         private val matrixClient: MatrixClient,
-        private val smsRoomRepository: SmsRoomRepository,
+        private val userService: SmsMatrixAppserviceUserService,
         private val matrixBotProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
 ) {
@@ -53,10 +54,13 @@ class ReceiveSmsService(
         }
         return Mono.zip(userIdMono, mappingTokenMono)
                 .flatMap {
-                    smsRoomRepository.findByMappingTokenAndUserUserId(userId = it.t1, mappingToken = it.t2)
+                    userService.getRoomId(
+                            userId = it.t1,
+                            mappingToken = it.t2
+                    ).zipWith(Mono.just(it.t1))
                 }.flatMap {
-                    val roomId = it.bridgedRoom.roomId
-                    val userId = it.user.userId
+                    val roomId = it.t1
+                    val userId = it.t2
                     logger.debug("receive SMS from $sender to $roomId")
                     matrixClient.roomsApi.sendRoomEvent(roomId, TextMessageEventContent(body), asUserId = userId)
                             .doOnError { logger.error("could not send SMS message to room $roomId as user $userId") }

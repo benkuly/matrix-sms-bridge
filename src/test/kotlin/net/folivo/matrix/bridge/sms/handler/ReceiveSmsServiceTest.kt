@@ -1,4 +1,4 @@
-package net.folivo.matrix.bridge.sms.mapping
+package net.folivo.matrix.bridge.sms.handler
 
 import io.mockk.Called
 import io.mockk.every
@@ -8,8 +8,7 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.room.AppserviceRoom
-import net.folivo.matrix.bridge.sms.user.AppserviceUser
+import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -22,13 +21,13 @@ import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
 
 @ExtendWith(MockKExtension::class)
-class ReceiveSmsServiceTest() {
+class ReceiveSmsServiceTest {
 
     @MockK
     lateinit var matrixClientMock: MatrixClient
 
     @MockK
-    lateinit var smsRoomRepositoryMock: SmsRoomRepository
+    lateinit var userServiceMock: SmsMatrixAppserviceUserService
 
     @MockK(relaxed = true)
     lateinit var matrixBotPropertiesMock: MatrixBotProperties
@@ -48,17 +47,8 @@ class ReceiveSmsServiceTest() {
     fun `should receive with mapping token to matrix room`() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
-        every { smsRoomRepositoryMock.findByMappingTokenAndUserUserId(123, "@sms_0123456789:someServerName") }
-                .returns(
-                        Mono.just(
-                                SmsRoom(
-                                        123,
-                                        AppserviceUser("@sms_0123456789:someServerName"),
-                                        AppserviceRoom("someRoomId")
-
-                                )
-                        )
-                )
+        every { userServiceMock.getRoomId("@sms_0123456789:someServerName", 123) }
+                .returns(Mono.just("someRoomId"))
         StepVerifier
                 .create(cut.receiveSms("#123someBody", "+0123456789"))
                 .verifyComplete()
@@ -79,7 +69,7 @@ class ReceiveSmsServiceTest() {
                 .returns(Mono.just("someEventId"))
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns("someMissingTokenWithDefaultRoom")
-        every { smsRoomRepositoryMock.findByMappingTokenAndUserUserId(123, "@sms_0123456789:someServerName") }
+        every { userServiceMock.getRoomId("@sms_0123456789:someServerName", 123) }
                 .returns(Mono.empty())
         every { smsBridgePropertiesMock.templates.defaultRoomIncomingMessage }.returns("{sender}: {body}")
 
@@ -124,7 +114,7 @@ class ReceiveSmsServiceTest() {
                 .returns(Mono.just("someEventId"))
         every { smsBridgePropertiesMock.defaultRoomId }.returns(null)
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithoutDefaultRoom }.returns("someMissingTokenWithoutDefaultRoom")
-        every { smsRoomRepositoryMock.findByMappingTokenAndUserUserId(123, "@sms_0123456789:someServerName") }
+        every { userServiceMock.getRoomId("@sms_0123456789:someServerName", 123) }
                 .returns(Mono.empty())
         StepVerifier
                 .create(cut.receiveSms("#123someBody", "+0123456789"))

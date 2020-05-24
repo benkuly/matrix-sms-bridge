@@ -6,10 +6,11 @@ import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import io.mockk.verifyOrder
-import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.*
+import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
+import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -32,38 +33,7 @@ class SmsMatrixAppserviceRoomServiceTest {
     lateinit var cut: SmsMatrixAppserviceRoomService
 
     @Test
-    fun `roomExistingState should be EXISTS when room is in database`() {
-        every { appserviceRoomRepositoryMock.findByRoomAlias("someRoomAlias") }
-                .returns(Mono.just(AppserviceRoom("someRoomId", "someRoomAlias")))
-
-        StepVerifier
-                .create(cut.roomExistingState("someRoomAlias"))
-                .assertNext { assertThat(it).isEqualTo(EXISTS) }
-                .verifyComplete()
-    }
-
-    @Test
-    fun `roomExistingState should be CAN_BE_CREATED when creation is allowed`() {
-        every { appserviceRoomRepositoryMock.findByRoomAlias("someRoomAlias") }
-                .returns(Mono.empty())
-
-        every { matrixAppserviceServiceHelperMock.shouldCreateRoom("someRoomAlias") }
-                .returns(Mono.just(true))
-
-        StepVerifier
-                .create(cut.roomExistingState("someRoomAlias"))
-                .assertNext { assertThat(it).isEqualTo(CAN_BE_CREATED) }
-                .verifyComplete()
-    }
-
-    @Test
-    fun `roomExistingState should be DOES_NOT_EXISTS when creation is not allowed`() {
-        every { appserviceRoomRepositoryMock.findByRoomAlias("someRoomAlias") }
-                .returns(Mono.empty())
-
-        every { matrixAppserviceServiceHelperMock.shouldCreateRoom("someRoomAlias") }
-                .returns(Mono.just(false))
-
+    fun `roomExistingState should be DOES_NOT_EXIST when room is in database`() {
         StepVerifier
                 .create(cut.roomExistingState("someRoomAlias"))
                 .assertNext { assertThat(it).isEqualTo(DOES_NOT_EXISTS) }
@@ -128,7 +98,11 @@ class SmsMatrixAppserviceRoomServiceTest {
     fun `should save user room leave in database`() {
         val room1 = AppserviceRoom("someRoomId1")
         val room2 = AppserviceRoom("someRoomId2")
-        val user = AppserviceUser("someUserId", mutableSetOf(room1, room2))
+        val user = AppserviceUser(
+                "someUserId", mutableMapOf(
+                room1 to MemberOfProperties(1), room2 to MemberOfProperties(1)
+        )
+        )
         every { appserviceUserRepositoryMock.findById("someUserId") }.returns(Mono.just(user))
         every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }.returns(Mono.just(user))
 

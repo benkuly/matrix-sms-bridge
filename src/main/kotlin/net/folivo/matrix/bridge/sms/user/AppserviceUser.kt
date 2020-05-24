@@ -14,5 +14,5 @@ data class AppserviceUser(
         val userId: String,
 
         @Relationship(type = "MEMBER_OF", direction = OUTGOING)
-        val rooms: MutableSet<AppserviceRoom> = HashSet()
+        val rooms: MutableMap<AppserviceRoom, MemberOfProperties> = HashMap()
 )
