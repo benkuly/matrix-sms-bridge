@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     base
-    id("org.springframework.boot") version "2.2.7.RELEASE"
+    id("org.springframework.boot") version "2.3.0.RELEASE"
     id("io.spring.dependency-management") version "1.0.9.RELEASE"
     kotlin("jvm") version "1.3.72"
     kotlin("kapt") version "1.3.72"
@@ -14,7 +14,7 @@ allprojects {
     apply(plugin = "kotlin")
 
     group = "net.folivo"
-    version = "0.1.4.RELEASE"
+    version = "0.1.5.RELEASE"
     java.sourceCompatibility = JavaVersion.VERSION_11
 
     repositories {
@@ -30,7 +30,7 @@ dependencies {
 
     api("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-starter:1.0.1")
 
-    implementation("net.folivo:matrix-spring-boot-bot:0.2.0.RELEASE")
+    implementation("net.folivo:matrix-spring-boot-bot:0.2.1.RELEASE")
 
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
