@@ -19,6 +19,8 @@ COPY src/main/resources/application.yml /config-default/application.yml
 
 COPY src/main/docker/gammu/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+RUN mkdir -p /var/log/supervisor
+
 EXPOSE 8080
 ARG JAR_FILE
 COPY ${JAR_FILE} app.jar
