@@ -3,8 +3,10 @@ package net.folivo.matrix.bridge.sms.user
 import net.folivo.matrix.appservice.api.user.CreateUserParameter
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
+import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 
+@Service
 class SmsMatrixAppserviceUserService(
         private val helper: MatrixAppserviceServiceHelper,
         private val appserviceUserRepository: AppserviceUserRepository
@@ -44,10 +46,11 @@ class SmsMatrixAppserviceUserService(
     // FIXME test
     fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {
         return appserviceUserRepository.findById(userId)
-                .map { user ->
-                    user.rooms.entries
-                            .find { it.value.mappingToken == mappingToken }
-                            ?.key?.roomId
+                .flatMap { user ->
+                    Mono.justOrEmpty(
+                            user.rooms.entries
+                                    .find { it.value.mappingToken == mappingToken }
+                                    ?.key?.roomId)
                 }
     }
 }

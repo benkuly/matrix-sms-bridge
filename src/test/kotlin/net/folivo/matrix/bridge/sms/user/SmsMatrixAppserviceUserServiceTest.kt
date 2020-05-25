@@ -7,6 +7,7 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState.*
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
+import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -82,6 +83,33 @@ class SmsMatrixAppserviceUserServiceTest {
         StepVerifier
                 .create(cut.getCreateUserParameter("@sms_1234567:someServer"))
                 .assertNext { assertThat(it.displayName).isEqualTo("+1234567 (SMS)") }
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should get roomId`() {
+        every { appserviceUserRepositoryMock.findById("someUserId") }
+                .returns(
+                        Mono.just(
+                                AppserviceUser(
+                                        "someUserId", mutableMapOf(
+                                        AppserviceRoom("someRoomId") to MemberOfProperties(24)
+                                )
+                                )
+                        )
+                )
+        StepVerifier
+                .create(cut.getRoomId("someUserId", 24))
+                .assertNext { assertThat(it).isEqualTo("someRoomId") }
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should not get roomId`() {
+        every { appserviceUserRepositoryMock.findById("someUserId") }
+                .returns(Mono.just(AppserviceUser("someUserId", mutableMapOf())))
+        StepVerifier
+                .create(cut.getRoomId("someUserId", 24))
                 .verifyComplete()
     }
 }

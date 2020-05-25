@@ -38,7 +38,7 @@ class SmsMatrixAppserviceRoomServiceTest {
 
     @Test
     fun `should save room in database`() {
-        val room = AppserviceRoom("someRoomId", "someRoomAlias")
+        val room = AppserviceRoom("someRoomId")
         every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }
                 .returns(Mono.just(room))
 
@@ -51,7 +51,7 @@ class SmsMatrixAppserviceRoomServiceTest {
 
     @Test
     fun `should save user join to room in database`() {
-        val room = AppserviceRoom("someRoomId", "someRoomAlias")
+        val room = AppserviceRoom("someRoomId")
         val user = AppserviceUser("someUserId")
         every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
         every { appserviceUserRepositoryMock.findById("someUserId") }.returns(Mono.just(user))

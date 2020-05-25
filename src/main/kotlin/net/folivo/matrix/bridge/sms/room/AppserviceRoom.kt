@@ -14,9 +14,6 @@ data class AppserviceRoom(
         @Property("roomId")
         val roomId: String,
 
-        @Property("roomAlias")
-        val roomAlias: String? = null,
-
         @Relationship(type = "MEMBER_OF", direction = INCOMING)
         val members: MutableMap<AppserviceUser, MemberOfProperties> = HashMap()
 )

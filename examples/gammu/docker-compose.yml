@@ -7,6 +7,9 @@ services:
         source: ./config
         target: /config
       - type: bind
+        source: ./config/gammu-smsdrc
+        target: /etc/gammu-smsdrc
+      - type: bind
         source: ./data
         target: /data
       #devices:

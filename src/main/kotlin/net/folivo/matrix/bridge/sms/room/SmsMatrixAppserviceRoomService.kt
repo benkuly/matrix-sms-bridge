@@ -7,7 +7,10 @@ import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExi
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
+import org.neo4j.springframework.data.repository.config.ReactiveNeo4jRepositoryConfigurationExtension
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Mono
 
 @Service
@@ -15,6 +18,8 @@ class SmsMatrixAppserviceRoomService(
         private val appserviceRoomRepository: AppserviceRoomRepository,
         private val appserviceUserRepository: AppserviceUserRepository
 ) : MatrixAppserviceRoomService {
+
+    private val logger = LoggerFactory.getLogger(SmsMatrixAppserviceRoomService::class.java)
 
     override fun roomExistingState(roomAlias: String): Mono<RoomExistingState> {
         return Mono.just(DOES_NOT_EXISTS)
@@ -25,36 +30,40 @@ class SmsMatrixAppserviceRoomService(
     }
 
     override fun saveRoom(roomAlias: String, roomId: String): Mono<Void> {
-        return appserviceRoomRepository.save(AppserviceRoom(roomId, roomAlias))
-                .then()
+        return Mono.empty()
     }
 
+    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun saveRoomJoin(roomId: String, userId: String): Mono<Void> {
-        return appserviceRoomRepository.findById(roomId)
-                .switchIfEmpty(appserviceRoomRepository.save(AppserviceRoom(roomId)))
-                .flatMap {
-                    Mono.zip(
-                            Mono.just(it),
-                            appserviceUserRepository.findById(userId)
-                                    .switchIfEmpty(Mono.just(AppserviceUser(userId))),
-                            appserviceUserRepository.findLastMappingTokenByUserId(userId)
-                                    .switchIfEmpty(Mono.just(0))
-                    )
-                }.flatMap {
-                    val room = it.t1
-                    val user = it.t2
-                    val mappingToken = it.t3 + 1
-                    user.rooms[room] = MemberOfProperties(mappingToken)
-                    appserviceUserRepository.save(user)
-                }.then()
+        logger.debug("saveRoomJoin in room $roomId of user $userId")
+        return Mono.zip(
+                appserviceRoomRepository.findById(roomId)
+                        .switchIfEmpty(appserviceRoomRepository.save(AppserviceRoom(roomId))),
+                appserviceUserRepository.findById(userId)
+                        .switchIfEmpty(Mono.just(AppserviceUser(userId))),
+                appserviceUserRepository.findLastMappingTokenByUserId(userId)
+                        .switchIfEmpty(Mono.just(0))
+        ).flatMap {
+            val room = it.t1
+            val user = it.t2
+            val mappingToken = it.t3 + 1
+            user.rooms[room] = MemberOfProperties(mappingToken)
+            appserviceUserRepository.save(user)
+        }.then()
     }
 
+    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun saveRoomLeave(roomId: String, userId: String): Mono<Void> {
+        logger.debug("saveRoomLeave in room $roomId of user $userId")
         return appserviceUserRepository.findById(userId)
                 .flatMap { user ->
                     val room = user.rooms.keys.find { it.roomId == roomId }
-                    user.rooms.remove(room)
-                    appserviceUserRepository.save(user)
+                    if (room != null) {
+                        user.rooms.remove(room)
+                        appserviceUserRepository.save(user)
+                    } else {
+                        Mono.empty()
+                    }
                 }.then()
     }
 }
