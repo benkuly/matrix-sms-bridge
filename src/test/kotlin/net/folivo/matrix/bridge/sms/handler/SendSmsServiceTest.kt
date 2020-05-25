@@ -10,7 +10,6 @@ import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
@@ -25,9 +24,6 @@ class SendSmsServiceTest {
 
     @MockK
     lateinit var appserviceRoomRepositoryMock: AppserviceRoomRepository
-
-    @MockK
-    lateinit var roomServiceMock: SmsMatrixAppserviceRoomService
 
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties

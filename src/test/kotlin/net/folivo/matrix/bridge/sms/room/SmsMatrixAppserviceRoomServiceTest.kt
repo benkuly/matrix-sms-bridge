@@ -7,7 +7,6 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import io.mockk.verifyOrder
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
-import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
@@ -19,9 +18,6 @@ import reactor.test.StepVerifier
 
 @ExtendWith(MockKExtension::class)
 class SmsMatrixAppserviceRoomServiceTest {
-
-    @MockK
-    lateinit var matrixAppserviceServiceHelperMock: MatrixAppserviceServiceHelper
 
     @MockK
     lateinit var appserviceRoomRepositoryMock: AppserviceRoomRepository
@@ -59,17 +55,21 @@ class SmsMatrixAppserviceRoomServiceTest {
         val user = AppserviceUser("someUserId")
         every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
         every { appserviceUserRepositoryMock.findById("someUserId") }.returns(Mono.just(user))
+        every { appserviceUserRepositoryMock.findLastMappingTokenByUserId("someUserId") }.returns(Mono.just(23))
         every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
         every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }.returns(Mono.just(user))
-
-        every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }
-                .returns(Mono.just(room))
+        every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
 
         StepVerifier
                 .create(cut.saveRoomJoin("someRoomId", "someUserId"))
                 .verifyComplete()
 
-        verify { appserviceUserRepositoryMock.save<AppserviceUser>(match { it.rooms.contains(room) }) }
+        verify {
+            appserviceUserRepositoryMock.save<AppserviceUser>(match {
+                it.rooms.contains(room)
+                && it.rooms.containsValue(MemberOfProperties(24))
+            })
+        }
     }
 
     @Test
@@ -78,8 +78,10 @@ class SmsMatrixAppserviceRoomServiceTest {
         val user = AppserviceUser("someUserId")
         every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.empty())
         every { appserviceUserRepositoryMock.findById("someUserId") }.returns(Mono.empty())
+        every { appserviceUserRepositoryMock.findLastMappingTokenByUserId("someUserId") }.returns(Mono.empty())
         every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
         every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }.returns(Mono.just(user))
+
 
         every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }
                 .returns(Mono.just(room))
@@ -90,7 +92,10 @@ class SmsMatrixAppserviceRoomServiceTest {
 
         verifyOrder {
             appserviceRoomRepositoryMock.save<AppserviceRoom>(room)
-            appserviceUserRepositoryMock.save<AppserviceUser>(match { it.rooms.contains(room) })
+            appserviceUserRepositoryMock.save<AppserviceUser>(match {
+                it.rooms.containsKey(room)
+                && it.rooms.containsValue(MemberOfProperties(1))
+            })
         }
     }
 

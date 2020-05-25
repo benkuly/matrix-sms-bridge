@@ -19,6 +19,7 @@ class AutoJoinCustomizerTest {
         StepVerifier
                 .create(cut.shouldJoin("someRoomId", "someUserId", true))
                 .assertNext { assertThat(it).isFalse() }
+                .verifyComplete()
     }
 
     @Test
@@ -26,6 +27,7 @@ class AutoJoinCustomizerTest {
         StepVerifier
                 .create(cut.shouldJoin("defaultRoomId", "someUserId", true))
                 .assertNext { assertThat(it).isTrue() }
+                .verifyComplete()
     }
 
     @Test
@@ -33,5 +35,6 @@ class AutoJoinCustomizerTest {
         StepVerifier
                 .create(cut.shouldJoin("someRoomId", "someUserId", false))
                 .assertNext { assertThat(it).isTrue() }
+                .verifyComplete()
     }
 }

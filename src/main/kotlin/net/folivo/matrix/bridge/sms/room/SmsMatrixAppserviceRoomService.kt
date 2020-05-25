@@ -49,7 +49,6 @@ class SmsMatrixAppserviceRoomService(
                 }.then()
     }
 
-    //FIXME test
     override fun saveRoomLeave(roomId: String, userId: String): Mono<Void> {
         return appserviceUserRepository.findById(userId)
                 .flatMap { user ->

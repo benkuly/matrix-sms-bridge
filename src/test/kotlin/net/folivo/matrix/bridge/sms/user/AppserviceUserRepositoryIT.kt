@@ -36,7 +36,7 @@ class AppserviceUserRepositoryIT {
 
 
     @Autowired
-    lateinit var cut: SmsRoomRepository
+    lateinit var cut: AppserviceUserRepository
 
     @Autowired
     lateinit var reactiveNeo4jClient: ReactiveNeo4jClient
@@ -49,27 +49,42 @@ class AppserviceUserRepositoryIT {
     lateinit var room2: AppserviceRoom
     lateinit var user1: AppserviceUser
     lateinit var user2: AppserviceUser
+    lateinit var user3: AppserviceUser
 
 
     @BeforeEach
     fun beforeEach() {
         template.deleteAll(AppserviceRoom::class.java).block()
         template.deleteAll(AppserviceUser::class.java).block()
-        template.deleteAll(SmsRoom::class.java).block()
 
         room1 = template.save(AppserviceRoom("someRoomId1")).block() ?: throw RuntimeException()
         room2 = template.save(AppserviceRoom("someRoomId2")).block() ?: throw RuntimeException()
 
-        user1 = template.save(AppserviceUser("someUserId1", mutableSetOf(room1, room2))).block()
+        user1 = template.save(
+                AppserviceUser(
+                        "someUserId1", mutableMapOf(
+                        room1 to MemberOfProperties(1), room2 to MemberOfProperties(24)
+                )
+                )
+        ).block()
                 ?: throw RuntimeException()
-        user2 = template.save(AppserviceUser("someUserId2", mutableSetOf(room1))).block() ?: throw RuntimeException()
+        user2 = template.save(
+                AppserviceUser(
+                        "someUserId2",
+                        mutableMapOf(room1 to MemberOfProperties(1))
+                )
+        ).block()
+                ?: throw RuntimeException()
+        user3 = template.save(
+                AppserviceUser(
+                        "someUserId3"
+                )
+        ).block()
+                ?: throw RuntimeException()
     }
 
     @Test
     fun `should findLastMappingTokenByUserId`() {
-        cut.save(SmsRoom(1, user1, room1)).block()
-        cut.save(SmsRoom(24, user1, room2)).block()
-
         StepVerifier
                 .create(cut.findLastMappingTokenByUserId("someUserId1"))
                 .assertNext { assertThat(it).isEqualTo(24) }
@@ -77,55 +92,16 @@ class AppserviceUserRepositoryIT {
     }
 
     @Test
-    fun `should not findLastMappingTokenByUserId`() {
-        cut.save(SmsRoom(1, user1, room1)).block()
+    fun `should not findLastMappingTokenByUserId when user not in room`() {
+        StepVerifier
+                .create(cut.findLastMappingTokenByUserId("someUserId3"))
+                .verifyComplete()
+    }
 
+    @Test
+    fun `should not findLastMappingTokenByUserId when user does not exist`() {
         StepVerifier
                 .create(cut.findLastMappingTokenByUserId("notExistingUserId"))
-                .verifyComplete()
-    }
-
-    @Test
-    fun `should findByBridgedRoomRoomIdAndUserUserId`() {
-        val expectedResult = cut.save(SmsRoom(4, user1, room1)).block() ?: throw RuntimeException()
-        cut.save(SmsRoom(24, user2, room2)).block()
-        StepVerifier
-                .create(cut.findByBridgedRoomRoomIdAndUserUserId("someRoomId1", "someUserId1"))
-                .assertNext {
-                    assertThat(it.mappingToken).isEqualTo(expectedResult.mappingToken)
-                    assertThat(it.user.userId).isEqualTo(expectedResult.user.userId)
-                    assertThat(it.bridgedRoom.roomId).isEqualTo(expectedResult.bridgedRoom.roomId)
-                }
-                .verifyComplete()
-    }
-
-    @Test
-    fun `should not findByBridgedRoomRoomIdAndUserUserId`() {
-        cut.save(SmsRoom(4, user1, room1)).block()
-        StepVerifier
-                .create(cut.findByBridgedRoomRoomIdAndUserUserId("someRoomId2", "someUserId2"))
-                .verifyComplete()
-    }
-
-    @Test
-    fun `should findByMappingTokenAndUserUserId`() {
-        val expectedResult = cut.save(SmsRoom(4, user1, room1)).block() ?: throw RuntimeException()
-        cut.save(SmsRoom(24, user2, room2)).block()
-        StepVerifier
-                .create(cut.findByMappingTokenAndUserUserId(4, "someUserId1"))
-                .assertNext {
-                    assertThat(it.mappingToken).isEqualTo(expectedResult.mappingToken)
-                    assertThat(it.user.userId).isEqualTo(expectedResult.user.userId)
-                    assertThat(it.bridgedRoom.roomId).isEqualTo(expectedResult.bridgedRoom.roomId)
-                }
-                .verifyComplete()
-    }
-
-    @Test
-    fun `should not findByMappingTokenAndUserUserId`() {
-        cut.save(SmsRoom(4, user1, room1)).block()
-        StepVerifier
-                .create(cut.findByMappingTokenAndUserUserId(24, "someUserId1"))
                 .verifyComplete()
     }
 }
