@@ -136,6 +136,17 @@ class ReceiveSmsServiceTest {
     }
 
     @Test
+    fun `should not answer when empty template given`() {
+        every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
+                .returns(Mono.just("someEventId"))
+        every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
+        every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns("")
+        StepVerifier
+                .create(cut.receiveSms("#someBody", "+0123456789"))
+                .verifyComplete()
+    }
+
+    @Test
     fun `should not answer when no template missingTokenWithoutDefaultRoom given`() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))

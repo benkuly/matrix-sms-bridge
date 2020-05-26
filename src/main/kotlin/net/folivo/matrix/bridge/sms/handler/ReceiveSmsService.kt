@@ -84,6 +84,6 @@ class ReceiveSmsService(
                                         )
                                 )
                 )
-                .filter { it != NO_ANSWER }
+                .filter { it != NO_ANSWER && it.isNotEmpty() }
     }
 }

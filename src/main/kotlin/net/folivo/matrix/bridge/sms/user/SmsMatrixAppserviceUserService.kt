@@ -43,7 +43,6 @@ class SmsMatrixAppserviceUserService(
                 .then()
     }
 
-    // FIXME test
     fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {
         return appserviceUserRepository.findById(userId)
                 .flatMap { user ->
