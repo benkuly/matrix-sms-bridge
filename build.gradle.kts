@@ -14,7 +14,7 @@ allprojects {
     apply(plugin = "kotlin")
 
     group = "net.folivo"
-    version = "0.1.7.RELEASE"
+    version = "0.1.8.RELEASE"
     java.sourceCompatibility = JavaVersion.VERSION_11
 
     repositories {
@@ -30,7 +30,7 @@ dependencies {
 
     api("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-starter:1.0.1")
 
-    implementation("net.folivo:matrix-spring-boot-bot:0.2.1.RELEASE")
+    implementation("net.folivo:matrix-spring-boot-bot:0.2.2.RELEASE")
 
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
