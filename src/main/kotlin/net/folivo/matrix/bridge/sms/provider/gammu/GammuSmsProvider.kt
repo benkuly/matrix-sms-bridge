@@ -44,7 +44,7 @@ class GammuSmsProvider(
 
     @EventListener(ContextRefreshedEvent::class)
     fun startNewMessageLookupLoop() {
-        disposable = Mono.just(true) // TODO is there a less hacky way? Without that line, repeat does not call getBatchToken
+        disposable = Mono.just(true) // TODO is there a less hacky way? Without that line, repeat does not work
                 .flatMapMany { Flux.fromStream(Files.list(Path.of(properties.inboxPath))) }
                 .map { it.toFile() }
                 .flatMap { file ->
@@ -55,7 +55,7 @@ class GammuSmsProvider(
                             .filter { it.startsWith("; ") }
                             .map { it.removePrefix("; ") }
                             .collectList()
-                            .map { Pair(sender, it.joinToString()) }
+                            .map { Pair(sender, it.joinToString(separator = "")) }
                             .doOnSuccess {
                                 Files.move(file.toPath(), Path.of(properties.inboxProcessedPath, file.name))
                             }
