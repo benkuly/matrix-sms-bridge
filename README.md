@@ -1,3 +1,4 @@
+![Docker Image CI](https://github.com/benkuly/matrix-sms-bridge/workflows/Docker%20Image%20CI/badge.svg)
 # matrix-sms-bridge
 
 This is a matrix bridge, which allows you to bridge matrix rooms to SMS with one telephone number only. It is build on top of [matrix-spring-boot-sdk](https://github.com/benkuly/matrix-spring-boot-sdk) and written in kotlin.
