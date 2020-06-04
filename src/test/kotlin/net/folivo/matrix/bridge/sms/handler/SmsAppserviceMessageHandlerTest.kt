@@ -22,13 +22,13 @@ import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
 
 @ExtendWith(MockKExtension::class)
-class SmsSendingMessageHandlerTest {
+class SmsAppserviceMessageHandlerTest {
 
     @MockK
     lateinit var sendSmsServiceMock: SendSmsService
 
     @MockK
-    lateinit var smsBotHandlerMock: SmsBotHandler
+    lateinit var smsBotMessageHandlerMock: SmsBotMessageHandler
 
     @MockK
     lateinit var roomRepositoryMock: AppserviceRoomRepository
@@ -40,7 +40,7 @@ class SmsSendingMessageHandlerTest {
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
 
     @InjectMockKs
-    lateinit var cut: SmsSendingMessageHandler
+    lateinit var cut: SmsAppserviceMessageHandler
 
     @BeforeEach
     fun beforeEach() {
@@ -48,16 +48,7 @@ class SmsSendingMessageHandlerTest {
         every { botPropertiesMock.serverName } returns "someServerName"
         every { botPropertiesMock.username } returns "smsbot"
         every { sendSmsServiceMock.sendSms(any(), any(), any()) } returns Mono.empty()
-        every { smsBotHandlerMock.handleMessageToSmsBot(any(), any(), any()) } returns Mono.empty()
-        every { roomRepositoryMock.findById(any<String>()) }.returns(
-                Mono.just(mockk<AppserviceRoom> {
-                    every { members } returns mutableMapOf(
-                            mockk<AppserviceUser> {
-                                every { userId } returns "someUserId"
-                            } to MemberOfProperties(1)
-                    )
-                })
-        )
+        every { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any()) } returns Mono.empty()
     }
 
     @Test
@@ -65,43 +56,52 @@ class SmsSendingMessageHandlerTest {
         val messageContext = mockk<MessageContext>(relaxed = true)
         every { messageContext.roomId } returns "someRoomId"
         every { messageContext.originalEvent.sender } returns "someSender"
+        val roomMock1 = mockk<AppserviceRoom> {
+            every { members } returns mutableMapOf(
+                    mockk<AppserviceUser> {
+                        every { userId } returns "someUserId"
+                    } to MemberOfProperties(1)
+            )
+        }
+        val roomMock2 = mockk<AppserviceRoom> {
+            every { members } returns mutableMapOf(
+                    mockk<AppserviceUser> {
+                        every { userId } returns "@smsbot:someServerName"
+                    } to MemberOfProperties(1),
+                    mockk<AppserviceUser> {
+                        every { userId } returns "@sms_1234567890:someServerName"
+                    } to MemberOfProperties(1)
+            )
+        }
+        every { roomRepositoryMock.findById("someRoomId") }.returnsMany(
+                Mono.just(roomMock1), Mono.just(roomMock2)
+        )
 
         StepVerifier
                 .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
                 .verifyComplete()
 
-        verify { sendSmsServiceMock.sendSms("someRoomId", "someBody", "someSender") }
+        verify { sendSmsServiceMock.sendSms(roomMock1, "someBody", "someSender") }
 
         // also try when more then one member
-        every { roomRepositoryMock.findById("someRoomId") }.returns(
-                Mono.just(mockk<AppserviceRoom> {
-                    every { members } returns mutableMapOf(
-                            mockk<AppserviceUser> {
-                                every { userId } returns "@smsbot:someServerName"
-                            } to MemberOfProperties(1),
-                            mockk<AppserviceUser> {
-                                every { userId } returns "@sms_1234567890:someServerName"
-                            } to MemberOfProperties(1)
-                    )
-                })
-        )
         StepVerifier
                 .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
                 .verifyComplete()
 
-        verify { sendSmsServiceMock.sendSms("someRoomId", "someBody", "someSender") }
+        verify { sendSmsServiceMock.sendSms(roomMock2, "someBody", "someSender") }
     }
 
     @Test
     fun `should delegate to SmsBotHandler when message seems to be for bot`() {
+        val roomMock = mockk<AppserviceRoom> {
+            every { members } returns mutableMapOf(
+                    mockk<AppserviceUser> {
+                        every { userId } returns "@smsbot:someServerName"
+                    } to MemberOfProperties(1)
+            )
+        }
         every { roomRepositoryMock.findById("someRoomId") }.returns(
-                Mono.just(mockk<AppserviceRoom> {
-                    every { members } returns mutableMapOf(
-                            mockk<AppserviceUser> {
-                                every { userId } returns "@smsbot:someServerName"
-                            } to MemberOfProperties(1)
-                    )
-                })
+                Mono.just(roomMock)
         )
 
         val messageContext = mockk<MessageContext>(relaxed = true)
@@ -112,7 +112,7 @@ class SmsSendingMessageHandlerTest {
                 .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
                 .verifyComplete()
 
-        verify { smsBotHandlerMock.handleMessageToSmsBot("someRoomId", "someBody", "someSender") }
+        verify { smsBotMessageHandlerMock.handleMessageToSmsBot(roomMock, "someBody", "someSender") }
 
     }
 

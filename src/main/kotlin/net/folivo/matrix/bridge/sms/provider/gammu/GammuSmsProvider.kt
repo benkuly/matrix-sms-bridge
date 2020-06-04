@@ -34,10 +34,12 @@ class GammuSmsProvider(
         private val receiveSmsService: ReceiveSmsService
 ) : SmsProvider {
 
-    private val logger = LoggerFactory.getLogger(GammuSmsProvider::class.java)
+    companion object {
+        private val LOG = LoggerFactory.getLogger(this::class.java)
+    }
 
     init {
-        logger.info("Using Gammu as SmsProvider.")
+        LOG.info("Using Gammu as SmsProvider.")
     }
 
     private var disposable: Disposable? = null
@@ -62,8 +64,8 @@ class GammuSmsProvider(
                 }.flatMap { message ->
                     receiveSms(message.first, message.second)
                 }
-                .doOnComplete { logger.debug("read inbox") }
-                .doOnError { logger.error("something happened while scanning directories for new sms", it) }
+                .doOnComplete { LOG.debug("read inbox") }
+                .doOnError { LOG.error("something happened while scanning directories for new sms", it) }
                 .delaySubscription(Duration.ofSeconds(10))
                 .repeat()
                 .retry()
@@ -104,11 +106,11 @@ class GammuSmsProvider(
                             )
                     )
                 else {
-                    logger.debug(output)
+                    LOG.debug(output)
                     it.success()
                 }
             } catch (e: Exception) {
-                logger.error("some unhandled exception occurred during running send sms shell command", e)
+                LOG.error("some unhandled exception occurred during running send sms shell command", e)
                 it.error(
                         MatrixServerException(
                                 INTERNAL_SERVER_ERROR,

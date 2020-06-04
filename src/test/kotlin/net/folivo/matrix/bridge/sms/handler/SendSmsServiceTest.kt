@@ -9,7 +9,6 @@ import io.mockk.verifyAll
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
-import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
@@ -21,9 +20,6 @@ import reactor.test.StepVerifier
 
 @ExtendWith(MockKExtension::class)
 class SendSmsServiceTest {
-
-    @MockK
-    lateinit var appserviceRoomRepositoryMock: AppserviceRoomRepository
 
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
@@ -39,22 +35,18 @@ class SendSmsServiceTest {
 
     @Test
     fun `should send sms`() {
-        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(
-                Mono.just(
-                        AppserviceRoom(
-                                "someRoomId",
-                                members = mutableMapOf(
-                                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
-                                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
-                                )
-                        )
+        val room = AppserviceRoom(
+                "someRoomId",
+                members = mutableMapOf(
+                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
+                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
 
         StepVerifier
-                .create(cut.sendSms("someRoomId", "someBody", "someSender"))
+                .create(cut.sendSms(room, "someBody", "someSender"))
                 .verifyComplete()
 
 
@@ -66,22 +58,18 @@ class SendSmsServiceTest {
 
     @Test
     fun `should not send sms back to sender (no loop)`() {
-        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(
-                Mono.just(
-                        AppserviceRoom(
-                                "someRoomId",
-                                members = mutableMapOf(
-                                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
-                                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
-                                )
-                        )
+        val room = AppserviceRoom(
+                "someRoomId",
+                members = mutableMapOf(
+                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
+                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
 
         StepVerifier
-                .create(cut.sendSms("someRoomId", "someBody", "@sms_0123456789:someServerName"))
+                .create(cut.sendSms(room, "someBody", "@sms_0123456789:someServerName"))
                 .verifyComplete()
 
         verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", "someTemplate") }
@@ -90,22 +78,18 @@ class SendSmsServiceTest {
 
     @Test
     fun `should inject variables to template string`() {
-        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(
-                Mono.just(
-                        AppserviceRoom(
-                                "someRoomId",
-                                members = mutableMapOf(
-                                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
-                                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
-                                )
-                        )
+        val room = AppserviceRoom(
+                "someRoomId",
+                members = mutableMapOf(
+                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
+                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate {sender} {body} {token}")
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
 
         StepVerifier
-                .create(cut.sendSms("someRoomId", "someBody", "someSender"))
+                .create(cut.sendSms(room, "someBody", "someSender"))
                 .verifyComplete()
 
 
@@ -117,22 +101,18 @@ class SendSmsServiceTest {
 
     @Test
     fun `should ignore message to invalid telephone number (should never happen)`() {
-        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(
-                Mono.just(
-                        AppserviceRoom(
-                                "someRoomId",
-                                members = mutableMapOf(
-                                        AppserviceUser("@sms_0123456789-24:someServerName") to MemberOfProperties(1),
-                                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
-                                )
-                        )
+        val room = AppserviceRoom(
+                "someRoomId",
+                members = mutableMapOf(
+                        AppserviceUser("@sms_0123456789-24:someServerName") to MemberOfProperties(1),
+                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
 
         StepVerifier
-                .create(cut.sendSms("someRoomId", "someBody", "someSender"))
+                .create(cut.sendSms(room, "someBody", "someSender"))
                 .verifyComplete()
 
         verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", "someTemplate") }
@@ -143,14 +123,10 @@ class SendSmsServiceTest {
     fun `should answer with error message in room when something went wrong`() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someId"))
-        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(
-                Mono.just(
-                        AppserviceRoom(
-                                "someRoomId",
-                                members = mutableMapOf(
-                                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1)
-                                )
-                        )
+        val room = AppserviceRoom(
+                "someRoomId",
+                members = mutableMapOf(
+                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
@@ -159,7 +135,7 @@ class SendSmsServiceTest {
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.error(RuntimeException()))
 
         StepVerifier
-                .create(cut.sendSms("someRoomId", "someBody", "someSender"))
+                .create(cut.sendSms(room, "someBody", "someSender"))
                 .verifyComplete()
 
 

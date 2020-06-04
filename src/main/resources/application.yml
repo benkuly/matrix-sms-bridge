@@ -2,6 +2,7 @@ matrix:
   bot:
     mode: APPSERVICE
     username: "smsbot"
+    trackMembership: ALL
   client:
   appservice:
     namespaces:

@@ -1,5 +1,6 @@
 package net.folivo.matrix.bridge.sms.room
 
+import io.mockk.Called
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
@@ -29,7 +30,7 @@ class SmsMatrixAppserviceRoomServiceTest {
     lateinit var cut: SmsMatrixAppserviceRoomService
 
     @Test
-    fun `roomExistingState should be DOES_NOT_EXIST when room is in database`() {
+    fun `roomExistingState should always be DOES_NOT_EXIST`() {
         StepVerifier
                 .create(cut.roomExistingState("someRoomAlias"))
                 .assertNext { assertThat(it).isEqualTo(DOES_NOT_EXISTS) }
@@ -37,16 +38,12 @@ class SmsMatrixAppserviceRoomServiceTest {
     }
 
     @Test
-    fun `should save room in database`() {
-        val room = AppserviceRoom("someRoomId")
-        every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }
-                .returns(Mono.just(room))
-
+    fun `should not save room in database`() {
         StepVerifier
                 .create(cut.saveRoom("someRoomAlias", "someRoomId"))
                 .verifyComplete()
 
-        verify { appserviceRoomRepositoryMock.save(room) }
+        verify { appserviceRoomRepositoryMock wasNot Called }
     }
 
     @Test
@@ -116,5 +113,25 @@ class SmsMatrixAppserviceRoomServiceTest {
                 .verifyComplete()
 
         verify { appserviceUserRepositoryMock.save<AppserviceUser>(match { it.rooms.contains(room2) }) }
+    }
+
+    @Test
+    fun `user should be member of room`() {
+        val user = AppserviceUser("someUserId")
+        val room = AppserviceRoom("someRoomId", mutableMapOf(user to MemberOfProperties(1)))
+        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
+
+        StepVerifier.create(cut.isMemberOf("someUserId", "someRoomId"))
+                .assertNext { assertThat(it).isTrue() }
+    }
+
+    @Test
+    fun `user should not be member of room`() {
+        val user = AppserviceUser("someUserId")
+        val room = AppserviceRoom("someRoomId", mutableMapOf(user to MemberOfProperties(1)))
+        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
+
+        StepVerifier.create(cut.isMemberOf("someOtherUserId", "someRoomId"))
+                .assertNext { assertThat(it).isFalse() }
     }
 }

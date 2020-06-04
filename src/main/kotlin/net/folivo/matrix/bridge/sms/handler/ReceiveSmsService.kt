@@ -20,10 +20,9 @@ class ReceiveSmsService(
         private val smsBridgeProperties: SmsBridgeProperties
 ) {
 
-    private val logger = LoggerFactory.getLogger(ReceiveSmsService::class.java)
-
     companion object {
         const val NO_ANSWER = "NO_ANSWER"
+        private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
     fun receiveSms(body: String, sender: String): Mono<String> {
@@ -58,21 +57,21 @@ class ReceiveSmsService(
                 }.flatMap {
                     val roomId = it.t1
                     val userId = it.t2
-                    logger.debug("receive SMS from $sender to $roomId")
+                    LOG.debug("receive SMS from $sender to $roomId")
                     matrixClient.roomsApi.sendRoomEvent(roomId, TextMessageEventContent(body), asUserId = userId)
-                            .doOnError { logger.error("could not send SMS message to room $roomId as user $userId") }
+                            .doOnError { LOG.error("could not send SMS message to room $roomId as user $userId") }
                 }.flatMap { Mono.just(NO_ANSWER) }
                 .switchIfEmpty(
                         Mono.fromCallable<String> {
                             smsBridgeProperties.defaultRoomId
                         }
                                 .flatMap { defaultRoomId ->
-                                    logger.debug("receive SMS without or wrong mappingToken from $sender to default room $defaultRoomId")
+                                    LOG.debug("receive SMS without or wrong mappingToken from $sender to default room $defaultRoomId")
                                     val message = smsBridgeProperties.templates.defaultRoomIncomingMessage
                                             .replace("{sender}", sender)
                                             .replace("{body}", body)
                                     matrixClient.roomsApi.sendRoomEvent(defaultRoomId, TextMessageEventContent(message))
-                                            .doOnError { logger.error("could not send SMS message to default room $defaultRoomId as user appservice user") }
+                                            .doOnError { LOG.error("could not send SMS message to default room $defaultRoomId as user appservice user") }
                                 }
                                 .map {
                                     smsBridgeProperties.templates.answerInvalidTokenWithDefaultRoom ?: NO_ANSWER
