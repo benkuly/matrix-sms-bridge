@@ -32,6 +32,9 @@ dependencies {
 
     implementation("net.folivo:matrix-spring-boot-bot:0.2.4.RELEASE")
 
+    implementation("com.github.ajalt:clikt:2.7.1")
+    implementation("com.googlecode.libphonenumber:libphonenumber:8.12.5")
+
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 

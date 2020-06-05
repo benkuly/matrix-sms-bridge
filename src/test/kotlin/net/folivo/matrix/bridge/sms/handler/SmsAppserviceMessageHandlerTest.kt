@@ -47,8 +47,22 @@ class SmsAppserviceMessageHandlerTest {
         every { smsBridgePropertiesMock.defaultRoomId } returns "defaultRoomId"
         every { botPropertiesMock.serverName } returns "someServerName"
         every { botPropertiesMock.username } returns "smsbot"
-        every { sendSmsServiceMock.sendSms(any(), any(), any()) } returns Mono.empty()
-        every { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any()) } returns Mono.empty()
+        every {
+            sendSmsServiceMock.sendSms(
+                    any(),
+                    any(),
+                    any(),
+                    content is TextMessageEventContent
+            )
+        } returns Mono.empty()
+        every {
+            smsBotMessageHandlerMock.handleMessageToSmsBot(
+                    any(),
+                    any(),
+                    any(),
+                    context::answer
+            )
+        } returns Mono.empty()
     }
 
     @Test
@@ -81,14 +95,14 @@ class SmsAppserviceMessageHandlerTest {
                 .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
                 .verifyComplete()
 
-        verify { sendSmsServiceMock.sendSms(roomMock1, "someBody", "someSender") }
+        verify { sendSmsServiceMock.sendSms(roomMock1, "someBody", "someSender", content is TextMessageEventContent) }
 
         // also try when more then one member
         StepVerifier
                 .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
                 .verifyComplete()
 
-        verify { sendSmsServiceMock.sendSms(roomMock2, "someBody", "someSender") }
+        verify { sendSmsServiceMock.sendSms(roomMock2, "someBody", "someSender", content is TextMessageEventContent) }
     }
 
     @Test
@@ -112,7 +126,7 @@ class SmsAppserviceMessageHandlerTest {
                 .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
                 .verifyComplete()
 
-        verify { smsBotMessageHandlerMock.handleMessageToSmsBot(roomMock, "someBody", "someSender") }
+        verify { smsBotMessageHandlerMock.handleMessageToSmsBot(roomMock, "someBody", "someSender", context::answer) }
 
     }
 

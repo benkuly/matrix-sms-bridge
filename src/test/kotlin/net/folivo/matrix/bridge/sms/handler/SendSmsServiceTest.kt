@@ -46,7 +46,7 @@ class SendSmsServiceTest {
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
 
         StepVerifier
-                .create(cut.sendSms(room, "someBody", "someSender"))
+                .create(cut.sendSms(room, "someBody", "someSender", content is TextMessageEventContent))
                 .verifyComplete()
 
 
@@ -69,7 +69,14 @@ class SendSmsServiceTest {
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
 
         StepVerifier
-                .create(cut.sendSms(room, "someBody", "@sms_0123456789:someServerName"))
+                .create(
+                        cut.sendSms(
+                                room,
+                                "someBody",
+                                "@sms_0123456789:someServerName",
+                                content is TextMessageEventContent
+                        )
+                )
                 .verifyComplete()
 
         verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", "someTemplate") }
@@ -89,7 +96,7 @@ class SendSmsServiceTest {
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
 
         StepVerifier
-                .create(cut.sendSms(room, "someBody", "someSender"))
+                .create(cut.sendSms(room, "someBody", "someSender", content is TextMessageEventContent))
                 .verifyComplete()
 
 
@@ -112,7 +119,7 @@ class SendSmsServiceTest {
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
 
         StepVerifier
-                .create(cut.sendSms(room, "someBody", "someSender"))
+                .create(cut.sendSms(room, "someBody", "someSender", content is TextMessageEventContent))
                 .verifyComplete()
 
         verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", "someTemplate") }
@@ -135,7 +142,7 @@ class SendSmsServiceTest {
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.error(RuntimeException()))
 
         StepVerifier
-                .create(cut.sendSms(room, "someBody", "someSender"))
+                .create(cut.sendSms(room, "someBody", "someSender", content is TextMessageEventContent))
                 .verifyComplete()
 
 

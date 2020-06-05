@@ -6,6 +6,7 @@ import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
 import net.folivo.matrix.core.model.events.m.room.message.MessageEvent.MessageEventContent
+import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
@@ -33,22 +34,24 @@ class SmsAppserviceMessageHandler(
             roomRepository.findById(roomId)
                     // FIXME switch if empty?
                     .flatMap { room ->
-                        if (room.members.let {
-                                    it.size == 1
-                                    && it.keys.first().userId == "@${botProperties.username}:${botProperties.serverName}"
-                                }) {
+                        //FIXME test changes
+                        if (room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } != null) {
                             smsBotMessageHandler.handleMessageToSmsBot(
                                     room = room,
                                     body = content.body,
-                                    sender = context.originalEvent.sender
+                                    sender = context.originalEvent.sender,
+                                    context = context
                             )
                         } else {
                             sendSmsService.sendSms(
                                     room = room,
                                     body = content.body,
-                                    sender = context.originalEvent.sender
+                                    sender = context.originalEvent.sender,
+                                    context = context,
+                                    isTextMessage = content is TextMessageEventContent
                             )
                         }
+
                     }
         }
     }
