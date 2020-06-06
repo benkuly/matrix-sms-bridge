@@ -6,14 +6,13 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.google.i18n.phonenumbers.NumberParseException
 import com.google.i18n.phonenumbers.PhoneNumberUtil
-import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 
 // FIXME test
 class SendSmsCommand(
-        private val sendSmsService: SendSmsService,
+        private val roomService: SmsMatrixAppserviceRoomService,
         private val sender: String,
-        private val messageContext: MessageContext,
         private val smsBridgeProperties: SmsBridgeProperties
 ) : CliktCommand(name = "send") {
 
@@ -31,7 +30,7 @@ class SendSmsCommand(
             val receiverNumber = phoneNumberUtil
                     .parse(telephonNumber, smsBridgeProperties.defaultRegion)
                     .let { it.countryCode + it.nationalNumber }
-            val answer = sendSmsService.createRoomAndSendSms(
+            val answer = roomService.createRoomAndSendMessage(
                     body = body,
                     sender = sender,
                     receiverNumber = receiverNumber,
