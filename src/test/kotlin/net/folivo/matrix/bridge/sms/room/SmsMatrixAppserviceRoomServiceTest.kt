@@ -8,10 +8,14 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import io.mockk.verifyOrder
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
+import net.folivo.matrix.bot.config.MatrixBotProperties
+import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
+import net.folivo.matrix.restclient.MatrixClient
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import reactor.core.publisher.Mono
@@ -26,8 +30,22 @@ class SmsMatrixAppserviceRoomServiceTest {
     @MockK
     lateinit var appserviceUserRepositoryMock: AppserviceUserRepository
 
+    @MockK
+    lateinit var matrixClient: MatrixClient
+
+    @MockK
+    lateinit var botProperties: MatrixBotProperties
+
+    @MockK
+    lateinit var smsBridgeProperties: SmsBridgeProperties
+
     @InjectMockKs
     lateinit var cut: SmsMatrixAppserviceRoomService
+
+    @BeforeEach
+    fun beforeEach() {
+
+    }
 
     @Test
     fun `roomExistingState should always be DOES_NOT_EXIST`() {

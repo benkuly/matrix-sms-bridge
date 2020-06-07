@@ -34,6 +34,15 @@ class SmsAppserviceMessageHandler(
             roomRepository.findById(roomId)
                     // FIXME switch if empty?
                     .flatMap { room ->
+                        sendSmsService.sendSms(
+                                room = room,
+                                body = content.body,
+                                sender = context.originalEvent.sender,
+                                context = context,
+                                isTextMessage = content is TextMessageEventContent
+                        ).thenReturn(room)
+                    }
+                    .flatMap { room ->
                         //FIXME test changes
                         if (room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } != null) {
                             smsBotMessageHandler.handleMessageToSmsBot(
@@ -43,15 +52,8 @@ class SmsAppserviceMessageHandler(
                                     context = context
                             )
                         } else {
-                            sendSmsService.sendSms(
-                                    room = room,
-                                    body = content.body,
-                                    sender = context.originalEvent.sender,
-                                    context = context,
-                                    isTextMessage = content is TextMessageEventContent
-                            )
+                            Mono.empty()
                         }
-
                     }
         }
     }

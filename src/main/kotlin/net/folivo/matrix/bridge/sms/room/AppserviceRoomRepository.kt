@@ -6,5 +6,5 @@ import reactor.core.publisher.Flux
 
 @Repository
 interface AppserviceRoomRepository : ReactiveCrudRepository<AppserviceRoom, String> {
-    fun findByMembersKeyUserIdContaining(members: List<String>): Flux<AppserviceRoom>
+    fun findByMembersUserIdContaining(members: List<String>): Flux<AppserviceRoom>
 }

@@ -6,6 +6,8 @@ import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExi
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService.RoomCreationMode.ALWAYS
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService.RoomCreationMode.AUTO
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
@@ -88,28 +90,31 @@ class SmsMatrixAppserviceRoomService(
                 }
     }
 
+    enum class RoomCreationMode {
+        AUTO, ALWAYS, NO
+    }
+
     // FIXME test
     @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun createRoomAndSendMessage(
             body: String,
             sender: String,
-            receiverNumber: Long,
+            receiverNumbers: List<String>,
             roomName: String?,
-            createNewRoom: Boolean,
-            disableAutomaticRoomCreation: Boolean
+            roomCreationMode: RoomCreationMode
     ): Mono<String> {
-        val receiverId = "@sms_$receiverNumber:${botProperties.serverName}"
-        val members = listOf(sender, receiverId)
-        return roomRepository.findByMembersKeyUserIdContaining(members)
+        val receiverIds = receiverNumbers.map { "@sms_$it:${botProperties.serverName}" }
+        val members = listOf(sender, *receiverIds.toTypedArray())
+        return roomRepository.findByMembersUserIdContaining(members)
                 .limitRequest(2)
                 .collectList()
                 .flatMap { rooms ->
-                    if (rooms.size == 0 && !disableAutomaticRoomCreation || createNewRoom) {
+                    if (rooms.size == 0 && roomCreationMode == AUTO || roomCreationMode == ALWAYS) {
                         matrixClient.roomsApi.createRoom(name = roomName, invite = members)
                                 .delayUntil { roomId ->
                                     matrixClient.roomsApi.getJoinedMembers(roomId)
                                             .flatMap {
-                                                if (it.joined.keys.contains(receiverId)) {
+                                                if (it.joined.keys.containsAll(receiverIds)) {
                                                     Mono.just(roomId)
                                                 } else {
                                                     Mono.error(
@@ -117,7 +122,7 @@ class SmsMatrixAppserviceRoomService(
                                                                     NOT_FOUND,
                                                                     ErrorResponse(
                                                                             "NET_FOLIVO.NOT_FOUND",
-                                                                            "Receiver $receiverId didn't join the room $roomId yet."
+                                                                            "Some of receivers didn't join the room $roomId."
                                                                     )
                                                             )
                                                     )
@@ -148,6 +153,6 @@ class SmsMatrixAppserviceRoomService(
                     } else {
                         Mono.just(smsBridgeProperties.templates.botSmsSendNoSendMessage)
                     }
-                }
+                }.map { it.replace("{receiverNumbers}", receiverNumbers.joinToString()) }
     }
 }

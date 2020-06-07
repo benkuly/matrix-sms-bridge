@@ -28,7 +28,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    api("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-starter:1.0.1")
+    api("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-starter:1.1.0")
 
     implementation("net.folivo:matrix-spring-boot-bot:0.2.4.RELEASE")
 
@@ -69,37 +69,6 @@ tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs = listOf("-Xjsr305=strict")
         jvmTarget = "11"
-    }
-}
-
-tasks {
-    register<Exec>("createTestInfra") {
-        workingDir = File("src/main/podman/")
-        group = "infrastructure"
-        commandLine("podman", "play", "kube", "testInfra.yaml")
-    }
-    register<Exec>("restartTestInfra") {
-        workingDir = File("src/main/podman/")
-        group = "infrastructure"
-        doFirst {
-            exec {
-                isIgnoreExitValue = true
-                commandLine("podman", "pod", "stop", "matrix-spring-boot-bot-examples")
-            }
-            exec {
-                isIgnoreExitValue = true
-                commandLine("podman", "pod", "rm", "matrix-spring-boot-bot-examples", "-f")
-            }
-        }
-        commandLine("podman", "play", "kube", "testInfra.yaml")
-    }
-    register<Exec>("startTestInfra") {
-        group = "infrastructure"
-        commandLine("podman", "pod", "start", "matrix-spring-boot-bot-examples")
-    }
-    register<Exec>("stopTestInfra") {
-        group = "infrastructure"
-        commandLine("podman", "pod", "stop", "matrix-spring-boot-bot-examples")
     }
 }
 

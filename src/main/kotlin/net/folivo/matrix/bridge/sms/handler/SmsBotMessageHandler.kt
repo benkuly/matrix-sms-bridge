@@ -29,17 +29,19 @@ class SmsBotMessageHandler(
             context: MessageContext
     ): Mono<Void> {
         LOG.info("currently SmsBotHandler is not implemented. from: $sender room: ${room.roomId} message: $body")
-        return if (room.members.size > 2) {
-            context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botTooManyMembers)).then()
-        } else if (body.startsWith("sms")) {
-            val args = body.split("\\s+".toRegex())
+        return if (body.startsWith("sms")) {
+            if (room.members.size > 2) {
+                context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botTooManyMembers)).then()
+            } else {
+                val args = body.split("\\s+".toRegex()) // FIXME not working with sms text!
 
-            Mono.fromCallable {
-                SmsCommand()
-                        .context { console = SmsBotConsole(context) }
-                        .subcommands(SendSmsCommand(roomService, sender, smsBridgeProperties))
-                        .main(args)
-            }.subscribeOn(Schedulers.boundedElastic()).then()
+                Mono.fromCallable {
+                    SmsCommand()
+                            .context { console = SmsBotConsole(context) }
+                            .subcommands(SendSmsCommand(sender, roomService, smsBridgeProperties))
+                            .main(args)
+                }.subscribeOn(Schedulers.boundedElastic()).then()
+            }
         } else {
             context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botHelp)).then()
         }

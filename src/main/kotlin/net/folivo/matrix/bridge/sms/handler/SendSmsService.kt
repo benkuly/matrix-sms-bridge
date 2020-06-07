@@ -38,7 +38,7 @@ class SendSmsService(
                 .flatMap { (member, memberOfProps, receiver) ->
                     if (isTextMessage) {
                         LOG.debug("send SMS from ${room.roomId} to +$receiver")
-                        sendSms(
+                        insertBodyAndSend(
                                 sender = sender,
                                 receiver = receiver,
                                 body = body,
@@ -69,11 +69,11 @@ class SendSmsService(
                 .then()
     }
 
-    private fun sendSms(sender: String, receiver: String, body: String, mappingToken: Int): Mono<Void> {
+    private fun insertBodyAndSend(sender: String, receiver: String, body: String, mappingToken: Int): Mono<Void> {
         val template = // FIXME test
                 if (sender == "@${smsBotProperties.username}:${smsBotProperties.serverName}")
-                    smsBridgeProperties.templates.outgoingMessage
-                else smsBridgeProperties.templates.outgoingMessageFromBot
+                    smsBridgeProperties.templates.outgoingMessageFromBot
+                else smsBridgeProperties.templates.outgoingMessage
         val templateBody = template.replace("{sender}", sender)
                 .replace("{body}", body)
                 .replace("{token}", "#$mappingToken")
