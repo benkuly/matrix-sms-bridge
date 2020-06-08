@@ -19,6 +19,7 @@ import reactor.core.publisher.Mono
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.text.Charsets.UTF_8
@@ -59,7 +60,11 @@ class GammuSmsProvider(
                             .collectList()
                             .map { Pair(sender, it.joinToString(separator = "")) }
                             .doOnSuccess {
-                                Files.move(file.toPath(), Path.of(properties.inboxProcessedPath, file.name))
+                                Files.move(
+                                        file.toPath(),
+                                        Path.of(properties.inboxProcessedPath, file.name),
+                                        StandardCopyOption.REPLACE_EXISTING
+                                )
                             }
                 }.flatMap { message ->
                     receiveSms(message.first, message.second)

@@ -7,6 +7,7 @@ import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
+import org.apache.tools.ant.types.Commandline
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
@@ -28,22 +29,25 @@ class SmsBotMessageHandler(
             sender: String,
             context: MessageContext
     ): Mono<Void> {
-        LOG.info("currently SmsBotHandler is not implemented. from: $sender room: ${room.roomId} message: $body")
         return if (body.startsWith("sms")) {
             if (room.members.size > 2) {
+                LOG.debug("to many members in room form sms command")
                 context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botTooManyMembers)).then()
             } else {
-                val args = body.split("\\s+".toRegex()) // FIXME not working with sms text!
+                LOG.debug("run sms command $body")
+
+                val args = Commandline.translateCommandline(body.removePrefix("sms"))
 
                 Mono.fromCallable {
                     SmsCommand()
                             .context { console = SmsBotConsole(context) }
                             .subcommands(SendSmsCommand(sender, roomService, smsBridgeProperties))
-                            .main(args)
+                            .parse(args)
                 }.subscribeOn(Schedulers.boundedElastic()).then()
             }
-        } else {
+        } else if (room.members.size == 2) {
+            LOG.debug("it seems to be a bot room, but message didn't start with 'sms'")
             context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botHelp)).then()
-        }
+        } else Mono.empty()
     }
 }

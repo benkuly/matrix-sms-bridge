@@ -11,7 +11,6 @@ import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService.RoomCreationMode
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService.RoomCreationMode.AUTO
 
-// FIXME test
 class SendSmsCommand(
         private val sender: String,
         private val roomService: SmsMatrixAppserviceRoomService,
