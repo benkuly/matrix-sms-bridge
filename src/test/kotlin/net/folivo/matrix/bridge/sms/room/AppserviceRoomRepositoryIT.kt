@@ -87,7 +87,9 @@ class AppserviceRoomRepositoryIT {
         user4 = template.save(
                 AppserviceUser(
                         "someUserId4",
-                        mutableMapOf(room2 to MemberOfProperties(2))
+                        mutableMapOf(
+                                room2 to MemberOfProperties(2)
+                        )
                 )
         ).block() ?: throw RuntimeException()
     }
@@ -113,6 +115,13 @@ class AppserviceRoomRepositoryIT {
     fun `should not findByMembersUserIdContaining`() {
         StepVerifier
                 .create(cut.findByMembersUserIdContaining(listOf("someUserId2", "someUserId4")))
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should not findByMembersUserIdContaining with foreign userid`() {
+        StepVerifier
+                .create(cut.findByMembersUserIdContaining(listOf("someUserId2", "someUserId24")))
                 .verifyComplete()
     }
 

@@ -9,6 +9,7 @@ import org.apache.tools.ant.types.Commandline
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
+import reactor.core.scheduler.Schedulers
 
 @Component
 class SmsBotMessageHandler(
@@ -35,27 +36,26 @@ class SmsBotMessageHandler(
                 val args = Commandline.translateCommandline(body.removePrefix("sms"))
 
                 //FIXME test
-                Mono.fromRunnable {
-                    var console = SmsBotConsole(context)
+                Mono.fromRunnable<Void> {
+                    val answerConsole = SmsBotConsole(context)
                     try {
-                        SmsCommand().context { console = console }
+                        SmsCommand().context { console = answerConsole }
                                 .subcommands(SendSmsCommand(sender, helper, smsBridgeProperties))
                                 .parse(args)
                     } catch (e: PrintHelpMessage) {
-                        console.print(e.command.getFormattedHelp(), false)
+                        answerConsole.print(e.command.getFormattedHelp(), false)
                     } catch (e: PrintCompletionMessage) {
-                        e.message?.also { console.print(it, false) }
+                        e.message?.also { answerConsole.print(it, false) }
                     } catch (e: PrintMessage) {
-                        e.message?.also { console.print(it, false) }
+                        e.message?.also { answerConsole.print(it, false) }
                     } catch (e: UsageError) {
-                        console.print(e.helpMessage(), true)
+                        answerConsole.print(e.helpMessage(), true)
                     } catch (e: CliktError) {
-                        e.message?.also { console.print(it, true) }
+                        e.message?.also { answerConsole.print(it, true) }
                     } catch (e: Abort) {
-                        console.print("Aborted!", true)
+                        answerConsole.print("Aborted!", true)
                     }
-                }
-//FIXME                        .subscribeOn(Schedulers.boundedElastic())
+                }.subscribeOn(Schedulers.boundedElastic())
             }
         } else if (room.members.size == 2) {
             LOG.debug("it seems to be a bot room, but message didn't start with 'sms'")

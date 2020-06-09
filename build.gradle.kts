@@ -20,7 +20,6 @@ allprojects {
     repositories {
         mavenCentral()
     }
-
 }
 
 dependencies {
@@ -55,6 +54,15 @@ dependencies {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
         exclude(group = "org.mockito", module = "mockito-core")
         exclude(group = "org.mockito", module = "mockito-junit-jupiter")
+    }
+}
+
+// workaround for Clikt with Gradle
+configurations {
+    productionRuntimeClasspath {
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        }
     }
 }
 
