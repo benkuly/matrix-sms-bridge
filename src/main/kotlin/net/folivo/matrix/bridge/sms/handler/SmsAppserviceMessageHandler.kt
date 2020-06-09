@@ -32,7 +32,6 @@ class SmsAppserviceMessageHandler(
             Mono.empty()
         } else {
             roomRepository.findById(roomId)
-                    // FIXME switch if empty?
                     .flatMap { room ->
                         sendSmsService.sendSms(
                                 room = room,
