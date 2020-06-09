@@ -14,7 +14,7 @@ allprojects {
     apply(plugin = "kotlin")
 
     group = "net.folivo"
-    version = "0.1.10.RELEASE"
+    version = "0.2.0.RELEASE"
     java.sourceCompatibility = JavaVersion.VERSION_11
 
     repositories {
@@ -32,7 +32,7 @@ dependencies {
 
     implementation("net.folivo:matrix-spring-boot-bot:0.2.4.RELEASE")
 
-    implementation("com.github.ajalt:clikt:2.7.1")
+    implementation("com.github.ajalt:clikt-multiplatform:2.7.1")
     implementation("org.apache.ant:ant:1.10.8") {
         exclude(group = "org.apache.ant", module = "ant-launcher")
     }

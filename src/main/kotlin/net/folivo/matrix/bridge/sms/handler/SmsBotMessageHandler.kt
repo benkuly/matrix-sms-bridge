@@ -1,7 +1,6 @@
 package net.folivo.matrix.bridge.sms.handler
 
-import com.github.ajalt.clikt.core.context
-import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.core.*
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
@@ -10,7 +9,6 @@ import org.apache.tools.ant.types.Commandline
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
-import reactor.core.scheduler.Schedulers
 
 @Component
 class SmsBotMessageHandler(
@@ -36,12 +34,28 @@ class SmsBotMessageHandler(
 
                 val args = Commandline.translateCommandline(body.removePrefix("sms"))
 
-                Mono.fromCallable {
-                    SmsCommand()
-                            .context { console = SmsBotConsole(context) }
-                            .subcommands(SendSmsCommand(sender, helper, smsBridgeProperties))
-                            .parse(args)
-                }.subscribeOn(Schedulers.boundedElastic()).then()
+                //FIXME test
+                Mono.fromRunnable {
+                    var console = SmsBotConsole(context)
+                    try {
+                        SmsCommand().context { console = console }
+                                .subcommands(SendSmsCommand(sender, helper, smsBridgeProperties))
+                                .parse(args)
+                    } catch (e: PrintHelpMessage) {
+                        console.print(e.command.getFormattedHelp(), false)
+                    } catch (e: PrintCompletionMessage) {
+                        e.message?.also { console.print(it, false) }
+                    } catch (e: PrintMessage) {
+                        e.message?.also { console.print(it, false) }
+                    } catch (e: UsageError) {
+                        console.print(e.helpMessage(), true)
+                    } catch (e: CliktError) {
+                        e.message?.also { console.print(it, true) }
+                    } catch (e: Abort) {
+                        console.print("Aborted!", true)
+                    }
+                }
+//FIXME                        .subscribeOn(Schedulers.boundedElastic())
             }
         } else if (room.members.size == 2) {
             LOG.debug("it seems to be a bot room, but message didn't start with 'sms'")

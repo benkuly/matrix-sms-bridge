@@ -80,11 +80,20 @@ class SmsBotMessageHandlerTest {
     }
 
     @Test
-    fun `should do nothing`() {
+    fun `should do nothing when too many members`() {
         every { roomMock.members.size }.returns(3)
         StepVerifier
                 .create(cut.handleMessageToSmsBot(roomMock, "bla", "someSender", contextMock))
                 .verifyComplete()
         verify { contextMock wasNot Called }
+    }
+
+    @Test
+    fun `should catch errors`() {
+        every { roomMock.members.size }.returns(2)
+        StepVerifier
+                .create(cut.handleMessageToSmsBot(roomMock, "sms send bla", "someSender", contextMock))
+                .verifyComplete()
+        verify { contextMock.answer(match<NoticeMessageEventContent> { it.body.contains("Error") }) }
     }
 }

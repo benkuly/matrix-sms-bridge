@@ -38,9 +38,13 @@ matrix:
       # (optional) SMS messages without a valid token a routed to this room.
       # Note that you must invite @smsbot:yourHomeServer to this room.
       defaultRoomId: "!jNkGzAFIPWxxXLmhso:matrix-local"
+      # The default region to use for telephone numbers.
+      defaultRegion: DE
       templates:
         # (optional) The message, that will be sent as SMS. Valid placeholders are {sender}, {body} and {token}.
         outgoingMessage: "{sender} wrote:\n\n{body}\n\nTo answer to this message add this token to your message: {token}"
+        # (optional) The message, that will be sent as SMS when send by bot. Valid placeholders are {sender}, {body} and {token}.
+        outgoingMessageFromBot: "{body}\n\nTo answer to this message add this token to your message: {token}"
         # (optional) The message, that will be sent as SMS, when an incoming SMS didn't contain a valid token
         # and was routed to a default room. By default no answer will be sent.
         answerInvalidTokenWithDefaultRoom: "Your token was invalid. The message will be sent to a default matrix room."
@@ -51,6 +55,8 @@ matrix:
         sendSmsError: "Could not send SMS to this user. Please try it again later."
         # (optional) The content of bridged SMS message into the default room. Valid placeholders are {sender} and {body}.
         defaultRoomIncomingMessage: "{sender} wrote:\n{body}"
+        
+        # see SmsBridgeProperties.kt for more templates.
   bot:
     # The domain-part of matrix-ids. E. g. example.org when your userIds look like @unicorn:example.org
     serverName: matrix-local
