@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 
-// FIXME test
 @Component
 class SmsBotMessageHandler(
         private val roomService: SmsMatrixAppserviceRoomService,

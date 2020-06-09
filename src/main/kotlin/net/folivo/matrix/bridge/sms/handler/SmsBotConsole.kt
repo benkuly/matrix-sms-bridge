@@ -5,11 +5,11 @@ import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.slf4j.LoggerFactory
 
-// FIXME test
 class SmsBotConsole(
-        private val messageContext: MessageContext,
-        override val lineSeparator: String = ""
+        private val messageContext: MessageContext
 ) : CliktConsole {
+    override val lineSeparator: String = ""
+
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }

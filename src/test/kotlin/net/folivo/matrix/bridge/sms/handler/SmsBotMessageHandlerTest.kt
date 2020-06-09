@@ -10,6 +10,7 @@ import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
+import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -57,7 +58,7 @@ class SmsBotMessageHandlerTest {
                 )
                 .verifyComplete()
         verify(exactly = 1) {
-            contextMock.answer(match { it.body == "message send" })
+            contextMock.answer(match<NoticeMessageEventContent> { it.body == "message send" })
         }
     }
 
@@ -67,7 +68,7 @@ class SmsBotMessageHandlerTest {
         StepVerifier
                 .create(cut.handleMessageToSmsBot(roomMock, "sms bla", "someSender", contextMock))
                 .verifyComplete()
-        verify { contextMock.answer(match { it.body == "tooMany" }) }
+        verify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "tooMany" }) }
     }
 
     @Test
@@ -76,7 +77,7 @@ class SmsBotMessageHandlerTest {
         StepVerifier
                 .create(cut.handleMessageToSmsBot(roomMock, "bla", "someSender", contextMock))
                 .verifyComplete()
-        verify { contextMock.answer(match { it.body == "help" }) }
+        verify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "help" }) }
     }
 
     @Test
