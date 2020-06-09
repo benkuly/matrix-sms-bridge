@@ -1,6 +1,7 @@
-package net.folivo.matrix.bridge.sms.user
+package net.folivo.matrix.bridge.sms.room
 
-import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bridge.sms.user.AppserviceUser
+import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -18,7 +19,7 @@ import reactor.test.StepVerifier
 
 @ReactiveDataNeo4jTest(excludeAutoConfiguration = [Neo4jTestHarnessAutoConfiguration::class])
 @Testcontainers
-class AppserviceUserRepositoryIT {
+class AppserviceRoomRepositoryIT {
 
     companion object {
         @Container
@@ -35,7 +36,7 @@ class AppserviceUserRepositoryIT {
 
 
     @Autowired
-    lateinit var cut: AppserviceUserRepository
+    lateinit var cut: AppserviceRoomRepository
 
     @Autowired
     lateinit var template: ReactiveNeo4jTemplate
@@ -46,6 +47,7 @@ class AppserviceUserRepositoryIT {
     lateinit var user1: AppserviceUser
     lateinit var user2: AppserviceUser
     lateinit var user3: AppserviceUser
+    lateinit var user4: AppserviceUser
 
 
     @BeforeEach
@@ -58,46 +60,60 @@ class AppserviceUserRepositoryIT {
 
         user1 = template.save(
                 AppserviceUser(
-                        "someUserId1", mutableMapOf(
-                        room1 to MemberOfProperties(1), room2 to MemberOfProperties(24)
+                        "someUserId1",
+                        mutableMapOf(
+                                room1 to MemberOfProperties(1),
+                                room2 to MemberOfProperties(24)
+                        )
                 )
-                )
-        ).block()
-                ?: throw RuntimeException()
+        ).block() ?: throw RuntimeException()
         user2 = template.save(
                 AppserviceUser(
                         "someUserId2",
-                        mutableMapOf(room1 to MemberOfProperties(1))
+                        mutableMapOf(
+                                room1 to MemberOfProperties(1)
+                        )
                 )
-        ).block()
-                ?: throw RuntimeException()
+        ).block() ?: throw RuntimeException()
         user3 = template.save(
                 AppserviceUser(
-                        "someUserId3"
+                        "someUserId3",
+                        mutableMapOf(
+                                room1 to MemberOfProperties(1),
+                                room2 to MemberOfProperties(2)
+                        )
                 )
-        ).block()
-                ?: throw RuntimeException()
+        ).block() ?: throw RuntimeException()
+        user4 = template.save(
+                AppserviceUser(
+                        "someUserId4",
+                        mutableMapOf(room2 to MemberOfProperties(2))
+                )
+        ).block() ?: throw RuntimeException()
     }
 
     @Test
-    fun `should findLastMappingTokenByUserId`() {
+    fun `should findByMembersUserIdContaining one`() {
         StepVerifier
-                .create(cut.findLastMappingTokenByUserId("someUserId1"))
-                .assertNext { assertThat(it).isEqualTo(24) }
+                .create(cut.findByMembersUserIdContaining(listOf("someUserId1", "someUserId2")))
+                .assertNext { assertThat(it.roomId).isEqualTo("someRoomId1") }
                 .verifyComplete()
     }
 
     @Test
-    fun `should not findLastMappingTokenByUserId when user not in room`() {
+    fun `should findByMembersUserIdContaining two`() {
         StepVerifier
-                .create(cut.findLastMappingTokenByUserId("someUserId3"))
+                .create(cut.findByMembersUserIdContaining(listOf("someUserId1", "someUserId3")))
+                .assertNext { assertThat(it.roomId).isEqualTo("someRoomId1") }
+                .assertNext { assertThat(it.roomId).isEqualTo("someRoomId2") }
                 .verifyComplete()
     }
 
     @Test
-    fun `should not findLastMappingTokenByUserId when user does not exist`() {
+    fun `should not findByMembersUserIdContaining`() {
         StepVerifier
-                .create(cut.findLastMappingTokenByUserId("notExistingUserId"))
+                .create(cut.findByMembersUserIdContaining(listOf("someUserId2", "someUserId4")))
                 .verifyComplete()
     }
+
 }

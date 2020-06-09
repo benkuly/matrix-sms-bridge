@@ -1,0 +1,4 @@
+matrix:
+  bridge:
+    sms:
+      defaultRegion: DE

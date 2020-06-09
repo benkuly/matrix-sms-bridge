@@ -32,9 +32,8 @@ services:
       - NEO4J_AUTH=neo4j/secret
     networks:
       - local-kannel
-    expose:
-      - 7687
     ports:
+      - 7687:7687
       - 7474:7474
   matrix-synapse:
     image: matrixdotorg/synapse:latest
