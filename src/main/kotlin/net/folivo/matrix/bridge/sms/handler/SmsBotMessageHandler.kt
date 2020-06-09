@@ -5,7 +5,6 @@ import com.github.ajalt.clikt.core.subcommands
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.apache.tools.ant.types.Commandline
 import org.slf4j.LoggerFactory
@@ -15,7 +14,7 @@ import reactor.core.scheduler.Schedulers
 
 @Component
 class SmsBotMessageHandler(
-        private val roomService: SmsMatrixAppserviceRoomService,
+        private val helper: SendSmsCommandHelper,
         private val smsBridgeProperties: SmsBridgeProperties
 ) {
     companion object {
@@ -40,7 +39,7 @@ class SmsBotMessageHandler(
                 Mono.fromCallable {
                     SmsCommand()
                             .context { console = SmsBotConsole(context) }
-                            .subcommands(SendSmsCommand(sender, roomService, smsBridgeProperties))
+                            .subcommands(SendSmsCommand(sender, helper, smsBridgeProperties))
                             .parse(args)
                 }.subscribeOn(Schedulers.boundedElastic()).then()
             }

@@ -43,11 +43,21 @@ class SmsAppserviceMessageHandlerTest {
     @InjectMockKs
     lateinit var cut: SmsAppserviceMessageHandler
 
+    @MockK
+    lateinit var contextMock: MessageContext
+
+    @MockK
+    lateinit var roomMock: AppserviceRoom
+
     @BeforeEach
     fun beforeEach() {
         every { smsBridgePropertiesMock.defaultRoomId } returns "defaultRoomId"
         every { botPropertiesMock.serverName } returns "someServerName"
         every { botPropertiesMock.username } returns "smsbot"
+        every { contextMock.roomId } returns "someRoomId"
+        every { contextMock.originalEvent.sender } returns "someSender"
+        every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(roomMock))
+
         every {
             sendSmsServiceMock.sendSms(any(), any(), any(), any(), any())
         } returns Mono.empty()
@@ -58,9 +68,6 @@ class SmsAppserviceMessageHandlerTest {
 
     @Test
     fun `should always delegate to SendSmsService`() {
-        val messageContext = mockk<MessageContext>(relaxed = true)
-        every { messageContext.roomId } returns "someRoomId"
-        every { messageContext.originalEvent.sender } returns "someSender"
         val roomMock1 = mockk<AppserviceRoom> {
             every { members } returns mutableMapOf(
                     mockk<AppserviceUser> {
@@ -83,73 +90,70 @@ class SmsAppserviceMessageHandlerTest {
         )
 
         StepVerifier
-                .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
+                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
                 .verifyComplete()
 
-        verify { sendSmsServiceMock.sendSms(roomMock1, "someBody", "someSender", messageContext, true) }
+        verify { sendSmsServiceMock.sendSms(roomMock1, "someBody", "someSender", contextMock, true) }
 
         // also try when more then one member
         StepVerifier
-                .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
+                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
                 .verifyComplete()
 
-        verify { sendSmsServiceMock.sendSms(roomMock2, "someBody", "someSender", messageContext, true) }
+        verify { sendSmsServiceMock.sendSms(roomMock2, "someBody", "someSender", contextMock, true) }
     }
 
     @Test
     fun `should always delegate to SendSmsService when message is not TextMessage`() {
-        val messageContext = mockk<MessageContext>(relaxed = true)
-        every { messageContext.roomId } returns "someRoomId"
-        every { messageContext.originalEvent.sender } returns "someSender"
-        val roomMock = mockk<AppserviceRoom> {
-            every { members } returns mutableMapOf(
-                    mockk<AppserviceUser> {
-                        every { userId } returns "someUserId"
-                    } to MemberOfProperties(1)
-            )
-        }
-        every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(roomMock))
+        every { roomMock.members } returns mutableMapOf(
+                mockk<AppserviceUser> {
+                    every { userId } returns "someUserId"
+                } to MemberOfProperties(1)
+        )
 
         StepVerifier
-                .create(cut.handleMessage(NoticeMessageEventContent("someBody"), messageContext))
+                .create(cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock))
                 .verifyComplete()
 
-        verify { sendSmsServiceMock.sendSms(roomMock, "someBody", "someSender", messageContext, false) }
+        verify { sendSmsServiceMock.sendSms(roomMock, "someBody", "someSender", contextMock, false) }
     }
 
     @Test
     fun `should delegate to SmsBotHandler when room contains bot`() {
-        val roomMock = mockk<AppserviceRoom> {
-            every { members } returns mutableMapOf(
-                    mockk<AppserviceUser> {
-                        every { userId } returns "@smsbot:someServerName"
-                    } to MemberOfProperties(1)
-            )
-        }
-        every { roomRepositoryMock.findById("someRoomId") }.returns(
-                Mono.just(roomMock)
+        every { roomMock.members } returns mutableMapOf(
+                mockk<AppserviceUser> {
+                    every { userId } returns "@smsbot:someServerName"
+                } to MemberOfProperties(1)
         )
 
-        val messageContext = mockk<MessageContext>(relaxed = true)
-        every { messageContext.roomId } returns "someRoomId"
-        every { messageContext.originalEvent.sender } returns "someSender"
-
         StepVerifier
-                .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
+                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
                 .verifyComplete()
 
-        verify { smsBotMessageHandlerMock.handleMessageToSmsBot(roomMock, "someBody", "someSender", messageContext) }
+        verify { smsBotMessageHandlerMock.handleMessageToSmsBot(roomMock, "someBody", "someSender", contextMock) }
+    }
 
+    @Test
+    fun `should not delegate to SmsBotHandler when room contains no bot`() {
+        every { roomMock.members } returns mutableMapOf(
+                mockk<AppserviceUser> {
+                    every { userId } returns "@someUser:someServerName"
+                } to MemberOfProperties(1)
+        )
+
+        StepVerifier
+                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
+                .verifyComplete()
+
+        verify { smsBotMessageHandlerMock wasNot Called }
     }
 
     @Test
     fun `should ignore messages to default room`() {
-        val messageContext = mockk<MessageContext>(relaxed = true)
-        every { messageContext.roomId } returns "defaultRoomId"
-        every { messageContext.originalEvent.sender } returns "someSender"
+        every { contextMock.roomId } returns "defaultRoomId"
 
         StepVerifier
-                .create(cut.handleMessage(TextMessageEventContent("someBody"), messageContext))
+                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
                 .verifyComplete()
 
         verify { sendSmsServiceMock wasNot Called }

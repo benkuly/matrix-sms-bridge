@@ -64,24 +64,21 @@ class ReceiveSmsService(
                 .switchIfEmpty(
                         Mono.fromCallable<String> {
                             smsBridgeProperties.defaultRoomId
-                        }
-                                .flatMap { defaultRoomId ->
-                                    LOG.debug("receive SMS without or wrong mappingToken from $sender to default room $defaultRoomId")
-                                    val message = smsBridgeProperties.templates.defaultRoomIncomingMessage
-                                            .replace("{sender}", sender)
-                                            .replace("{body}", body)
-                                    matrixClient.roomsApi.sendRoomEvent(defaultRoomId, TextMessageEventContent(message))
-                                            .doOnError { LOG.error("could not send SMS message to default room $defaultRoomId as user appservice user") }
-                                }
-                                .map {
-                                    smsBridgeProperties.templates.answerInvalidTokenWithDefaultRoom ?: NO_ANSWER
-                                }
-                                .switchIfEmpty(
-                                        Mono.just(
-                                                smsBridgeProperties.templates.answerInvalidTokenWithoutDefaultRoom
-                                                ?: NO_ANSWER
-                                        )
+                        }.flatMap { defaultRoomId ->
+                            LOG.debug("receive SMS without or wrong mappingToken from $sender to default room $defaultRoomId")
+                            val message = smsBridgeProperties.templates.defaultRoomIncomingMessage
+                                    .replace("{sender}", sender)
+                                    .replace("{body}", body)
+                            matrixClient.roomsApi.sendRoomEvent(defaultRoomId, TextMessageEventContent(message))
+                                    .doOnError { LOG.error("could not send SMS message to default room $defaultRoomId as user appservice user") }
+                        }.map {
+                            smsBridgeProperties.templates.answerInvalidTokenWithDefaultRoom ?: NO_ANSWER
+                        }.switchIfEmpty(
+                                Mono.just(
+                                        smsBridgeProperties.templates.answerInvalidTokenWithoutDefaultRoom
+                                        ?: NO_ANSWER
                                 )
+                        )
                 )
                 .filter { it != NO_ANSWER && it.isNotEmpty() }
     }

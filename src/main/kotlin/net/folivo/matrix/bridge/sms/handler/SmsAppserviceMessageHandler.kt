@@ -43,7 +43,6 @@ class SmsAppserviceMessageHandler(
                         ).thenReturn(room)
                     }
                     .flatMap { room ->
-                        //FIXME test changes
                         if (room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } != null) {
                             smsBotMessageHandler.handleMessageToSmsBot(
                                     room = room,

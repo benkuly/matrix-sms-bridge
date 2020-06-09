@@ -8,9 +8,8 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import io.mockk.verifyAll
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService.RoomCreationMode.ALWAYS
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService.RoomCreationMode.AUTO
+import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
+import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -19,7 +18,7 @@ import reactor.core.publisher.Mono
 @ExtendWith(MockKExtension::class)
 class SendSmsCommandTest {
     @MockK
-    lateinit var roomServiceMock: SmsMatrixAppserviceRoomService
+    lateinit var helper: SendSmsCommandHelper
 
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
@@ -32,11 +31,11 @@ class SendSmsCommandTest {
 
     @BeforeEach
     fun beforeEach() {
-        every { roomServiceMock.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
+        every { helper.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("answer"))
         every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
         every { smsBridgePropertiesMock.templates.botSmsSendInvalidTelephoneNumber }.returns("invalid")
-        cut = SendSmsCommand("someSender", roomServiceMock, smsBridgePropertiesMock)
+        cut = SendSmsCommand("someSender", helper, smsBridgePropertiesMock)
         cut.context { console = consoleMock }
     }
 
@@ -45,14 +44,14 @@ class SendSmsCommandTest {
         cut.parse(listOf("some text", "-t", "01111111111", "-t", "02222222222"))
 
         verifyAll {
-            roomServiceMock.createRoomAndSendMessage(
+            helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
                     receiverNumbers = listOf("491111111111"),
                     roomName = null,
                     roomCreationMode = AUTO
             )
-            roomServiceMock.createRoomAndSendMessage(
+            helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
                     receiverNumbers = listOf("492222222222"),
@@ -67,7 +66,7 @@ class SendSmsCommandTest {
         cut.parse(listOf("some text", "-t", "01111111111", "-t", "02222222222", "-n", "some name", "-g"))
 
         verify {
-            roomServiceMock.createRoomAndSendMessage(
+            helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
                     receiverNumbers = listOf("491111111111", "492222222222"),
@@ -82,7 +81,7 @@ class SendSmsCommandTest {
         cut.parse(listOf("some text", "-t", "01111111111", "-m", "always"))
 
         verify {
-            roomServiceMock.createRoomAndSendMessage(
+            helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
                     receiverNumbers = listOf("491111111111"),

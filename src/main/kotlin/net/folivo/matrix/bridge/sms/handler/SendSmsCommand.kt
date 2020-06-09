@@ -7,13 +7,12 @@ import com.github.ajalt.clikt.parameters.types.enum
 import com.google.i18n.phonenumbers.NumberParseException
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService.RoomCreationMode
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService.RoomCreationMode.AUTO
+import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode
+import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
 
 class SendSmsCommand(
         private val sender: String,
-        private val roomService: SmsMatrixAppserviceRoomService,
+        private val helper: SendSmsCommandHelper,
         private val smsBridgeProperties: SmsBridgeProperties
 ) : CliktCommand(name = "send") {
 
@@ -33,7 +32,7 @@ class SendSmsCommand(
                         .let { it.countryCode.toString() + it.nationalNumber.toString() }
             }
             if (createGroup) {
-                roomService.createRoomAndSendMessage(
+                helper.createRoomAndSendMessage(
                         body = body,
                         sender = sender,
                         receiverNumbers = receiverNumbers,
@@ -43,7 +42,7 @@ class SendSmsCommand(
                         .ifPresent { echo(it) }
             } else {
                 receiverNumbers.forEach { number ->
-                    roomService.createRoomAndSendMessage(
+                    helper.createRoomAndSendMessage(
                             body = body,
                             sender = sender,
                             receiverNumbers = listOf(number),

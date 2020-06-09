@@ -9,7 +9,6 @@ import io.mockk.verify
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -20,7 +19,7 @@ import reactor.test.StepVerifier
 @ExtendWith(MockKExtension::class)
 class SmsBotMessageHandlerTest {
     @MockK
-    lateinit var roomServiceMock: SmsMatrixAppserviceRoomService
+    lateinit var sendSmsCommandHelperMock: SendSmsCommandHelper
 
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
@@ -44,7 +43,7 @@ class SmsBotMessageHandlerTest {
     @Test
     fun `should run command`() {
         every { roomMock.members.size }.returns(2)
-        every { roomServiceMock.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
+        every { sendSmsCommandHelperMock.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("message send"))
         every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
         StepVerifier

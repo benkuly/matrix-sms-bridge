@@ -70,7 +70,7 @@ class SendSmsService(
     }
 
     private fun insertBodyAndSend(sender: String, receiver: String, body: String, mappingToken: Int): Mono<Void> {
-        val template = // FIXME test
+        val template =
                 if (sender == "@${smsBotProperties.username}:${smsBotProperties.serverName}")
                     smsBridgeProperties.templates.outgoingMessageFromBot
                 else smsBridgeProperties.templates.outgoingMessage
