@@ -29,7 +29,7 @@ class SendSmsCommand(
         try {
             val receiverNumbers = telephoneNumbers.map { rawNumber ->
                 phoneNumberUtil.parse(rawNumber, smsBridgeProperties.defaultRegion)
-                        .let { it.countryCode.toString() + it.nationalNumber.toString() }
+                        .let { "+${it.countryCode}${it.nationalNumber}" }
             }
             if (createGroup) {
                 helper.createRoomAndSendMessage(

@@ -47,14 +47,14 @@ class SendSmsCommandTest {
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
-                    receiverNumbers = listOf("491111111111"),
+                    receiverNumbers = listOf("+491111111111"),
                     roomName = null,
                     roomCreationMode = AUTO
             )
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
-                    receiverNumbers = listOf("492222222222"),
+                    receiverNumbers = listOf("+492222222222"),
                     roomName = null,
                     roomCreationMode = AUTO
             )
@@ -69,7 +69,7 @@ class SendSmsCommandTest {
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
-                    receiverNumbers = listOf("491111111111", "492222222222"),
+                    receiverNumbers = listOf("+491111111111", "+492222222222"),
                     roomName = "some name",
                     roomCreationMode = AUTO
             )
@@ -84,7 +84,7 @@ class SendSmsCommandTest {
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
-                    receiverNumbers = listOf("491111111111"),
+                    receiverNumbers = listOf("+491111111111"),
                     roomName = null,
                     roomCreationMode = ALWAYS
             )
