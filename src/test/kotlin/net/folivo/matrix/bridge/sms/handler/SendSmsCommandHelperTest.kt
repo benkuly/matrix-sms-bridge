@@ -79,7 +79,6 @@ class SendSmsCommandHelperTest {
                     name = "room name",
                     invite = setOf(
                             "someSender",
-                            "@bot:someServer",
                             "@sms_1111111111:someServer"
                     )
             )
@@ -115,7 +114,6 @@ class SendSmsCommandHelperTest {
                     name = "room name",
                     invite = setOf(
                             "someSender",
-                            "@bot:someServer",
                             "@sms_1111111111:someServer",
                             "@sms_22222222:someServer"
                     )
@@ -161,7 +159,6 @@ class SendSmsCommandHelperTest {
                     name = "room name",
                     invite = setOf(
                             "someSender",
-                            "@bot:someServer",
                             "@sms_1111111111:someServer"
                     )
             )

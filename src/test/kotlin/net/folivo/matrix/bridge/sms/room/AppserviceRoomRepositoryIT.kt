@@ -60,7 +60,7 @@ class AppserviceRoomRepositoryIT {
 
         user1 = template.save(
                 AppserviceUser(
-                        "someUserId1",
+                        "someUserId1", true,
                         mutableMapOf(
                                 room1 to MemberOfProperties(1),
                                 room2 to MemberOfProperties(24)
@@ -69,7 +69,7 @@ class AppserviceRoomRepositoryIT {
         ).block() ?: throw RuntimeException()
         user2 = template.save(
                 AppserviceUser(
-                        "someUserId2",
+                        "someUserId2", true,
                         mutableMapOf(
                                 room1 to MemberOfProperties(1)
                         )
@@ -77,7 +77,7 @@ class AppserviceRoomRepositoryIT {
         ).block() ?: throw RuntimeException()
         user3 = template.save(
                 AppserviceUser(
-                        "someUserId3",
+                        "someUserId3", true,
                         mutableMapOf(
                                 room1 to MemberOfProperties(1),
                                 room2 to MemberOfProperties(2)
@@ -86,7 +86,7 @@ class AppserviceRoomRepositoryIT {
         ).block() ?: throw RuntimeException()
         user4 = template.save(
                 AppserviceUser(
-                        "someUserId4",
+                        "someUserId4", true,
                         mutableMapOf(
                                 room2 to MemberOfProperties(2)
                         )

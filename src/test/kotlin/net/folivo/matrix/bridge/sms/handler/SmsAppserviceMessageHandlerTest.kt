@@ -11,7 +11,7 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
-import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
@@ -32,7 +32,7 @@ class SmsAppserviceMessageHandlerTest {
     lateinit var smsBotMessageHandlerMock: SmsBotMessageHandler
 
     @MockK
-    lateinit var roomRepositoryMock: AppserviceRoomRepository
+    lateinit var roomServiceMock: SmsMatrixAppserviceRoomService
 
     @MockK
     lateinit var botPropertiesMock: MatrixBotProperties
@@ -56,7 +56,7 @@ class SmsAppserviceMessageHandlerTest {
         every { botPropertiesMock.username } returns "smsbot"
         every { contextMock.roomId } returns "someRoomId"
         every { contextMock.originalEvent.sender } returns "someSender"
-        every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(roomMock))
+        every { roomServiceMock.getRoomOrCreateAndJoin("someRoomId", "someSender") }.returns(Mono.just(roomMock))
 
         every {
             sendSmsServiceMock.sendSms(any(), any(), any(), any(), any())
@@ -85,7 +85,7 @@ class SmsAppserviceMessageHandlerTest {
                     } to MemberOfProperties(1)
             )
         }
-        every { roomRepositoryMock.findById("someRoomId") }.returnsMany(
+        every { roomServiceMock.getRoomOrCreateAndJoin("someRoomId", "someSender") }.returnsMany(
                 Mono.just(roomMock1), Mono.just(roomMock2)
         )
 
@@ -143,6 +143,21 @@ class SmsAppserviceMessageHandlerTest {
 
         StepVerifier
                 .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
+                .verifyComplete()
+
+        verify { smsBotMessageHandlerMock wasNot Called }
+    }
+
+    @Test
+    fun `should not delegate to SmsBotHandler when message is no text message`() {
+        every { roomMock.members } returns mutableMapOf(
+                mockk<AppserviceUser> {
+                    every { userId } returns "@someUser:someServerName"
+                } to MemberOfProperties(1)
+        )
+
+        StepVerifier
+                .create(cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock))
                 .verifyComplete()
 
         verify { smsBotMessageHandlerMock wasNot Called }

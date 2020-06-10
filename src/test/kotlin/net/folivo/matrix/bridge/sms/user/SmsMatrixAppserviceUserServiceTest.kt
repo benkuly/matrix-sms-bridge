@@ -18,7 +18,7 @@ import reactor.test.StepVerifier
 @ExtendWith(MockKExtension::class)
 class SmsMatrixAppserviceUserServiceTest {
     @MockK
-    lateinit var matrixAppserviceServiceHelperMock: MatrixAppserviceServiceHelper
+    lateinit var helperMock: MatrixAppserviceServiceHelper
 
     @MockK
     lateinit var appserviceUserRepositoryMock: AppserviceUserRepository
@@ -42,7 +42,7 @@ class SmsMatrixAppserviceUserServiceTest {
         every { appserviceUserRepositoryMock.existsById("someUserId") }
                 .returns(Mono.just(false))
 
-        every { matrixAppserviceServiceHelperMock.shouldCreateUser("someUserId") }
+        every { helperMock.isManagedUser("someUserId") }
                 .returns(Mono.just(true))
 
         StepVerifier
@@ -56,7 +56,7 @@ class SmsMatrixAppserviceUserServiceTest {
         every { appserviceUserRepositoryMock.existsById("someUserId") }
                 .returns(Mono.just(false))
 
-        every { matrixAppserviceServiceHelperMock.shouldCreateUser("someUserId") }
+        every { helperMock.isManagedUser("someUserId") }
                 .returns(Mono.just(false))
 
         StepVerifier
@@ -66,10 +66,25 @@ class SmsMatrixAppserviceUserServiceTest {
     }
 
     @Test
-    fun `should save user in database`() {
-        val user = AppserviceUser("someUserId")
+    fun `should save managed user in database`() {
+        val user = AppserviceUser("someUserId", true)
         every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
                 .returns(Mono.just(user))
+        every { helperMock.isManagedUser("someUserId") }.returns(Mono.just(true))
+
+        StepVerifier
+                .create(cut.saveUser("someUserId"))
+                .verifyComplete()
+
+        verify { appserviceUserRepositoryMock.save(user) }
+    }
+
+    @Test
+    fun `should save not managed user in database`() {
+        val user = AppserviceUser("someUserId", false)
+        every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
+                .returns(Mono.just(user))
+        every { helperMock.isManagedUser("someUserId") }.returns(Mono.just(false))
 
         StepVerifier
                 .create(cut.saveUser("someUserId"))
@@ -92,7 +107,7 @@ class SmsMatrixAppserviceUserServiceTest {
                 .returns(
                         Mono.just(
                                 AppserviceUser(
-                                        "someUserId", mutableMapOf(
+                                        "someUserId", true, mutableMapOf(
                                         AppserviceRoom("someRoomId") to MemberOfProperties(24)
                                 )
                                 )
@@ -107,7 +122,7 @@ class SmsMatrixAppserviceUserServiceTest {
     @Test
     fun `should not get roomId`() {
         every { appserviceUserRepositoryMock.findById("someUserId") }
-                .returns(Mono.just(AppserviceUser("someUserId", mutableMapOf())))
+                .returns(Mono.just(AppserviceUser("someUserId", true, mutableMapOf())))
         StepVerifier
                 .create(cut.getRoomId("someUserId", 24))
                 .verifyComplete()

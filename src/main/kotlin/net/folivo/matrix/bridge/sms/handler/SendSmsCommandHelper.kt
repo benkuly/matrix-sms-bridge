@@ -40,18 +40,18 @@ class SendSmsCommandHelper(
             roomCreationMode: RoomCreationMode
     ): Mono<String> {
         val receiverIds = receiverNumbers.map { "@sms_${it.removePrefix("+")}:${botProperties.serverName}" }
-        val members = setOf(
+        val membersWithoutBot = setOf(
                 sender,
-                "@${botProperties.username}:${botProperties.serverName}",
                 *receiverIds.toTypedArray()
         )
+        val members = setOf(*membersWithoutBot.toTypedArray(), "@${botProperties.username}:${botProperties.serverName}")
         return roomRepository.findByMembersUserIdContaining(members)
                 .limitRequest(2)
                 .collectList()
                 .flatMap { rooms ->
                     if (rooms.size == 0 && roomCreationMode == AUTO || roomCreationMode == ALWAYS) {
                         LOG.debug("create room and send message")
-                        matrixClient.roomsApi.createRoom(name = roomName, invite = members)
+                        matrixClient.roomsApi.createRoom(name = roomName, invite = membersWithoutBot)
                                 .flatMap { roomId ->
                                     Flux.fromIterable(receiverIds)
                                             .flatMap { receiverId ->

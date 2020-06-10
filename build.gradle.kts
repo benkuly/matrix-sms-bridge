@@ -29,7 +29,7 @@ dependencies {
 
     api("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-starter:1.1.0")
 
-    implementation("net.folivo:matrix-spring-boot-bot:0.2.5.RELEASE")
+    implementation("net.folivo:matrix-spring-boot-bot:0.2.6.RELEASE")
 
     implementation("com.github.ajalt:clikt-multiplatform:2.7.1")
     implementation("org.apache.ant:ant:1.10.8") {

@@ -5,17 +5,14 @@ import org.neo4j.springframework.data.core.schema.Id
 import org.neo4j.springframework.data.core.schema.Node
 import org.neo4j.springframework.data.core.schema.Relationship
 import org.neo4j.springframework.data.core.schema.Relationship.Direction.OUTGOING
-import org.springframework.data.annotation.Version
 
 @Node("AppserviceUser")
 data class AppserviceUser(
         @Id
         val userId: String,
 
+        val isManaged: Boolean,
+
         @Relationship(type = "MEMBER_OF", direction = OUTGOING)
         val rooms: MutableMap<AppserviceRoom, MemberOfProperties> = HashMap()
-) {
-    @Version
-    var version: Long = 0
-        private set
-}
+)

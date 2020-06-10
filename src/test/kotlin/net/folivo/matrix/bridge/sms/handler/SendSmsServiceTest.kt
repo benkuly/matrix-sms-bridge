@@ -54,8 +54,8 @@ class SendSmsServiceTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 members = mutableMapOf(
-                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
-                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
+                        AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(1),
+                        AppserviceUser("@sms_9876543210:someServerName", true) to MemberOfProperties(2)
                 )
         )
 
@@ -75,8 +75,8 @@ class SendSmsServiceTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 members = mutableMapOf(
-                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1),
-                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
+                        AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(1),
+                        AppserviceUser("@sms_9876543210:someServerName", true) to MemberOfProperties(2)
                 )
         )
 
@@ -101,7 +101,7 @@ class SendSmsServiceTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 members = mutableMapOf(
-                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(24)
+                        AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(24)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate {sender} {body} {token}")
@@ -123,7 +123,7 @@ class SendSmsServiceTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 members = mutableMapOf(
-                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(24)
+                        AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(24)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessageFromBot }.returns("someBotTemplate {sender} {body} {token}")
@@ -144,8 +144,8 @@ class SendSmsServiceTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 members = mutableMapOf(
-                        AppserviceUser("@sms_0123456789-24:someServerName") to MemberOfProperties(1),
-                        AppserviceUser("@sms_9876543210:someServerName") to MemberOfProperties(2)
+                        AppserviceUser("@sms_0123456789-24:someServerName", true) to MemberOfProperties(1),
+                        AppserviceUser("@sms_9876543210:someServerName", true) to MemberOfProperties(2)
                 )
         )
 
@@ -162,7 +162,7 @@ class SendSmsServiceTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 members = mutableMapOf(
-                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1)
+                        AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(1)
                 )
         )
         every { smsProviderMock.sendSms("+0123456789", "someTemplate") }.returns(Mono.error(RuntimeException()))
@@ -186,7 +186,7 @@ class SendSmsServiceTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 members = mutableMapOf(
-                        AppserviceUser("@sms_0123456789:someServerName") to MemberOfProperties(1)
+                        AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(1)
                 )
         )
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())

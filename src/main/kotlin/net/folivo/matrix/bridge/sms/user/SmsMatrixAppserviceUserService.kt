@@ -18,7 +18,7 @@ class SmsMatrixAppserviceUserService(
                     if (isInDatabase) {
                         Mono.just(MatrixAppserviceUserService.UserExistingState.EXISTS)
                     } else {
-                        helper.shouldCreateUser(userId)
+                        helper.isManagedUser(userId)
                                 .map { shouldCreateUser ->
                                     if (shouldCreateUser) {
                                         MatrixAppserviceUserService.UserExistingState.CAN_BE_CREATED
@@ -39,7 +39,8 @@ class SmsMatrixAppserviceUserService(
     }
 
     override fun saveUser(userId: String): Mono<Void> {
-        return appserviceUserRepository.save(AppserviceUser(userId))
+        return helper.isManagedUser(userId)
+                .flatMap { appserviceUserRepository.save(AppserviceUser(userId, it)) }
                 .then()
     }
 
