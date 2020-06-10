@@ -70,7 +70,7 @@ class SendSmsCommandHelper(
                                                                         asUserId = receiverId
                                                                 )
                                                             }
-                                                }.then()
+                                                }
                                             }.then(
                                                     matrixClient.roomsApi.sendRoomEvent(
                                                             roomId = roomId,

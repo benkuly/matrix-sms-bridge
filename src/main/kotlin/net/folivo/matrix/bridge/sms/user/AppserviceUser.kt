@@ -17,7 +17,6 @@ data class AppserviceUser(
         @Relationship(type = "MEMBER_OF", direction = OUTGOING)
         val rooms: MutableMap<AppserviceRoom, MemberOfProperties> = HashMap()
 ) {
-
     @Version
     var version: Long? = null
         private set

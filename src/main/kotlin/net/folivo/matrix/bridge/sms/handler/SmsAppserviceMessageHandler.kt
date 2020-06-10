@@ -26,32 +26,36 @@ class SmsAppserviceMessageHandler(
 
     override fun handleMessage(content: MessageEventContent, context: MessageContext): Mono<Void> {
         val roomId = context.roomId
-        LOG.debug("handle message in room $roomId")
+        val sender = context.originalEvent.sender
+        LOG.debug("handle message in room $roomId from sender $sender")
         return if (context.roomId == smsBridgeProperties.defaultRoomId) {
             LOG.debug("ignored message to default room")
             Mono.empty()
         } else {
-            val sender = context.originalEvent.sender
             roomService.getRoomOrCreateAndJoin(roomId, sender)
                     .flatMap { room ->
-                        sendSmsService.sendSms(
-                                room = room,
-                                body = content.body,
-                                sender = sender,
-                                context = context,
-                                isTextMessage = content is TextMessageEventContent
-                        ).thenReturn(room)
-                    }.flatMap { room ->
                         if (content is TextMessageEventContent && room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } != null) {
                             smsBotMessageHandler.handleMessageToSmsBot(
                                     room = room,
                                     body = content.body,
                                     sender = sender,
                                     context = context
-                            )
+                            ).map { Pair(it, room) }//FIXME test
                         } else {
                             LOG.debug("room didn't contain bot user or event was no text message")
+                            Mono.just(Pair(true, room))
+                        }
+                    }.flatMap { (wasForBot, room) ->
+                        if (wasForBot) {//FIXME test
                             Mono.empty()
+                        } else {
+                            sendSmsService.sendSms(
+                                    room = room,
+                                    body = content.body,
+                                    sender = sender,
+                                    context = context,
+                                    isTextMessage = content is TextMessageEventContent
+                            )
                         }
                     }
         }
