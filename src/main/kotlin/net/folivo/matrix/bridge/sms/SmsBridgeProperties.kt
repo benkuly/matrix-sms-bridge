@@ -19,7 +19,7 @@ data class SmsBridgeProperties(
             val sendSmsIncompatibleMessage: String = "Only text messages can be send to this SMS user.",
             val defaultRoomIncomingMessage: String = "{sender} wrote:\n\n{body}",
             val botHelp: String = "To use this bot, write sms",
-            val botTooManyMembers: String = "Only two members in this room are allowed to write with this bot.",
+            val botTooManyMembers: String = "Only rooms with two members are allowed to write with this bot.",
             val botSmsSendInvalidTelephoneNumber: String = "The telephone number is invalid.",
             val botSmsSendNewRoomMessage: String = "{sender} wrote:\n\n{body}",
             val botSmsSendCreatedRoomAndSendMessage: String = "You were invited to a new created room and the message to the telephone number(s) {receiverNumbers} was send for you.",

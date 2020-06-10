@@ -3,7 +3,9 @@ package net.folivo.matrix.bridge.sms.user
 import net.folivo.matrix.appservice.api.user.CreateUserParameter
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
+import org.neo4j.springframework.data.repository.config.ReactiveNeo4jRepositoryConfigurationExtension
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Mono
 
 @Service
@@ -12,6 +14,7 @@ class SmsMatrixAppserviceUserService(
         private val appserviceUserRepository: AppserviceUserRepository
 ) : MatrixAppserviceUserService {
 
+    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun userExistingState(userId: String): Mono<MatrixAppserviceUserService.UserExistingState> {
         return appserviceUserRepository.existsById(userId)
                 .flatMap { isInDatabase ->
@@ -38,12 +41,14 @@ class SmsMatrixAppserviceUserService(
         }
     }
 
+    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun saveUser(userId: String): Mono<Void> {
         return helper.isManagedUser(userId)
                 .flatMap { appserviceUserRepository.save(AppserviceUser(userId, it)) }
                 .then()
     }
 
+    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {
         return appserviceUserRepository.findById(userId)
                 .flatMap { user ->

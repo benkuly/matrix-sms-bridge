@@ -43,31 +43,51 @@ class SmsMatrixAppserviceRoomService(
     @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun saveRoomJoin(roomId: String, userId: String): Mono<Void> {
         LOG.debug("saveRoomJoin in room $roomId of user $userId")
-        return Mono.zip(
-                roomRepository.findById(roomId)
-                        .switchIfEmpty(roomRepository.save(AppserviceRoom(roomId))),
-                userRepository.findById(userId)
-                        .switchIfEmpty(helper.isManagedUser(userId).map { AppserviceUser(userId, it) }),
-                userRepository.findLastMappingTokenByUserId(userId)
-                        .switchIfEmpty(Mono.just(0))
-        ).flatMap {
-            val room = it.t1
-            val user = it.t2
-            val mappingToken = it.t3 + 1
+        return roomRepository.findById(roomId)
+                .switchIfEmpty(Mono.just(AppserviceRoom(roomId)))
+                .flatMap { room ->
+                    if (room.members.isEmpty()) {
+                        LOG.debug("collect all members in room $roomId because we didn't save it yet")
+                        matrixClient.roomsApi.getJoinedMembers(roomId)
+                                .flatMapMany { response -> Flux.fromIterable(response.joined.keys) }
+                                .flatMap { joinedUserId ->
+                                    Mono.zip(
+                                            findOrCreateUser(joinedUserId),
+                                            userRepository.findLastMappingTokenByUserId(joinedUserId)
+                                                    .switchIfEmpty(Mono.just(0))
+                                    )
+                                }.collectList()
+                                .flatMap { members ->
+                                    members.forEach { room.members[it.t1] = MemberOfProperties(it.t2 + 1) }
+                                    roomRepository.save(room)
+                                }
+                    } else {
+                        Mono.zip(
+                                findOrCreateUser(userId),
+                                userRepository.findLastMappingTokenByUserId(userId)
+                                        .switchIfEmpty(Mono.just(0))
+                        )
+                                .flatMap {
+                                    val user = it.t1
+                                    val mappingToken = it.t2 + 1
 
-            user.rooms[room] = MemberOfProperties(mappingToken)
-            userRepository.save(user)
-                    .flatMap {
-                        if (room.members.isEmpty()) {
-                            matrixClient.roomsApi.getJoinedMembers(roomId)
-                                    .flatMapMany { response -> Flux.fromIterable(response.joined.keys) }
-                                    .flatMap { joinedUser -> saveRoomJoin(roomId, joinedUser) }
-                                    .then()
-                        } else {
-                            Mono.empty()
-                        }
+                                    room.members[user] = MemberOfProperties(mappingToken)
+                                    roomRepository.save(room)
+                                }
                     }
-        }
+                }.then()
+    }
+
+    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
+    private fun findOrCreateUser(userId: String): Mono<AppserviceUser> {
+        return userRepository.findById(userId)
+                .switchIfEmpty(
+                        helper.isManagedUser(userId)
+                                .flatMap {
+                                    userRepository.save(
+                                            AppserviceUser(userId, it)
+                                    )
+                                })
     }
 
     @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
@@ -85,6 +105,7 @@ class SmsMatrixAppserviceRoomService(
                 }.then()
     }
 
+    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun isMemberOf(userId: String, roomId: String): Mono<Boolean> {
         return roomRepository.findById(roomId)
                 .map { room ->
@@ -92,8 +113,14 @@ class SmsMatrixAppserviceRoomService(
                 }
     }
 
+    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun getRoomOrCreateAndJoin(roomId: String, userId: String): Mono<AppserviceRoom> {
         return roomRepository.findById(roomId)
-                .switchIfEmpty(saveRoomJoin(roomId, userId).flatMap { roomRepository.findById(roomId) })
+                .switchIfEmpty(Mono.defer {
+                    saveRoomJoin(
+                            roomId,
+                            userId
+                    ).flatMap { roomRepository.findById(roomId) }
+                })
     }
 }

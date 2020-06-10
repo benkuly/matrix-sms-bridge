@@ -9,7 +9,6 @@ import org.apache.tools.ant.types.Commandline
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
-import reactor.core.scheduler.Schedulers
 
 @Component
 class SmsBotMessageHandler(
@@ -36,7 +35,7 @@ class SmsBotMessageHandler(
                 val args = Commandline.translateCommandline(body.removePrefix("sms"))
 
                 //FIXME test
-                Mono.fromRunnable<Void> {
+                Mono.from<Void> { subscriber ->
                     val answerConsole = SmsBotConsole(context)
                     try {
                         SmsCommand().context { console = answerConsole }
@@ -55,7 +54,8 @@ class SmsBotMessageHandler(
                     } catch (e: Abort) {
                         answerConsole.print("Aborted!", true)
                     }
-                }.subscribeOn(Schedulers.boundedElastic())
+                    subscriber.onComplete()
+                }//FIXME.subscribeOn(Schedulers.single())
             }
         } else if (room.members.size == 2) {
             LOG.debug("it seems to be a bot room, but message didn't start with 'sms'")

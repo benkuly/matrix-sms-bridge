@@ -10,4 +10,5 @@ interface AppserviceUserRepository : ReactiveCrudRepository<AppserviceUser, Stri
 
     @Query("MATCH (:AppserviceRoom) <- [m:MEMBER_OF] - (:AppserviceUser {userId:\$userId}) WITH max(m.mappingToken) as maxi WHERE NOT maxi IS NULL RETURN maxi")
     fun findLastMappingTokenByUserId(userId: String): Mono<Int>
+
 }

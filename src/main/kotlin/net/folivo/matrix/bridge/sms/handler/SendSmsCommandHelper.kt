@@ -9,9 +9,11 @@ import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
+import org.neo4j.springframework.data.repository.config.ReactiveNeo4jRepositoryConfigurationExtension
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -32,6 +34,7 @@ class SendSmsCommandHelper(
         AUTO, ALWAYS, NO
     }
 
+    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun createRoomAndSendMessage(
             body: String,
             sender: String,

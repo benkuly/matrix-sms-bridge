@@ -50,7 +50,7 @@ class SmsAppserviceMessageHandler(
                                     context = context
                             )
                         } else {
-                            LOG.debug("room didn't contain bot user")
+                            LOG.debug("room didn't contain bot user or event was no text message")
                             Mono.empty()
                         }
                     }

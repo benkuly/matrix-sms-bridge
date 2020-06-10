@@ -124,5 +124,4 @@ class AppserviceRoomRepositoryIT {
                 .create(cut.findByMembersUserIdContaining(setOf("someUserId2", "someUserId24")))
                 .verifyComplete()
     }
-
 }

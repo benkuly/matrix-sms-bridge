@@ -10,6 +10,7 @@ import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
 import org.slf4j.LoggerFactory
+import reactor.core.scheduler.Schedulers
 
 class SendSmsCommand(
         private val sender: String,
@@ -44,7 +45,8 @@ class SendSmsCommand(
                         receiverNumbers = receiverNumbers,
                         roomName = roomName,
                         roomCreationMode = roomCreationMode
-                ).blockOptional()
+                ).subscribeOn(Schedulers.boundedElastic())
+                        .blockOptional()
                         .ifPresent { echo(it) }
             } else {
                 LOG.debug("use one room for each number and send message")
@@ -55,7 +57,8 @@ class SendSmsCommand(
                             receiverNumbers = listOf(number),
                             roomName = roomName,
                             roomCreationMode = roomCreationMode
-                    ).blockOptional()
+                    ).subscribeOn(Schedulers.boundedElastic())
+                            .blockOptional()
                             .ifPresent { echo(it) }
                 }
             }

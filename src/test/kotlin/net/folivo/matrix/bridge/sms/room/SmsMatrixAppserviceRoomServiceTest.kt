@@ -1,9 +1,12 @@
 package net.folivo.matrix.bridge.sms.room
 
-import io.mockk.*
+import io.mockk.Called
+import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.mockk
+import io.mockk.verify
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
@@ -73,9 +76,9 @@ class SmsMatrixAppserviceRoomServiceTest {
                 .verifyComplete()
 
         verify {
-            appserviceUserRepositoryMock.save<AppserviceUser>(match {
-                it.rooms.contains(room)
-                && it.rooms.containsValue(MemberOfProperties(24))
+            appserviceRoomRepositoryMock.save<AppserviceRoom>(match {
+                it.members.contains(user)
+                && it.members[user] == MemberOfProperties(24)
             })
         }
     }
@@ -83,43 +86,41 @@ class SmsMatrixAppserviceRoomServiceTest {
     @Test
     fun `should save user join to room in database even if entities does not exists`() {
         val user = AppserviceUser("someUserId", true)
+        val existingUser = AppserviceUser("someExistingUserId", false)
         val roomWithoutMember = AppserviceRoom("someRoomId")
-        val roomWithMember = AppserviceRoom("someRoomId", mutableMapOf(user to mockk()))
-        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returnsMany(
-                Mono.empty(),
-                Mono.just(roomWithMember)
+        val roomWithMember = AppserviceRoom(
+                "someRoomId", mutableMapOf(
+                existingUser to MemberOfProperties(1),
+                user to MemberOfProperties(1)
         )
+        )
+        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.empty())
         every { appserviceUserRepositoryMock.findById(any<String>()) }.returns(Mono.empty())
         every { appserviceUserRepositoryMock.findLastMappingTokenByUserId(any()) }.returns(Mono.empty())
         every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(roomWithoutMember))
-        every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }.returns(Mono.just(user))
+        every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }.returnsMany(
+                Mono.just(existingUser), Mono.just(user)
+        )
         every { matrixClientMock.roomsApi.getJoinedMembers(allAny()) }.returns(
                 Mono.just(
                         GetJoinedMembersResponse(
                                 mapOf(
-                                        "someExistingUserId" to mockk()
+                                        "someExistingUserId" to mockk(),
+                                        "soneUserId" to mockk()
                                 )
                         )
                 )
         )
         every { helperMock.isManagedUser("someExistingUserId") }.returns(Mono.just(false))
+        every { helperMock.isManagedUser("soneUserId") }.returns(Mono.just(true))
+
 
         StepVerifier
                 .create(cut.saveRoomJoin("someRoomId", "someUserId"))
                 .verifyComplete()
 
-        verifyOrder {
-            appserviceRoomRepositoryMock.save<AppserviceRoom>(roomWithoutMember)
-            appserviceUserRepositoryMock.save<AppserviceUser>(match {
-                it.rooms.containsKey(roomWithoutMember)
-                && it.rooms.containsValue(MemberOfProperties(1))
-            })
-            appserviceUserRepositoryMock.save<AppserviceUser>(match {
-                it.userId == "someExistingUserId"
-                && it.rooms.containsKey(roomWithMember)
-                && !it.isManaged
-                && it.rooms.containsValue(MemberOfProperties(1))
-            })
+        verify {
+            appserviceRoomRepositoryMock.save<AppserviceRoom>(roomWithMember)
         }
     }
 
