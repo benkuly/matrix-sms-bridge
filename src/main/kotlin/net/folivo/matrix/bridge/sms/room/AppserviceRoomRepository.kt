@@ -8,12 +8,11 @@ import reactor.core.publisher.Flux
 @Repository
 interface AppserviceRoomRepository : ReactiveCrudRepository<AppserviceRoom, String> {
     @Query(
-            "MATCH (au:AppserviceUser) " +
-            "WHERE au.userId in \$members " +
-            "WITH collect(au) as users " +
-            "MATCH (ar:AppserviceRoom) " +
-            "WHERE ALL(au in users WHERE (au) - [:MEMBER_OF] -> (ar)) " +
-            "RETURN ar, collect(users)"
+            "MATCH (user:AppserviceUser)-[:MEMBER_OF]->(room:AppserviceRoom) " +
+            "WHERE user.userId in \$members " +
+            "WITH room, size(\$members) as inputCnt, count(DISTINCT user) as cnt " +
+            "WHERE cnt = inputCnt " +
+            "RETURN room"
     )
-    fun findByMembersUserIdContaining(members: List<String>): Flux<AppserviceRoom>
+    fun findByMembersUserIdContaining(members: Set<String>): Flux<AppserviceRoom>
 }

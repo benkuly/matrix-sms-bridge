@@ -40,7 +40,11 @@ class SendSmsCommandHelper(
             roomCreationMode: RoomCreationMode
     ): Mono<String> {
         val receiverIds = receiverNumbers.map { "@sms_${it.removePrefix("+")}:${botProperties.serverName}" }
-        val members = listOf(sender, *receiverIds.toTypedArray())
+        val members = setOf(
+                sender,
+                "@${botProperties.username}:${botProperties.serverName}",
+                *receiverIds.toTypedArray()
+        )
         return roomRepository.findByMembersUserIdContaining(members)
                 .limitRequest(2)
                 .collectList()
@@ -101,7 +105,6 @@ class SendSmsCommandHelper(
                 }
     }
 
-    //FIXME test
     private fun registerOnMatrixException(userId: String, error: Throwable): Mono<Void> {
         return if (error is MatrixServerException && error.statusCode == FORBIDDEN) {
             LOG.warn("try to register user because of ${error.errorResponse}")

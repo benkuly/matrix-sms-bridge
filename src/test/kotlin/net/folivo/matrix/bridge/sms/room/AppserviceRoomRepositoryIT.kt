@@ -97,7 +97,7 @@ class AppserviceRoomRepositoryIT {
     @Test
     fun `should findByMembersUserIdContaining one`() {
         StepVerifier
-                .create(cut.findByMembersUserIdContaining(listOf("someUserId1", "someUserId2")))
+                .create(cut.findByMembersUserIdContaining(setOf("someUserId1", "someUserId2")))
                 .assertNext { assertThat(it.roomId).isEqualTo("someRoomId1") }
                 .verifyComplete()
     }
@@ -105,7 +105,7 @@ class AppserviceRoomRepositoryIT {
     @Test
     fun `should findByMembersUserIdContaining two`() {
         StepVerifier
-                .create(cut.findByMembersUserIdContaining(listOf("someUserId1", "someUserId3")))
+                .create(cut.findByMembersUserIdContaining(setOf("someUserId1", "someUserId3")))
                 .assertNext { assertThat(it.roomId).isEqualTo("someRoomId1") }
                 .assertNext { assertThat(it.roomId).isEqualTo("someRoomId2") }
                 .verifyComplete()
@@ -114,14 +114,14 @@ class AppserviceRoomRepositoryIT {
     @Test
     fun `should not findByMembersUserIdContaining`() {
         StepVerifier
-                .create(cut.findByMembersUserIdContaining(listOf("someUserId2", "someUserId4")))
+                .create(cut.findByMembersUserIdContaining(setOf("someUserId2", "someUserId4")))
                 .verifyComplete()
     }
 
     @Test
     fun `should not findByMembersUserIdContaining with foreign userid`() {
         StepVerifier
-                .create(cut.findByMembersUserIdContaining(listOf("someUserId2", "someUserId24")))
+                .create(cut.findByMembersUserIdContaining(setOf("someUserId2", "someUserId24")))
                 .verifyComplete()
     }
 

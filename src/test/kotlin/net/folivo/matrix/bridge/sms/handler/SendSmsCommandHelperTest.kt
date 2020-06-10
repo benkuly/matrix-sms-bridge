@@ -4,17 +4,21 @@ import io.mockk.*
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import net.folivo.matrix.appservice.api.AppserviceHandlerHelper
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.NO
 import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
+import net.folivo.matrix.core.api.ErrorResponse
+import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.springframework.http.HttpStatus.FORBIDDEN
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
@@ -23,6 +27,9 @@ import reactor.test.StepVerifier
 class SendSmsCommandHelperTest {
     @MockK
     lateinit var roomRepositoryMock: AppserviceRoomRepository
+
+    @MockK
+    lateinit var helperMock: AppserviceHandlerHelper
 
     @MockK
     lateinit var matrixClientMock: MatrixClient
@@ -38,10 +45,12 @@ class SendSmsCommandHelperTest {
 
     @BeforeEach
     fun beforeEach() {
+        every { botPropertiesMock.username }.returns("bot")
         every { botPropertiesMock.serverName }.returns("someServer")
         every { matrixClientMock.roomsApi.createRoom(allAny()) }.returns(Mono.just("someRoomId"))
         every { matrixClientMock.roomsApi.joinRoom(allAny()) }.returns(Mono.empty())
         every { matrixClientMock.roomsApi.sendRoomEvent(allAny(), any()) }.returns(Mono.just("someEventId"))
+        every { helperMock.registerAndSaveUser(any()) }.returns(Mono.just(true))
         every { smsBridgePropertiesMock.templates.botSmsSendNewRoomMessage }.returns("newRoomMessage {sender} {body}")
         every { smsBridgePropertiesMock.templates.botSmsSendCreatedRoomAndSendMessage }.returns("create room and send message {receiverNumbers}")
         every { smsBridgePropertiesMock.templates.botSmsSendSendMessage }.returns("send message {receiverNumbers}")
@@ -68,8 +77,9 @@ class SendSmsCommandHelperTest {
         verifyAll {
             matrixClientMock.roomsApi.createRoom(
                     name = "room name",
-                    invite = listOf(
+                    invite = setOf(
                             "someSender",
+                            "@bot:someServer",
                             "@sms_1111111111:someServer"
                     )
             )
@@ -103,8 +113,9 @@ class SendSmsCommandHelperTest {
         verifyAll {
             matrixClientMock.roomsApi.createRoom(
                     name = "room name",
-                    invite = listOf(
+                    invite = setOf(
                             "someSender",
+                            "@bot:someServer",
                             "@sms_1111111111:someServer",
                             "@sms_22222222:someServer"
                     )
@@ -117,7 +128,53 @@ class SendSmsCommandHelperTest {
                     txnId = any()
             )
             roomRepositoryMock.findByMembersUserIdContaining(match {
-                it.containsAll(listOf("someSender", "@sms_1111111111:someServer", "@sms_22222222:someServer"))
+                it.containsAll(setOf("someSender", "@sms_1111111111:someServer", "@sms_22222222:someServer"))
+            })
+        }
+    }
+
+    @Test
+    fun `should create user and join when user does not exists`() {
+        every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
+                .returns(Flux.just(mockk(), mockk()))
+        every { matrixClientMock.roomsApi.joinRoom(allAny()) }.returnsMany(
+                Mono.error(
+                        MatrixServerException(
+                                FORBIDDEN,
+                                ErrorResponse("FORBIDDEN", "user does not exists")
+                        )
+                ), Mono.just("someRoomId")
+        )
+
+        StepVerifier.create(
+                cut.createRoomAndSendMessage(
+                        body = "some text",
+                        sender = "someSender",
+                        roomCreationMode = ALWAYS,
+                        roomName = "room name",
+                        receiverNumbers = listOf("+1111111111")
+                )
+        ).assertNext { assertThat(it).isEqualTo("create room and send message +1111111111") }
+                .verifyComplete()
+        verifyAll {
+            matrixClientMock.roomsApi.createRoom(
+                    name = "room name",
+                    invite = setOf(
+                            "someSender",
+                            "@bot:someServer",
+                            "@sms_1111111111:someServer"
+                    )
+            )
+            helperMock.registerAndSaveUser("@sms_1111111111:someServer")
+            matrixClientMock.roomsApi.joinRoom("someRoomId", asUserId = "@sms_1111111111:someServer")
+            matrixClientMock.roomsApi.joinRoom("someRoomId", asUserId = "@sms_1111111111:someServer")
+            matrixClientMock.roomsApi.sendRoomEvent(
+                    roomId = "someRoomId",
+                    eventContent = match<TextMessageEventContent> { it.body == "newRoomMessage someSender some text" },
+                    txnId = any()
+            )
+            roomRepositoryMock.findByMembersUserIdContaining(match {
+                it.containsAll(setOf("someSender", "@bot:someServer", "@sms_1111111111:someServer"))
             })
         }
     }
