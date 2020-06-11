@@ -6,6 +6,7 @@ import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.core.model.events.m.room.message.MessageEvent.MessageEventContent
+import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -46,7 +47,7 @@ class SmsAppserviceMessageHandler(
                             Mono.just(Pair(false, room))
                         }
                     }.flatMap { (wasForBot, room) ->
-                        if (wasForBot) {
+                        if (wasForBot || content is NoticeMessageEventContent) {
                             Mono.empty()
                         } else {
                             sendSmsService.sendSms(

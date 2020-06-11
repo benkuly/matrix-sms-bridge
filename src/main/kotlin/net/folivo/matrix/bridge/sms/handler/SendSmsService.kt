@@ -53,7 +53,7 @@ class SendSmsService(
                             ).then()
                         }
                     } else {
-                        LOG.debug("cannot SMS from ${room.roomId} to +$receiver because of incompatible message type")
+                        LOG.debug("cannot send SMS from ${room.roomId} to +$receiver because of incompatible message type")
                         context.answer(
                                 NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsIncompatibleMessage),
                                 asUserId = member.userId

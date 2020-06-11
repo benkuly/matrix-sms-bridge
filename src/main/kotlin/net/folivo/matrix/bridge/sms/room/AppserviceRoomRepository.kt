@@ -13,6 +13,7 @@ interface AppserviceRoomRepository : ReactiveCrudRepository<AppserviceRoom, Stri
             "WITH room, size(\$members) as inputCnt, count(DISTINCT user) as cnt " +
             "WHERE cnt = inputCnt " +
             "RETURN room"
-    )
+    )// TODO fix query to load also users and therefore allow check to find real matching room (without other managed users) in SendSmsCommandHelper
+    // TODO or maybe write a query, which does that
     fun findByMembersUserIdContaining(members: Set<String>): Flux<AppserviceRoom>
 }

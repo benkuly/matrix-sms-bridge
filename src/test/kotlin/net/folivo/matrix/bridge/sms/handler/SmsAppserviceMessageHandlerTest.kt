@@ -16,6 +16,7 @@ import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
+import net.folivo.matrix.core.model.events.m.room.message.UnknownMessageEventContent
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -108,10 +109,25 @@ class SmsAppserviceMessageHandlerTest {
         )
 
         StepVerifier
-                .create(cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock))
+                .create(cut.handleMessage(UnknownMessageEventContent("someBody", "image"), contextMock))
                 .verifyComplete()
 
         verify { sendSmsServiceMock.sendSms(roomMock, "someBody", "someSender", contextMock, false) }
+    }
+
+    @Test
+    fun `should not delegate to SendSmsService when message is NoticeMessage`() {
+        every { roomMock.members } returns mutableMapOf(
+                mockk<AppserviceUser> {
+                    every { userId } returns "someUserId"
+                } to MemberOfProperties(1)
+        )
+
+        StepVerifier
+                .create(cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock))
+                .verifyComplete()
+
+        verify { sendSmsServiceMock wasNot Called }
     }
 
     @Test
@@ -161,7 +177,7 @@ class SmsAppserviceMessageHandlerTest {
                 .verifyComplete()
 
         verify { smsBotMessageHandlerMock wasNot Called }
-        verify { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) }
+        verify { sendSmsServiceMock wasNot Called }
     }
 
     @Test

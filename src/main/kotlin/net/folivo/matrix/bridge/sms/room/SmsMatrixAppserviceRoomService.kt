@@ -10,10 +10,8 @@ import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.restclient.MatrixClient
-import org.neo4j.springframework.data.repository.config.ReactiveNeo4jRepositoryConfigurationExtension
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
@@ -46,7 +44,6 @@ class SmsMatrixAppserviceRoomService(
         return saveRoomJoinAndGet(roomId, userId).then()
     }
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun saveRoomJoinAndGet(roomId: String, userId: String): Mono<AppserviceRoom> {
         return roomRepository.findById(roomId)
                 .switchIfEmpty(roomRepository.save((AppserviceRoom(roomId))))
@@ -91,7 +88,6 @@ class SmsMatrixAppserviceRoomService(
                                 .flatMap { userRepository.save(AppserviceUser(userId, it)) })
     }
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun saveRoomLeave(roomId: String, userId: String): Mono<Void> {
         LOG.debug("saveRoomLeave in room $roomId of user $userId") // TODO remove old rooms
         return roomRepository.findById(roomId)

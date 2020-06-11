@@ -4,9 +4,7 @@ import net.folivo.matrix.appservice.api.user.CreateUserParameter
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import org.neo4j.springframework.data.repository.config.ReactiveNeo4jRepositoryConfigurationExtension
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Mono
 
 @Service
@@ -42,7 +40,6 @@ class SmsMatrixAppserviceUserService(
         }
     }
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun saveUser(userId: String): Mono<Void> {
         return helper.isManagedUser(userId)
                 .flatMap { appserviceUserRepository.save(AppserviceUser(userId, it)) }
