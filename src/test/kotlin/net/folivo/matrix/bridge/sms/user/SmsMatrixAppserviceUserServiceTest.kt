@@ -7,6 +7,7 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.verify
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState.*
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
+import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
@@ -22,6 +23,9 @@ class SmsMatrixAppserviceUserServiceTest {
 
     @MockK
     lateinit var appserviceUserRepositoryMock: AppserviceUserRepository
+
+    @MockK
+    lateinit var smsBridgePropertiesMock: SmsBridgeProperties
 
     @InjectMockKs
     lateinit var cut: SmsMatrixAppserviceUserService
@@ -103,19 +107,59 @@ class SmsMatrixAppserviceUserServiceTest {
 
     @Test
     fun `should get roomId`() {
+        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
         every { appserviceUserRepositoryMock.findById("someUserId") }
                 .returns(
                         Mono.just(
                                 AppserviceUser(
                                         "someUserId", true, mutableMapOf(
-                                        AppserviceRoom("someRoomId") to MemberOfProperties(24)
+                                        AppserviceRoom("someRoomId1") to MemberOfProperties(12),
+                                        AppserviceRoom("someRoomId2") to MemberOfProperties(24)
                                 )
                                 )
                         )
                 )
         StepVerifier
                 .create(cut.getRoomId("someUserId", 24))
-                .assertNext { assertThat(it).isEqualTo("someRoomId") }
+                .assertNext { assertThat(it).isEqualTo("someRoomId2") }
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should get roomId when mapping token forced`() {
+        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
+        every { appserviceUserRepositoryMock.findById("someUserId") }
+                .returns(
+                        Mono.just(
+                                AppserviceUser(
+                                        "someUserId", true, mutableMapOf(
+                                        AppserviceRoom("someRoomId1") to MemberOfProperties(12)
+                                )
+                                )
+                        )
+                )
+        StepVerifier
+                .create(cut.getRoomId("someUserId", 12))
+                .assertNext { assertThat(it).isEqualTo("someRoomId1") }
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should get first roomId when mapping token can be ignored`() {
+        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
+        every { appserviceUserRepositoryMock.findById("someUserId") }
+                .returns(
+                        Mono.just(
+                                AppserviceUser(
+                                        "someUserId", true, mutableMapOf(
+                                        AppserviceRoom("someRoomId1") to MemberOfProperties(12)
+                                )
+                                )
+                        )
+                )
+        StepVerifier
+                .create(cut.getRoomId("someUserId", 24))
+                .assertNext { assertThat(it).isEqualTo("someRoomId1") }
                 .verifyComplete()
     }
 

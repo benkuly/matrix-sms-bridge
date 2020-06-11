@@ -39,7 +39,7 @@ class SmsBotMessageHandler(
 
                 val args = Commandline.translateCommandline(body.removePrefix("sms"))
 
-                //FIXME test
+                //TODO test
                 Mono.empty<Void>()
                         .publishOn(Schedulers.boundedElastic())
                         .then(Mono.from<Void> { subscriber ->
@@ -69,7 +69,7 @@ class SmsBotMessageHandler(
                     .flatMap { serviceHelper.isManagedUser(it.userId) }
                     .collectList()
                     .map { !it.contains(false) }
-                    .flatMap { onlyManagedUsers -> //FIXME test
+                    .flatMap { onlyManagedUsers ->
                         if (onlyManagedUsers) {
                             Mono.just(false)
                         } else {

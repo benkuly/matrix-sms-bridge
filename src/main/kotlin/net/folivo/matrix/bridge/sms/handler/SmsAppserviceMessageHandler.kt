@@ -40,13 +40,13 @@ class SmsAppserviceMessageHandler(
                                     body = content.body,
                                     sender = sender,
                                     context = context
-                            ).map { Pair(it, room) }//FIXME test
+                            ).map { Pair(it, room) }
                         } else {
                             LOG.debug("room didn't contain bot user or event was no text message")
-                            Mono.just(Pair(true, room))
+                            Mono.just(Pair(false, room))
                         }
                     }.flatMap { (wasForBot, room) ->
-                        if (wasForBot) {//FIXME test
+                        if (wasForBot) {
                             Mono.empty()
                         } else {
                             sendSmsService.sendSms(

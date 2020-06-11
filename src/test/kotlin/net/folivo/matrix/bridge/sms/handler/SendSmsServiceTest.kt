@@ -43,6 +43,8 @@ class SendSmsServiceTest {
         every { matrixBotPropertiesMock.serverName } returns "someServerName"
         every { matrixBotPropertiesMock.username } returns "someUsername"
         every { smsProviderMock.sendSms(any(), any()) }.returns(Mono.empty())
+        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
+        every { smsBridgePropertiesMock.templates.outgoingMessageToken }.returns(" someToken")
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate")
         every { smsBridgePropertiesMock.templates.sendSmsError }.returns("sendSmsError")
         every { smsBridgePropertiesMock.templates.sendSmsIncompatibleMessage }.returns("incompatibleMessage")
@@ -65,8 +67,8 @@ class SendSmsServiceTest {
 
 
         verifyAll {
-            smsProviderMock.sendSms("+0123456789", "someTemplate")
-            smsProviderMock.sendSms("+9876543210", "someTemplate")
+            smsProviderMock.sendSms("+0123456789", "someTemplate someToken")
+            smsProviderMock.sendSms("+9876543210", "someTemplate someToken")
         }
     }
 
@@ -92,8 +94,8 @@ class SendSmsServiceTest {
                 )
                 .verifyComplete()
 
-        verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", "someTemplate") }
-        verify { smsProviderMock.sendSms("+9876543210", "someTemplate") }
+        verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", any()) }
+        verify { smsProviderMock.sendSms("+9876543210", "someTemplate someToken") }
     }
 
     @Test
@@ -104,7 +106,9 @@ class SendSmsServiceTest {
                         AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(24)
                 )
         )
-        every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate {sender} {body} {token}")
+        every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate {sender} {body} ")
+        every { smsBridgePropertiesMock.templates.outgoingMessageToken }.returns("{token}")
+
 
         StepVerifier
                 .create(
@@ -126,7 +130,8 @@ class SendSmsServiceTest {
                         AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(24)
                 )
         )
-        every { smsBridgePropertiesMock.templates.outgoingMessageFromBot }.returns("someBotTemplate {sender} {body} {token}")
+        every { smsBridgePropertiesMock.templates.outgoingMessageFromBot }.returns("someBotTemplate {sender} {body} ")
+        every { smsBridgePropertiesMock.templates.outgoingMessageToken }.returns("{token}")
 
         StepVerifier
                 .create(
@@ -136,6 +141,28 @@ class SendSmsServiceTest {
 
         verifyAll {
             smsProviderMock.sendSms("+0123456789", "someBotTemplate @someUsername:someServerName someBody #24")
+        }
+    }
+
+    @Test
+    fun `should use other template string when token not needed`() {
+        val room = AppserviceRoom(
+                "someRoomId",
+                members = mutableMapOf(
+                        AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(24)
+                )
+        )
+        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
+        every { smsBridgePropertiesMock.templates.outgoingMessageFromBot }.returns("someBotTemplate {sender} {body}")
+
+        StepVerifier
+                .create(
+                        cut.sendSms(room, "someBody", "@someUsername:someServerName", contextMock, true)
+                )
+                .verifyComplete()
+
+        verifyAll {
+            smsProviderMock.sendSms("+0123456789", "someBotTemplate @someUsername:someServerName someBody")
         }
     }
 
@@ -153,8 +180,8 @@ class SendSmsServiceTest {
                 .create(cut.sendSms(room, "someBody", "someSender", contextMock, true))
                 .verifyComplete()
 
-        verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", "someTemplate") }
-        verify { smsProviderMock.sendSms("+9876543210", "someTemplate") }
+        verify(exactly = 0) { smsProviderMock.sendSms("+0123456789", any()) }
+        verify { smsProviderMock.sendSms("+9876543210", "someTemplate someToken") }
     }
 
     @Test
@@ -165,7 +192,8 @@ class SendSmsServiceTest {
                         AppserviceUser("@sms_0123456789:someServerName", true) to MemberOfProperties(1)
                 )
         )
-        every { smsProviderMock.sendSms("+0123456789", "someTemplate") }.returns(Mono.error(RuntimeException()))
+        every { smsProviderMock.sendSms("+0123456789", any()) }
+                .returns(Mono.error(RuntimeException()))
 
         StepVerifier
                 .create(cut.sendSms(room, "someBody", "someSender", contextMock, true))
@@ -173,7 +201,7 @@ class SendSmsServiceTest {
 
 
         verifyAll {
-            smsProviderMock.sendSms("+0123456789", "someTemplate")
+            smsProviderMock.sendSms("+0123456789", "someTemplate someToken")
             contextMock.answer(
                     match<NoticeMessageEventContent> { it.body == "sendSmsError" },
                     asUserId = "@sms_0123456789:someServerName"

@@ -58,16 +58,12 @@ class SmsAppserviceMessageHandlerTest {
         every { contextMock.originalEvent.sender } returns "someSender"
         every { roomServiceMock.getRoomOrCreateAndJoin("someRoomId", "someSender") }.returns(Mono.just(roomMock))
 
-        every {
-            sendSmsServiceMock.sendSms(any(), any(), any(), any(), any())
-        } returns Mono.empty()
-        every {
-            smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any())
-        } returns Mono.empty()
+        every { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) } returns Mono.empty()
+        every { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any()) } returns Mono.just(false)
     }
 
     @Test
-    fun `should always delegate to SendSmsService`() {
+    fun `should delegate to SendSmsService when not message for sms bot`() {
         val roomMock1 = mockk<AppserviceRoom> {
             every { members } returns mutableMapOf(
                     mockk<AppserviceUser> {
@@ -104,7 +100,7 @@ class SmsAppserviceMessageHandlerTest {
     }
 
     @Test
-    fun `should always delegate to SendSmsService when message is not TextMessage`() {
+    fun `should delegate to SendSmsService when message is not TextMessage`() {
         every { roomMock.members } returns mutableMapOf(
                 mockk<AppserviceUser> {
                     every { userId } returns "someUserId"
@@ -119,7 +115,9 @@ class SmsAppserviceMessageHandlerTest {
     }
 
     @Test
-    fun `should delegate to SmsBotHandler when room contains bot`() {
+    fun `should delegate to SmsBotHandler when room contains bot and not delegate to SendSmsService`() {
+        every { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any()) } returns Mono.just(true)
+
         every { roomMock.members } returns mutableMapOf(
                 mockk<AppserviceUser> {
                     every { userId } returns "@smsbot:someServerName"
@@ -131,6 +129,7 @@ class SmsAppserviceMessageHandlerTest {
                 .verifyComplete()
 
         verify { smsBotMessageHandlerMock.handleMessageToSmsBot(roomMock, "someBody", "someSender", contextMock) }
+        verify { sendSmsServiceMock wasNot Called }
     }
 
     @Test
@@ -146,6 +145,7 @@ class SmsAppserviceMessageHandlerTest {
                 .verifyComplete()
 
         verify { smsBotMessageHandlerMock wasNot Called }
+        verify { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -161,6 +161,7 @@ class SmsAppserviceMessageHandlerTest {
                 .verifyComplete()
 
         verify { smsBotMessageHandlerMock wasNot Called }
+        verify { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) }
     }
 
     @Test

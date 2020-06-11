@@ -3,6 +3,7 @@ package net.folivo.matrix.bridge.sms.user
 import net.folivo.matrix.appservice.api.user.CreateUserParameter
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
+import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import org.neo4j.springframework.data.repository.config.ReactiveNeo4jRepositoryConfigurationExtension
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -11,7 +12,8 @@ import reactor.core.publisher.Mono
 @Service
 class SmsMatrixAppserviceUserService(
         private val helper: MatrixAppserviceServiceHelper,
-        private val appserviceUserRepository: AppserviceUserRepository
+        private val appserviceUserRepository: AppserviceUserRepository,
+        private val smsBridgeProperties: SmsBridgeProperties
 ) : MatrixAppserviceUserService {
 
     @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
@@ -52,10 +54,15 @@ class SmsMatrixAppserviceUserService(
     fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {
         return appserviceUserRepository.findById(userId)
                 .flatMap { user ->
-                    Mono.justOrEmpty(
-                            user.rooms.entries
-                                    .find { it.value.mappingToken == mappingToken }
-                                    ?.key?.roomId)
+                    val rooms = user.rooms.keys
+                    if (rooms.size == 1 && smsBridgeProperties.allowMappingWithoutToken) {
+                        Mono.just(rooms.first().roomId)
+                    } else {
+                        Mono.justOrEmpty(
+                                user.rooms.entries
+                                        .find { it.value.mappingToken == mappingToken }
+                                        ?.key?.roomId)
+                    }
                 }
     }
 }

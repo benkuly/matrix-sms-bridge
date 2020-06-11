@@ -31,9 +31,7 @@ class SendSmsService(
     ): Mono<Void> {
         return Flux.fromIterable(room.members.entries)
                 .filter { it.key.userId != sender }
-                .map {
-                    Triple(it.key, it.value, it.key.userId.removePrefix("@sms_").substringBefore(":"))
-                }
+                .map { Triple(it.key, it.value, it.key.userId.removePrefix("@sms_").substringBefore(":")) }
                 .filter { it.third.matches(Regex("[0-9]{6,15}")) }
                 .flatMap { (member, memberOfProps, receiver) ->
                     if (isTextMessage) {
@@ -42,39 +40,45 @@ class SendSmsService(
                                 sender = sender,
                                 receiver = receiver,
                                 body = body,
-                                mappingToken = memberOfProps.mappingToken
-                        )
-                                .onErrorResume {
-                                    LOG.error(
-                                            "Could not send sms from room ${room.roomId} and $sender with body '$body'. " +
-                                            "This should be handled, e.g. by queuing messages.", it
-                                    )
-                                    context.answer(
-                                            NoticeMessageEventContent(
-                                                    smsBridgeProperties.templates.sendSmsError
-                                            ),
-                                            asUserId = member.userId
-                                    ).then()
-                                }
+                                mappingToken = memberOfProps.mappingToken,
+                                needsToken = member.rooms.size > 1
+                        ).onErrorResume {
+                            LOG.error(
+                                    "Could not send sms from room ${room.roomId} and $sender with body '$body'. " +
+                                    "This should be handled, e.g. by queuing messages.", it
+                            )
+                            context.answer(
+                                    NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsError),
+                                    asUserId = member.userId
+                            ).then()
+                        }
                     } else {
                         LOG.debug("cannot SMS from ${room.roomId} to +$receiver because of incompatible message type")
                         context.answer(
-                                NoticeMessageEventContent(
-                                        smsBridgeProperties.templates.sendSmsIncompatibleMessage
-                                ),
+                                NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsIncompatibleMessage),
                                 asUserId = member.userId
-                        ).then()
+                        )
                     }
                 }
                 .then()
     }
 
-    private fun insertBodyAndSend(sender: String, receiver: String, body: String, mappingToken: Int): Mono<Void> {
-        val template =
+    private fun insertBodyAndSend(
+            sender: String,
+            receiver: String,
+            body: String,
+            mappingToken: Int,
+            needsToken: Boolean
+    ): Mono<Void> {
+        val messageTemplate =
                 if (sender == "@${smsBotProperties.username}:${smsBotProperties.serverName}")
                     smsBridgeProperties.templates.outgoingMessageFromBot
                 else smsBridgeProperties.templates.outgoingMessage
-        val templateBody = template.replace("{sender}", sender)
+        val completeTemplate =
+                if (smsBridgeProperties.allowMappingWithoutToken && !needsToken) messageTemplate
+                else messageTemplate + smsBridgeProperties.templates.outgoingMessageToken
+
+        val templateBody = completeTemplate.replace("{sender}", sender)
                 .replace("{body}", body)
                 .replace("{token}", "#$mappingToken")
 
