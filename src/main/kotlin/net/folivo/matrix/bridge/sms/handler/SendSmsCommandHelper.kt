@@ -82,7 +82,7 @@ class SendSmsCommandHelper(
                                                     )
                                             )
                                 }.map { smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage }
-                    } else if (rooms.size == 1) {
+                    } else if (rooms.size == 1 && rooms[0].members.keys.count { it.isManaged } == receiverIds.size + 1) {
                         LOG.debug("only send message")
                         matrixClient.roomsApi.sendRoomEvent(
                                 roomId = rooms[0].roomId,

@@ -15,5 +15,4 @@ interface AppserviceRoomRepository : ReactiveCrudRepository<AppserviceRoom, Stri
             "RETURN room"
     )
     fun findByMembersUserIdContaining(members: Set<String>): Flux<AppserviceRoom>
-
 }

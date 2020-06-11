@@ -179,7 +179,7 @@ class SmsMatrixAppserviceRoomServiceTest {
             appserviceRoomRepositoryMock.findById("someRoomId")
             matrixClientMock.roomsApi.leaveRoom("someRoomId", "someUserId2")
             matrixClientMock.roomsApi.leaveRoom("someRoomId", null)
-            appserviceRoomRepositoryMock.save<AppserviceRoom>(match {
+            appserviceRoomRepositoryMock.delete(match {
                 it.members.keys.containsAll(listOf(user2, user3))
             })
         }

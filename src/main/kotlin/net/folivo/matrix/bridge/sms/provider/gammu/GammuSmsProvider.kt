@@ -88,7 +88,7 @@ class GammuSmsProvider(
                                 receiver,
                                 "-len",
                                 body.length.toString(),
-                                "-unicode",
+                                "-unicode", // TODO maybe don't sent everything in unicode (it allows more characters per sms)
                                 "-text",
                                 body
                         )

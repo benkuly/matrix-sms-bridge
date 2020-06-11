@@ -84,7 +84,6 @@ class SmsMatrixAppserviceRoomService(
                 }
     }
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     private fun findOrCreateUser(userId: String): Mono<AppserviceUser> {
         return userRepository.findById(userId)
                 .switchIfEmpty(
@@ -113,7 +112,7 @@ class SmsMatrixAppserviceRoomService(
                                                         matrixClient.roomsApi.leaveRoom(roomId)
                                                     else matrixClient.roomsApi.leaveRoom(roomId, it.userId)
                                                 }
-                                                .then(roomRepository.save(room))
+                                                .then(roomRepository.delete(room))
                                     } else {
                                         roomRepository.save(room)
                                     }

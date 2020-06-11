@@ -10,6 +10,8 @@ import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.NO
 import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
+import net.folivo.matrix.bridge.sms.user.AppserviceUser
+import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -200,6 +202,33 @@ class SendSmsCommandHelperTest {
                     txnId = any()
             )
         }
+    }
+
+    @Test
+    fun `should not send message when one room exists, but members does not match size`() {
+        every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
+                .returns(Flux.just(mockk {
+                    every { roomId }.returns("someRoomId")
+                    every { members }.returns(
+                            mutableMapOf(
+                                    AppserviceUser("someUser", true) to MemberOfProperties(1),
+                                    AppserviceUser("someUserTooMany", true) to MemberOfProperties(1),
+                                    AppserviceUser("botUser", true) to MemberOfProperties(1)
+                            )
+                    )
+                }))
+
+        StepVerifier.create(
+                cut.createRoomAndSendMessage(
+                        body = "some text",
+                        sender = "someSender",
+                        roomCreationMode = NO,
+                        roomName = "room name",
+                        receiverNumbers = listOf("+1111111111")
+                )
+        ).assertNext { assertThat(it).isEqualTo("disabled room creation +1111111111") }
+                .verifyComplete()
+        verify { matrixClientMock wasNot Called }
     }
 
     @Test
