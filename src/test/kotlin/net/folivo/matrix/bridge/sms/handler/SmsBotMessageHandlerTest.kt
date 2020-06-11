@@ -5,12 +5,11 @@ import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import io.mockk.mockk
 import io.mockk.verify
-import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -27,9 +26,6 @@ class SmsBotMessageHandlerTest {
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
 
-    @MockK
-    lateinit var serviceHelperMock: MatrixAppserviceServiceHelper
-
     @InjectMockKs
     lateinit var cut: SmsBotMessageHandler
 
@@ -41,7 +37,6 @@ class SmsBotMessageHandlerTest {
 
     @BeforeEach
     fun beforeEach() {
-        every { serviceHelperMock.isManagedUser(any()) }.returns(Mono.just(false))
         every { smsBridgePropertiesMock.templates.botTooManyMembers }.returns("tooMany")
         every { smsBridgePropertiesMock.templates.botHelp }.returns("help")
         every { contextMock.answer(any(), any()) }.returns(Mono.empty())
@@ -84,8 +79,9 @@ class SmsBotMessageHandlerTest {
         every { roomMock.members.size }.returns(2)
         every { roomMock.members.keys }.returns(
                 mutableSetOf(
-                        mockk { every { userId }.returns("someUserI1") },
-                        mockk { every { userId }.returns("someUserId2") })
+                        AppserviceUser("someUserId1", true),
+                        AppserviceUser("someUserId2", false)
+                )
         )
         StepVerifier
                 .create(cut.handleMessageToSmsBot(roomMock, "bla", "someSender", contextMock))
@@ -96,11 +92,11 @@ class SmsBotMessageHandlerTest {
 
     @Test
     fun `should do nothing when all members are managed`() {
-        every { serviceHelperMock.isManagedUser(any()) }.returns(Mono.just(true))
         every { roomMock.members.keys }.returns(
                 mutableSetOf(
-                        mockk { every { userId }.returns("someUserI1") },
-                        mockk { every { userId }.returns("someUserId2") })
+                        AppserviceUser("someUserId1", true),
+                        AppserviceUser("someUserId2", true)
+                )
         )
         every { roomMock.members.size }.returns(2)
         StepVerifier

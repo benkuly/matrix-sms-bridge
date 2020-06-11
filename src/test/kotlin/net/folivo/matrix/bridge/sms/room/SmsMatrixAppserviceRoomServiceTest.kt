@@ -1,14 +1,12 @@
 package net.folivo.matrix.bridge.sms.room
 
-import io.mockk.Called
-import io.mockk.every
+import io.mockk.*
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import io.mockk.mockk
-import io.mockk.verify
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
+import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
@@ -34,6 +32,9 @@ class SmsMatrixAppserviceRoomServiceTest {
     lateinit var helperMock: MatrixAppserviceServiceHelper
 
     @MockK
+    lateinit var botPropertiesMock: MatrixBotProperties
+
+    @MockK
     lateinit var matrixClientMock: MatrixClient
 
     @InjectMockKs
@@ -42,6 +43,8 @@ class SmsMatrixAppserviceRoomServiceTest {
     @BeforeEach
     fun beforeEach() {
         every { helperMock.isManagedUser("someUserId") }.returns(Mono.just(true))
+        every { botPropertiesMock.username }.returns("bot")
+        every { botPropertiesMock.serverName }.returns("someServer")
     }
 
     @Test
@@ -126,21 +129,60 @@ class SmsMatrixAppserviceRoomServiceTest {
 
     @Test
     fun `should save user room leave in database`() {
-        val room1 = AppserviceRoom("someRoomId1")
-        val room2 = AppserviceRoom("someRoomId2")
-        val user = AppserviceUser(
-                "someUserId", true, mutableMapOf(
-                room1 to MemberOfProperties(1), room2 to MemberOfProperties(1)
+        val user1 = AppserviceUser("someUserId1", false)
+        val user2 = AppserviceUser("someUserId2", false)
+        val user3 = AppserviceUser("someUserId3", true)
+
+        val room = AppserviceRoom(
+                "someRoomId", mutableMapOf(
+                user1 to MemberOfProperties(1),
+                user2 to MemberOfProperties(1),
+                user3 to MemberOfProperties(1)
         )
         )
-        every { appserviceUserRepositoryMock.findById("someUserId") }.returns(Mono.just(user))
-        every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }.returns(Mono.just(user))
+        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
+        every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
 
         StepVerifier
-                .create(cut.saveRoomLeave("someRoomId1", "someUserId"))
+                .create(cut.saveRoomLeave("someRoomId", "someUserId1"))
                 .verifyComplete()
 
-        verify { appserviceUserRepositoryMock.save<AppserviceUser>(match { it.rooms.contains(room2) }) }
+        verify {
+            appserviceRoomRepositoryMock.save<AppserviceRoom>(match {
+                it.members.keys.containsAll(listOf(user2, user3))
+            })
+        }
+    }
+
+    @Test
+    fun `should save user room leave in database and leave room when all users are managed users`() {
+        val user1 = AppserviceUser("someUserId1", false)
+        val user2 = AppserviceUser("someUserId2", true)
+        val user3 = AppserviceUser("@bot:someServer", true)
+
+        val room = AppserviceRoom(
+                "someRoomId", mutableMapOf(
+                user1 to MemberOfProperties(1),
+                user2 to MemberOfProperties(1),
+                user3 to MemberOfProperties(1)
+        )
+        )
+        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
+        every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
+        every { matrixClientMock.roomsApi.leaveRoom(allAny()) }.returns(Mono.empty())
+
+        StepVerifier
+                .create(cut.saveRoomLeave("someRoomId", "someUserId1"))
+                .verifyComplete()
+
+        verifyAll {
+            appserviceRoomRepositoryMock.findById("someRoomId")
+            matrixClientMock.roomsApi.leaveRoom("someRoomId", "someUserId2")
+            matrixClientMock.roomsApi.leaveRoom("someRoomId", null)
+            appserviceRoomRepositoryMock.save<AppserviceRoom>(match {
+                it.members.keys.containsAll(listOf(user2, user3))
+            })
+        }
     }
 
     @Test

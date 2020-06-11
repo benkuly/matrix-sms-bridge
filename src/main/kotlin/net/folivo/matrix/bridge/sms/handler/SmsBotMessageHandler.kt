@@ -1,7 +1,6 @@
 package net.folivo.matrix.bridge.sms.handler
 
 import com.github.ajalt.clikt.core.*
-import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
@@ -16,7 +15,6 @@ import reactor.core.scheduler.Schedulers
 @Component
 class SmsBotMessageHandler(
         private val helper: SendSmsCommandHelper,
-        private val serviceHelper: MatrixAppserviceServiceHelper,
         private val smsBridgeProperties: SmsBridgeProperties
 ) {
     companion object {
@@ -66,7 +64,7 @@ class SmsBotMessageHandler(
             }
         } else if (room.members.size == 2) {
             Flux.fromIterable(room.members.keys)
-                    .flatMap { serviceHelper.isManagedUser(it.userId) }
+                    .map { it.isManaged }
                     .collectList()
                     .map { !it.contains(false) }
                     .flatMap { onlyManagedUsers ->

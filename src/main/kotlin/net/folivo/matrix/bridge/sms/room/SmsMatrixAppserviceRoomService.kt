@@ -5,6 +5,7 @@ import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
+import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
@@ -21,7 +22,8 @@ class SmsMatrixAppserviceRoomService(
         private val roomRepository: AppserviceRoomRepository,
         private val userRepository: AppserviceUserRepository,
         private val matrixClient: MatrixClient,
-        private val helper: MatrixAppserviceServiceHelper
+        private val helper: MatrixAppserviceServiceHelper,
+        private val botProperties: MatrixBotProperties
 ) : MatrixAppserviceRoomService {
 
     companion object {
@@ -93,12 +95,29 @@ class SmsMatrixAppserviceRoomService(
     @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun saveRoomLeave(roomId: String, userId: String): Mono<Void> {
         LOG.debug("saveRoomLeave in room $roomId of user $userId") // TODO remove old rooms
-        return userRepository.findById(userId)
-                .flatMap { user ->
-                    val room = user.rooms.keys.find { it.roomId == roomId }
-                    if (room != null) {
-                        user.rooms.remove(room)
-                        userRepository.save(user)
+        return roomRepository.findById(roomId)
+                .flatMap { room ->
+                    val user = room.members.keys.find { it.userId == userId }
+                    if (user != null) {
+                        room.members.remove(user)
+
+                        Flux.fromIterable(room.members.keys)
+                                .map { it.isManaged }
+                                .collectList()
+                                .map { !it.contains(false) }
+                                .flatMap { onlyManagedUsers ->
+                                    if (onlyManagedUsers) {
+                                        Flux.fromIterable(room.members.keys)
+                                                .flatMap {
+                                                    if (it.userId == "@${botProperties.username}:${botProperties.serverName}")
+                                                        matrixClient.roomsApi.leaveRoom(roomId)
+                                                    else matrixClient.roomsApi.leaveRoom(roomId, it.userId)
+                                                }
+                                                .then(roomRepository.save(room))
+                                    } else {
+                                        roomRepository.save(room)
+                                    }
+                                }
                     } else {
                         Mono.empty()
                     }
