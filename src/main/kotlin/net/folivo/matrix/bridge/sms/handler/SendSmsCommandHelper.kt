@@ -34,7 +34,7 @@ class SendSmsCommandHelper(
     }
 
     fun createRoomAndSendMessage(
-            body: String,
+            body: String?,
             sender: String,
             receiverNumbers: List<String>,
             roomName: String?,
@@ -70,14 +70,14 @@ class SendSmsCommandHelper(
                                                             }
                                                 }
                                             }.then(
-                                                    matrixClient.roomsApi.sendRoomEvent(
+                                                    if (!body.isNullOrBlank()) matrixClient.roomsApi.sendRoomEvent(
                                                             roomId = roomId,
                                                             eventContent = TextMessageEventContent(
                                                                     smsBridgeProperties.templates.botSmsSendNewRoomMessage
                                                                             .replace("{sender}", sender)
                                                                             .replace("{body}", body)
                                                             )
-                                                    )
+                                                    ) else Mono.just("nothing")
                                             )
                                 }.map { smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage }
                     } else if (rooms.size == 1) {
@@ -86,7 +86,9 @@ class SendSmsCommandHelper(
                                 .map { room ->
                                     room.members.keys.count { it.isManaged } == receiverIds.size + 1
                                 }.flatMap { membersMatch ->
-                                    if (membersMatch) {
+                                    if (body.isNullOrBlank()) {
+                                        Mono.just(smsBridgeProperties.templates.botSmsSendNoMessage)
+                                    } else if (membersMatch) {
                                         matrixClient.roomsApi.sendRoomEvent(
                                                 roomId = rooms[0].roomId,
                                                 eventContent = TextMessageEventContent(

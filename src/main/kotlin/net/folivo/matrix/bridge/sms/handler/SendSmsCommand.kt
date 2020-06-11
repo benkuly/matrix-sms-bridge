@@ -2,6 +2,7 @@ package net.folivo.matrix.bridge.sms.handler
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.enum
 import com.google.i18n.phonenumbers.NumberParseException
@@ -24,7 +25,7 @@ class SendSmsCommand(
 
     private val phoneNumberUtil = PhoneNumberUtil.getInstance()
 
-    private val body by argument()
+    private val body by argument().optional()
 
     private val telephoneNumbers by option("-t", "--telephoneNumber").multiple(required = true).unique()
     private val roomName by option("-n", "--roomName")

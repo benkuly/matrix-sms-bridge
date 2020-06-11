@@ -24,9 +24,10 @@ data class SmsBridgeProperties(
             val botTooManyMembers: String = "Only rooms with two members are allowed to write with this bot.",
             val botSmsSendInvalidTelephoneNumber: String = "The telephone number is invalid.",
             val botSmsSendNewRoomMessage: String = "{sender} wrote:\n\n{body}",
-            val botSmsSendCreatedRoomAndSendMessage: String = "You were invited to a new created room and the message to the telephone number(s) {receiverNumbers} was send for you.",
+            val botSmsSendCreatedRoomAndSendMessage: String = "You were invited to a new created room and (if given) the message to the telephone number(s) {receiverNumbers} was send for you.",
             val botSmsSendSendMessage: String = "The message was send for you into an existing room with the telephone number(s) {receiverNumbers}.",
             val botSmsSendTooManyRooms: String = "No message was sent, because there was more then one room with this telephone number(s) {receiverNumbers}. You can force room creation with the -c option.",
+            val botSmsSendNoMessage: String = "There was no message content to send.",
             val botSmsSendDisabledRoomCreation: String = "No message was not sent to telephone number(s) {receiverNumbers}, because either the bot wasn't invited to the room with the telephone number or creation was disabled by your command.",
             val botSmsSendError: String = "There was an error while sending message to the telephone number(s) {receiverNumbers}. Reason: {error}"
     )
