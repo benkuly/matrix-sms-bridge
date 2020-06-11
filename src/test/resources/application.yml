@@ -2,3 +2,22 @@ matrix:
   bridge:
     sms:
       defaultRegion: DE
+  bot:
+    mode: APPSERVICE
+    username: "smsbot"
+    trackMembership: ALL
+    serverName: matrix-local
+  appservice:
+    hsToken: 312df522183efd404ec1cd22d2ffa4bbc76a8c1ccf541dd692eef281356bb74e
+    namespaces:
+      users:
+        - exclusive: true
+          regex: "sms_[0-9]{6,15}"
+      aliases: []
+      rooms: []
+  client:
+    homeServer:
+      hostname: matrix-synapse
+      port: 8008
+      secure: false
+    token: 30c05ae90a248a4188e620216fa72e349803310ec83e2a77b34fe90be6081f46

@@ -9,13 +9,12 @@ import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
-import org.neo4j.springframework.data.repository.config.ReactiveNeo4jRepositoryConfigurationExtension
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+
 
 @Component
 class SendSmsCommandHelper(
@@ -34,7 +33,6 @@ class SendSmsCommandHelper(
         AUTO, ALWAYS, NO
     }
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun createRoomAndSendMessage(
             body: String,
             sender: String,
@@ -82,16 +80,26 @@ class SendSmsCommandHelper(
                                                     )
                                             )
                                 }.map { smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage }
-                    } else if (rooms.size == 1 && rooms[0].members.keys.count { it.isManaged } == receiverIds.size + 1) {
+                    } else if (rooms.size == 1) {
                         LOG.debug("only send message")
-                        matrixClient.roomsApi.sendRoomEvent(
-                                roomId = rooms[0].roomId,
-                                eventContent = TextMessageEventContent(
-                                        smsBridgeProperties.templates.botSmsSendNewRoomMessage
-                                                .replace("{sender}", sender)
-                                                .replace("{body}", body)
-                                )
-                        ).map { smsBridgeProperties.templates.botSmsSendSendMessage }
+                        roomRepository.findById(rooms[0].roomId)
+                                .map { room ->
+                                    room.members.keys.count { it.isManaged } == receiverIds.size + 1
+                                }.flatMap { membersMatch ->
+                                    if (membersMatch) {
+                                        matrixClient.roomsApi.sendRoomEvent(
+                                                roomId = rooms[0].roomId,
+                                                eventContent = TextMessageEventContent(
+                                                        smsBridgeProperties.templates.botSmsSendNewRoomMessage
+                                                                .replace("{sender}", sender)
+                                                                .replace("{body}", body)
+                                                )
+                                        ).map { smsBridgeProperties.templates.botSmsSendSendMessage }
+                                    } else {
+                                        Mono.just(smsBridgeProperties.templates.botSmsSendDisabledRoomCreation)
+                                    }
+                                }
+
                     } else if (rooms.size > 1) {
                         Mono.just(smsBridgeProperties.templates.botSmsSendTooManyRooms)
                     } else {

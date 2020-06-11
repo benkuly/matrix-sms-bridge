@@ -123,7 +123,6 @@ class SmsMatrixAppserviceRoomService(
                 }.then()
     }
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun isMemberOf(userId: String, roomId: String): Mono<Boolean> {
         return roomRepository.findById(roomId)
                 .map { room ->
@@ -132,7 +131,6 @@ class SmsMatrixAppserviceRoomService(
     }
 
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun getRoomOrCreateAndJoin(roomId: String, userId: String): Mono<AppserviceRoom> {
         return roomRepository.findById(roomId)
                 .switchIfEmpty(Mono.defer { saveRoomJoinAndGet(roomId, userId) })

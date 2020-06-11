@@ -16,7 +16,6 @@ class SmsMatrixAppserviceUserService(
         private val smsBridgeProperties: SmsBridgeProperties
 ) : MatrixAppserviceUserService {
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun userExistingState(userId: String): Mono<MatrixAppserviceUserService.UserExistingState> {
         return appserviceUserRepository.existsById(userId)
                 .flatMap { isInDatabase ->
@@ -50,7 +49,6 @@ class SmsMatrixAppserviceUserService(
                 .then()
     }
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {
         return appserviceUserRepository.findById(userId)
                 .flatMap { user ->// FIXME more logging to find the mistake

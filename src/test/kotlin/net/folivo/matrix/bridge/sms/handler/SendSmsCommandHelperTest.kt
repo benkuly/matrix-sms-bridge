@@ -180,16 +180,24 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should send message when one room exists`() {
-        every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
-                .returns(Flux.just(mockk {
-                    every { roomId }.returns("someRoomId")
-                    every { members }.returns(
-                            mutableMapOf(
-                                    AppserviceUser("smsUser", true) to MemberOfProperties(2),
-                                    AppserviceUser("botUser", true) to MemberOfProperties(2)
-                            )
+        every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }.returns(Flux.just(mockk {
+            every { roomId }.returns("someRoomId")
+        }))
+        every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(mockk {
+            every { roomId }.returns("someRoomId")
+            every { members }.returns(
+                    mutableMapOf(
+                            AppserviceUser(
+                                    "smsUser",
+                                    true
+                            ) to MemberOfProperties(2),
+                            AppserviceUser(
+                                    "botUser",
+                                    true
+                            ) to MemberOfProperties(2)
                     )
-                }))
+            )
+        }))
 
         StepVerifier.create(
                 cut.createRoomAndSendMessage(
@@ -212,8 +220,11 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should not send message when one room exists, but members does not match size`() {
-        every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
-                .returns(Flux.just(mockk {
+        every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }.returns(Flux.just(mockk {
+            every { roomId }.returns("someRoomId")
+        }))
+        every { roomRepositoryMock.findById("someRoomId") }
+                .returns(Mono.just(mockk {
                     every { roomId }.returns("someRoomId")
                     every { members }.returns(
                             mutableMapOf(

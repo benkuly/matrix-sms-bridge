@@ -4,9 +4,11 @@ import org.neo4j.springframework.data.repository.config.EnableReactiveNeo4jRepos
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
+import org.springframework.transaction.annotation.EnableTransactionManagement
 
 @SpringBootApplication
 @EnableReactiveNeo4jRepositories
+@EnableTransactionManagement
 @EnableConfigurationProperties(SmsBridgeProperties::class)
 class SmsBridgeApplication
 

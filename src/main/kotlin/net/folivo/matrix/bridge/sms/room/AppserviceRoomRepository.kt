@@ -10,9 +10,9 @@ interface AppserviceRoomRepository : ReactiveCrudRepository<AppserviceRoom, Stri
     @Query(
             "MATCH (user:AppserviceUser)-[:MEMBER_OF]->(room:AppserviceRoom) " +
             "WHERE user.userId in \$members " +
-            "WITH room, collect(user) as users, size(\$members) as inputCnt, count(DISTINCT user) as cnt " +
+            "WITH room, size(\$members) as inputCnt, count(DISTINCT user) as cnt " +
             "WHERE cnt = inputCnt " +
-            "RETURN room, users"
+            "RETURN room"
     )
     fun findByMembersUserIdContaining(members: Set<String>): Flux<AppserviceRoom>
 }

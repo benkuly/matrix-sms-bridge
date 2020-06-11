@@ -14,7 +14,6 @@ class SmsMatrixAppserviceEventService(
         eventHandler: List<MatrixEventHandler>
 ) : DefaultMatrixAppserviceEventService(eventHandler) {
 
-    @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     override fun eventProcessingState(
             tnxId: String,
             eventIdOrType: String
