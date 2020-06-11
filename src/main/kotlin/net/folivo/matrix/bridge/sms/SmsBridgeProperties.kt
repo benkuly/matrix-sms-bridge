@@ -28,7 +28,7 @@ data class SmsBridgeProperties(
             val botSmsSendSendMessage: String = "The message was send for you into an existing room with the telephone number(s) {receiverNumbers}.",
             val botSmsSendTooManyRooms: String = "No message was sent, because there was more then one room with this telephone number(s) {receiverNumbers}. You can force room creation with the -c option.",
             val botSmsSendNoMessage: String = "There was no message content to send.",
-            val botSmsSendDisabledRoomCreation: String = "No message was not sent to telephone number(s) {receiverNumbers}, because either the bot wasn't invited to the room with the telephone number or creation was disabled by your command.",
+            val botSmsSendDisabledRoomCreation: String = "No message was sent to telephone number(s) {receiverNumbers}, because either the bot wasn't invited to the room with the telephone number or creation was disabled by your command.",
             val botSmsSendError: String = "There was an error while sending message to the telephone number(s) {receiverNumbers}. Reason: {error}"
     )
 }
