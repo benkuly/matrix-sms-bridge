@@ -126,7 +126,6 @@ class SmsMatrixAppserviceRoomService(
                 }
     }
 
-
     fun getRoomOrCreateAndJoin(roomId: String, userId: String): Mono<AppserviceRoom> {
         return roomRepository.findById(roomId)
                 .switchIfEmpty(Mono.defer { saveRoomJoinAndGet(roomId, userId) })
