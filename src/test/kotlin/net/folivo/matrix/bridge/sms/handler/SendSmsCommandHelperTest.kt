@@ -183,6 +183,12 @@ class SendSmsCommandHelperTest {
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
                 .returns(Flux.just(mockk {
                     every { roomId }.returns("someRoomId")
+                    every { members }.returns(
+                            mutableMapOf(
+                                    AppserviceUser("smsUser", true) to MemberOfProperties(2),
+                                    AppserviceUser("botUser", true) to MemberOfProperties(2)
+                            )
+                    )
                 }))
 
         StepVerifier.create(

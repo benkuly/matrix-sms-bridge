@@ -53,7 +53,7 @@ class SmsMatrixAppserviceUserService(
     @Transactional(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
     fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {
         return appserviceUserRepository.findById(userId)
-                .flatMap { user ->
+                .flatMap { user ->// FIXME more logging to find the mistake
                     val rooms = user.rooms.keys
                     if (rooms.size == 1 && smsBridgeProperties.allowMappingWithoutToken) {
                         Mono.just(rooms.first().roomId)

@@ -44,16 +44,15 @@ class ReceiveSmsService(
             }
         }
 
-        val mappingTokenMono = Mono.fromCallable<Int> {
-            Regex("#[0-9]{1,9}").find(body)
-                    ?.value?.substringAfter('#')?.toInt()
-        }
-        return Mono.zip(userIdMono, mappingTokenMono)
-                .flatMap {
+        val mappingToken =
+                Regex("#[0-9]{1,9}").find(body)
+                        ?.value?.substringAfter('#')?.toInt()
+        return userIdMono
+                .flatMap { userId ->
                     userService.getRoomId(
-                            userId = it.t1,
-                            mappingToken = it.t2
-                    ).zipWith(Mono.just(it.t1))
+                            userId = userId,
+                            mappingToken = mappingToken
+                    ).zipWith(Mono.just(userId))
                 }.flatMap {
                     val roomId = it.t1
                     val userId = it.t2

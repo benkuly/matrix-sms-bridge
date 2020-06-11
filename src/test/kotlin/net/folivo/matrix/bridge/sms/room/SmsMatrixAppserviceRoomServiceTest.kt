@@ -168,7 +168,7 @@ class SmsMatrixAppserviceRoomServiceTest {
         )
         )
         every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
-        every { appserviceRoomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
+        every { appserviceRoomRepositoryMock.delete(any()) }.returns(Mono.empty())
         every { matrixClientMock.roomsApi.leaveRoom(allAny()) }.returns(Mono.empty())
 
         StepVerifier

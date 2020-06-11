@@ -91,6 +91,8 @@ class ReceiveSmsServiceTest {
     fun `should receive without mapping token to default matrix room, when given`() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
+        every { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+                .returns(Mono.empty())
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns(null)
         every { smsBridgePropertiesMock.templates.defaultRoomIncomingMessage }.returns("{sender}: {body}")
@@ -128,6 +130,8 @@ class ReceiveSmsServiceTest {
     fun `should not answer when no template missingTokenWithDefaultRoom given`() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
+        every { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+                .returns(Mono.empty())
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns(null)
         StepVerifier
@@ -136,9 +140,11 @@ class ReceiveSmsServiceTest {
     }
 
     @Test
-    fun `should not answer when empty template given`() {
+    fun `should not answer when empty template missingTokenWithDefaultRoom given`() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
+        every { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+                .returns(Mono.empty())
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns("")
         StepVerifier
@@ -150,6 +156,8 @@ class ReceiveSmsServiceTest {
     fun `should not answer when no template missingTokenWithoutDefaultRoom given`() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("someEventId"))
+        every { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+                .returns(Mono.empty())
         every { smsBridgePropertiesMock.defaultRoomId }.returns(null)
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithoutDefaultRoom }.returns(null)
         StepVerifier
@@ -168,6 +176,8 @@ class ReceiveSmsServiceTest {
     fun `should have error, when message could not be send to matrix room`() {
         every { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(Mono.error(MatrixServerException(I_AM_A_TEAPOT, ErrorResponse("TEA"))))
+        every { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+                .returns(Mono.empty())
         every { smsBridgePropertiesMock.defaultRoomId }.returns("someRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithoutDefaultRoom }.returns(null)
         StepVerifier

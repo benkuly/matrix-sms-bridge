@@ -98,8 +98,10 @@ class AppserviceRoomRepositoryIT {
     fun `should findByMembersUserIdContaining one`() {
         StepVerifier
                 .create(cut.findByMembersUserIdContaining(setOf("someUserId1", "someUserId2")))
-                .assertNext { assertThat(it.roomId).isEqualTo("someRoomId1") }
-                .verifyComplete()
+                .assertNext {
+                    assertThat(it.roomId).isEqualTo("someRoomId1")
+                    assertThat(it.members.keys).containsAll(listOf(user1, user2))
+                }.verifyComplete()
     }
 
     @Test
