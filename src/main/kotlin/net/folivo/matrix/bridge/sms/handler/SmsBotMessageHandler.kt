@@ -8,7 +8,6 @@ import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventCont
 import org.apache.tools.ant.types.Commandline
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 
@@ -27,7 +26,10 @@ class SmsBotMessageHandler(
             sender: String,
             context: MessageContext
     ): Mono<Boolean> {
-        return if (body.startsWith("sms")) {
+        return if (room.members.keys.find { it.userId == sender && !it.isManaged } == null) {
+            LOG.debug("ignore message from not managed user")
+            Mono.just(false)
+        } else if (body.startsWith("sms")) {
             if (room.members.size > 2) {
                 LOG.debug("to many members in room form sms command")
                 context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botTooManyMembers))
@@ -63,19 +65,9 @@ class SmsBotMessageHandler(
                         }).thenReturn(true)
             }
         } else if (room.members.size == 2) {
-            Flux.fromIterable(room.members.keys)
-                    .map { it.isManaged }
-                    .collectList()
-                    .map { !it.contains(false) }
-                    .flatMap { onlyManagedUsers ->
-                        if (onlyManagedUsers) {
-                            Mono.just(false)
-                        } else {
-                            LOG.debug("it seems to be a bot room, but message didn't start with 'sms'")
-                            context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botHelp))
-                                    .thenReturn(true)
-                        }
-                    }
+            LOG.debug("it seems to be a bot room, but message didn't start with 'sms'")
+            context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botHelp))
+                    .thenReturn(true)
         } else Mono.just(false)
     }
 }

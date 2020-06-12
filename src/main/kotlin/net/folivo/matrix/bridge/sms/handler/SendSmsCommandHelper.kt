@@ -9,6 +9,7 @@ import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
+import net.folivo.matrix.restclient.api.rooms.Preset.TRUSTED_PRIVATE
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Component
@@ -52,34 +53,37 @@ class SendSmsCommandHelper(
                 .flatMap { rooms ->
                     if (rooms.size == 0 && roomCreationMode == AUTO || roomCreationMode == ALWAYS) {
                         LOG.debug("create room and send message")
-                        matrixClient.roomsApi.createRoom(name = roomName, invite = membersWithoutBot)
-                                .flatMap { roomId ->
-                                    Flux.fromIterable(receiverIds)
-                                            .flatMap { receiverId ->
-                                                matrixClient.roomsApi.joinRoom(
-                                                        roomIdOrAlias = roomId,
-                                                        asUserId = receiverId
-                                                ).onErrorResume { error ->
-                                                    registerOnMatrixException(receiverId, error)
-                                                            .then(Mono.just(true)) // TODO scary workaround
-                                                            .flatMap {
-                                                                matrixClient.roomsApi.joinRoom(
-                                                                        roomIdOrAlias = roomId,
-                                                                        asUserId = receiverId
-                                                                )
-                                                            }
-                                                }
-                                            }.then(
-                                                    if (!body.isNullOrBlank()) matrixClient.roomsApi.sendRoomEvent(
-                                                            roomId = roomId,
-                                                            eventContent = TextMessageEventContent(
-                                                                    smsBridgeProperties.templates.botSmsSendNewRoomMessage
-                                                                            .replace("{sender}", sender)
-                                                                            .replace("{body}", body)
-                                                            )
-                                                    ) else Mono.just("nothing")
-                                            )
-                                }.map { smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage }
+                        matrixClient.roomsApi.createRoom(
+                                name = roomName,
+                                invite = membersWithoutBot,
+                                preset = TRUSTED_PRIVATE
+                        ).flatMap { roomId ->
+                            Flux.fromIterable(receiverIds)
+                                    .flatMap { receiverId ->
+                                        matrixClient.roomsApi.joinRoom(
+                                                roomIdOrAlias = roomId,
+                                                asUserId = receiverId
+                                        ).onErrorResume { error ->
+                                            registerOnMatrixException(receiverId, error)
+                                                    .then(Mono.just(true)) // TODO scary workaround
+                                                    .flatMap {
+                                                        matrixClient.roomsApi.joinRoom(
+                                                                roomIdOrAlias = roomId,
+                                                                asUserId = receiverId
+                                                        )
+                                                    }
+                                        }
+                                    }.then(
+                                            if (!body.isNullOrBlank()) matrixClient.roomsApi.sendRoomEvent(
+                                                    roomId = roomId,
+                                                    eventContent = TextMessageEventContent(
+                                                            smsBridgeProperties.templates.botSmsSendNewRoomMessage
+                                                                    .replace("{sender}", sender)
+                                                                    .replace("{body}", body)
+                                                    )
+                                            ) else Mono.just("nothing")
+                                    )
+                        }.map { smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage }
                     } else if (rooms.size == 1) {
                         LOG.debug("only send message")
                         roomRepository.findById(rooms[0].roomId)

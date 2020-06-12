@@ -16,6 +16,7 @@ import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
+import net.folivo.matrix.restclient.api.rooms.Preset.TRUSTED_PRIVATE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -83,7 +84,8 @@ class SendSmsCommandHelperTest {
                     invite = setOf(
                             "someSender",
                             "@sms_1111111111:someServer"
-                    )
+                    ),
+                    preset = TRUSTED_PRIVATE
             )
             matrixClientMock.roomsApi.joinRoom("someRoomId", asUserId = "@sms_1111111111:someServer")
             matrixClientMock.roomsApi.sendRoomEvent(
@@ -119,7 +121,8 @@ class SendSmsCommandHelperTest {
                             "someSender",
                             "@sms_1111111111:someServer",
                             "@sms_22222222:someServer"
-                    )
+                    ),
+                    preset = TRUSTED_PRIVATE
             )
             matrixClientMock.roomsApi.joinRoom("someRoomId", asUserId = "@sms_1111111111:someServer")
             matrixClientMock.roomsApi.joinRoom("someRoomId", asUserId = "@sms_22222222:someServer")
@@ -157,7 +160,8 @@ class SendSmsCommandHelperTest {
                             "someSender",
                             "@sms_1111111111:someServer",
                             "@sms_22222222:someServer"
-                    )
+                    ),
+                    preset = TRUSTED_PRIVATE
             )
             roomsApi.joinRoom("someRoomId", asUserId = "@sms_1111111111:someServer")
             roomsApi.joinRoom("someRoomId", asUserId = "@sms_22222222:someServer")
@@ -199,7 +203,8 @@ class SendSmsCommandHelperTest {
                     invite = setOf(
                             "someSender",
                             "@sms_1111111111:someServer"
-                    )
+                    ),
+                    preset = TRUSTED_PRIVATE
             )
             helperMock.registerAndSaveUser("@sms_1111111111:someServer")
             matrixClientMock.roomsApi.joinRoom("someRoomId", asUserId = "@sms_1111111111:someServer")

@@ -40,11 +40,17 @@ class SmsBotMessageHandlerTest {
         every { smsBridgePropertiesMock.templates.botTooManyMembers }.returns("tooMany")
         every { smsBridgePropertiesMock.templates.botHelp }.returns("help")
         every { contextMock.answer(any(), any()) }.returns(Mono.empty())
+        every { roomMock.members.size }.returns(2)
+        every { roomMock.members.keys }.returns(
+                mutableSetOf(
+                        AppserviceUser("someUserId1", true),
+                        AppserviceUser("someUserId2", false)
+                )
+        )
     }
 
     @Test
     fun `should run command`() {
-        every { roomMock.members.size }.returns(2)
         every { sendSmsCommandHelperMock.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
                 .returns(Mono.just("message send"))
         every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
@@ -53,7 +59,7 @@ class SmsBotMessageHandlerTest {
                         cut.handleMessageToSmsBot(
                                 roomMock,
                                 "sms send -t 01111111111 'some Text'",
-                                "someSender",
+                                "someUserId2",
                                 contextMock
                         )
                 )
@@ -67,8 +73,15 @@ class SmsBotMessageHandlerTest {
     @Test
     fun `should answer with error when too many members for sms command`() {
         every { roomMock.members.size }.returns(3)
+        every { roomMock.members.keys }.returns(
+                mutableSetOf(
+                        AppserviceUser("someUserId1", true),
+                        AppserviceUser("someUserId2", false),
+                        AppserviceUser("someUserId3", false)
+                )
+        )
         StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "sms bla", "someSender", contextMock))
+                .create(cut.handleMessageToSmsBot(roomMock, "sms bla", "someUserId2", contextMock))
                 .assertNext { assertThat(it).isTrue() }
                 .verifyComplete()
         verify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "tooMany" }) }
@@ -76,18 +89,24 @@ class SmsBotMessageHandlerTest {
 
     @Test
     fun `should answer with help when not sms command`() {
-        every { roomMock.members.size }.returns(2)
-        every { roomMock.members.keys }.returns(
-                mutableSetOf(
-                        AppserviceUser("someUserId1", true),
-                        AppserviceUser("someUserId2", false)
-                )
-        )
         StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "bla", "someSender", contextMock))
+                .create(cut.handleMessageToSmsBot(roomMock, "bla", "someUserId2", contextMock))
                 .assertNext { assertThat(it).isTrue() }
                 .verifyComplete()
         verify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "help" }) }
+    }
+
+    @Test
+    fun `should not allow managed user to run command`() {
+        StepVerifier
+                .create(cut.handleMessageToSmsBot(roomMock, "sms send", "someUserId1", contextMock))
+                .assertNext { assertThat(it).isFalse() }
+                .verifyComplete()
+        StepVerifier
+                .create(cut.handleMessageToSmsBot(roomMock, "sms send", "notKnownUserId", contextMock))
+                .assertNext { assertThat(it).isFalse() }
+                .verifyComplete()
+        verify { contextMock wasNot Called }
     }
 
     @Test
@@ -98,9 +117,8 @@ class SmsBotMessageHandlerTest {
                         AppserviceUser("someUserId2", true)
                 )
         )
-        every { roomMock.members.size }.returns(2)
         StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "bla", "someSender", contextMock))
+                .create(cut.handleMessageToSmsBot(roomMock, "bla", "someUserId1", contextMock))
                 .assertNext { assertThat(it).isFalse() }
                 .verifyComplete()
         verify { contextMock wasNot Called }
@@ -109,8 +127,15 @@ class SmsBotMessageHandlerTest {
     @Test
     fun `should do nothing when too many members`() {
         every { roomMock.members.size }.returns(3)
+        every { roomMock.members.keys }.returns(
+                mutableSetOf(
+                        AppserviceUser("someUserId1", true),
+                        AppserviceUser("someUserId2", false),
+                        AppserviceUser("someUserId3", false)
+                )
+        )
         StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "bla", "someSender", contextMock))
+                .create(cut.handleMessageToSmsBot(roomMock, "bla", "someUserId2", contextMock))
                 .assertNext { assertThat(it).isFalse() }
                 .verifyComplete()
         verify { contextMock wasNot Called }
@@ -118,9 +143,8 @@ class SmsBotMessageHandlerTest {
 
     @Test
     fun `should catch errors`() {
-        every { roomMock.members.size }.returns(2)
         StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "sms send bla", "someSender", contextMock))
+                .create(cut.handleMessageToSmsBot(roomMock, "sms send bla", "someUserId2", contextMock))
                 .assertNext { assertThat(it).isTrue() }
                 .verifyComplete()
         verify { contextMock.answer(match<NoticeMessageEventContent> { it.body.contains("Error") }) }
