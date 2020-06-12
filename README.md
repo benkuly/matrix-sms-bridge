@@ -7,7 +7,7 @@ This is a matrix bridge, which allows you to bridge matrix rooms to SMS with one
 ### Automated room creation
 Create a room with you and `@smsBot:yourHomeServer.org` only. Now you can write `sms send --help` which gives you a help, how to use this command.
 
-Example: `sms send -t 01749292923 "Hello World"` creates a new room with the telephone number and writes "Hello World" for you.
+Example: `sms send -t 01749292923 "Hello World"` creates a new room with the telephone number and writes "Hello World" for you. If there already is a room with this telephone numer and you participating, then "Hello World" will send it to that room.
 
 ### Invite telephone number to matrix room
 The virtual matrix users, which represents SMS numbers, have the following pattern:
