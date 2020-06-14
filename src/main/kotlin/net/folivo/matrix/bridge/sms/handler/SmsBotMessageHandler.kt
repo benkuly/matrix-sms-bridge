@@ -40,29 +40,28 @@ class SmsBotMessageHandler(
                 val args = Commandline.translateCommandline(body.removePrefix("sms"))
 
                 //TODO test
-                Mono.empty<Void>()
-                        .publishOn(Schedulers.boundedElastic())
-                        .then(Mono.from<Void> { subscriber ->
-                            val answerConsole = SmsBotConsole(context)
-                            try {
-                                SmsCommand().context { console = answerConsole }
-                                        .subcommands(SendSmsCommand(sender, helper, smsBridgeProperties))
-                                        .parse(args)
-                            } catch (e: PrintHelpMessage) {
-                                answerConsole.print(e.command.getFormattedHelp(), false)
-                            } catch (e: PrintCompletionMessage) {
-                                e.message?.also { answerConsole.print(it, false) }
-                            } catch (e: PrintMessage) {
-                                e.message?.also { answerConsole.print(it, false) }
-                            } catch (e: UsageError) {
-                                answerConsole.print(e.helpMessage(), true)
-                            } catch (e: CliktError) {
-                                e.message?.also { answerConsole.print(it, true) }
-                            } catch (e: Abort) {
-                                answerConsole.print("Aborted!", true)
-                            }
-                            subscriber.onComplete()
-                        }).thenReturn(true)
+                Mono.from<Void> { subscriber ->
+                    val answerConsole = SmsBotConsole(context)
+                    try {
+                        SmsCommand().context { console = answerConsole }
+                                .subcommands(SendSmsCommand(sender, helper, smsBridgeProperties))
+                                .parse(args)
+                    } catch (e: PrintHelpMessage) {
+                        answerConsole.print(e.command.getFormattedHelp(), false)
+                    } catch (e: PrintCompletionMessage) {
+                        e.message?.also { answerConsole.print(it, false) }
+                    } catch (e: PrintMessage) {
+                        e.message?.also { answerConsole.print(it, false) }
+                    } catch (e: UsageError) {
+                        answerConsole.print(e.helpMessage(), true)
+                    } catch (e: CliktError) {
+                        e.message?.also { answerConsole.print(it, true) }
+                    } catch (e: Abort) {
+                        answerConsole.print("Aborted!", true)
+                    }
+                    subscriber.onComplete()
+                }.subscribeOn(Schedulers.boundedElastic())
+                        .thenReturn(true)
             }
         } else if (room.members.size == 2) {
             LOG.debug("it seems to be a bot room, but message didn't start with 'sms'")

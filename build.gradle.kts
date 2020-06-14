@@ -14,7 +14,7 @@ allprojects {
     apply(plugin = "kotlin")
 
     group = "net.folivo"
-    version = "0.2.3.RELEASE"
+    version = "0.2.4.RELEASE"
     java.sourceCompatibility = JavaVersion.VERSION_11
 
     repositories {
