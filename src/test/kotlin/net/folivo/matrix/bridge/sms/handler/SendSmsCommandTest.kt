@@ -41,20 +41,20 @@ class SendSmsCommandTest {
 
     @Test
     fun `should send message`() {
-        cut.parse(listOf("some text", "-t", "01111111111", "-t", "02222222222"))
+        cut.parse(listOf("some text", "-t", "017331111111", "-t", "017332222222"))
 
         verifyAll {
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
-                    receiverNumbers = listOf("+491111111111"),
+                    receiverNumbers = listOf("+4917331111111"),
                     roomName = null,
                     roomCreationMode = AUTO
             )
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
-                    receiverNumbers = listOf("+492222222222"),
+                    receiverNumbers = listOf("+4917332222222"),
                     roomName = null,
                     roomCreationMode = AUTO
             )
@@ -63,13 +63,13 @@ class SendSmsCommandTest {
 
     @Test
     fun `should send message to group and use name`() {
-        cut.parse(listOf("some text", "-t", "01111111111", "-t", "02222222222", "-n", "some name", "-g"))
+        cut.parse(listOf("some text", "-t", "017331111111", "-t", "017332222222", "-n", "some name", "-g"))
 
         verify {
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
-                    receiverNumbers = listOf("+491111111111", "+492222222222"),
+                    receiverNumbers = listOf("+4917331111111", "+4917332222222"),
                     roomName = "some name",
                     roomCreationMode = AUTO
             )
@@ -78,13 +78,13 @@ class SendSmsCommandTest {
 
     @Test
     fun `should send message and create room`() {
-        cut.parse(listOf("some text", "-t", "01111111111", "-m", "always"))
+        cut.parse(listOf("some text", "-t", "017331111111", "-m", "always"))
 
         verify {
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
-                    receiverNumbers = listOf("+491111111111"),
+                    receiverNumbers = listOf("+4917331111111"),
                     roomName = null,
                     roomCreationMode = ALWAYS
             )
@@ -93,8 +93,8 @@ class SendSmsCommandTest {
 
     @Test
     fun `should echo answer from service`() {
-        cut.parse(listOf("some text", "-t", "01111111111"))
-        cut.parse(listOf("some text", "-t", "01111111111", "-g"))
+        cut.parse(listOf("some text", "-t", "017331111111"))
+        cut.parse(listOf("some text", "-t", "017331111111", "-g"))
 
         verify(exactly = 2) { consoleMock.print("answer", any()) }
     }

@@ -58,7 +58,7 @@ class SmsBotMessageHandlerTest {
                 .create(
                         cut.handleMessageToSmsBot(
                                 roomMock,
-                                "sms send -t 01111111111 'some Text'",
+                                "sms send -t 017392837462 'some Text'",
                                 "someUserId2",
                                 contextMock
                         )
