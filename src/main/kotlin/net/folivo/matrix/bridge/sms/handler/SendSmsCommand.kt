@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.enum
 import com.google.i18n.phonenumbers.NumberParseException
+import com.google.i18n.phonenumbers.NumberParseException.ErrorType.NOT_A_NUMBER
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode
@@ -36,7 +37,13 @@ class SendSmsCommand(
         try {
             val receiverNumbers = telephoneNumbers.map { rawNumber ->
                 phoneNumberUtil.parse(rawNumber, smsBridgeProperties.defaultRegion)
-                        .let { "+${it.countryCode}${it.nationalNumber}" }
+                        .let {
+                            if (!phoneNumberUtil.isValidNumber(it)) throw NumberParseException(
+                                    NOT_A_NUMBER,
+                                    "not a valid number"
+                            )
+                            "+${it.countryCode}${it.nationalNumber}"
+                        }
             }
             if (useGroup) {
                 LOG.debug("use group and send message")

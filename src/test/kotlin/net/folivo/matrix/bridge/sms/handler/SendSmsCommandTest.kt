@@ -103,7 +103,8 @@ class SendSmsCommandTest {
     fun `should fail and echo when wrong telephone number`() {
         cut.parse(listOf("some text", "-t", "abc"))
         cut.parse(listOf("some text", "-t", "123456789123456789"))
+        cut.parse(listOf("some text", "-t", "012345678 DINO"))
 
-        verify(exactly = 2) { consoleMock.print("invalid", any()) }
+        verify(exactly = 3) { consoleMock.print("invalid", any()) }
     }
 }
