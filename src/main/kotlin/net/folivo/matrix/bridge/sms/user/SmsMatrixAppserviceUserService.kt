@@ -52,7 +52,7 @@ class SmsMatrixAppserviceUserService(
 
     fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {
         return appserviceUserRepository.findById(userId)
-                .flatMap { user ->// FIXME more logging to find the mistake
+                .flatMap { user ->
                     val rooms = user.rooms.keys
                     if (rooms.size == 1 && smsBridgeProperties.allowMappingWithoutToken) {
                         Mono.just(rooms.first().roomId)
