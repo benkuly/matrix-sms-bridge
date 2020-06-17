@@ -61,6 +61,8 @@ class SendSmsCommandHelperTest {
         every { smsBridgePropertiesMock.templates.botSmsSendDisabledRoomCreation }.returns("disabled room creation {receiverNumbers}")
         every { smsBridgePropertiesMock.templates.botSmsSendError }.returns("error {error} {receiverNumbers}")
         every { smsBridgePropertiesMock.templates.botSmsSendNoMessage }.returns("no message {receiverNumbers}")
+        every { smsBridgePropertiesMock.templates.botSmsSendBotNotMember }.returns("bot not member {receiverNumbers}")
+
     }
 
     @Test
@@ -215,7 +217,7 @@ class SendSmsCommandHelperTest {
                     txnId = any()
             )
             roomRepositoryMock.findByMembersUserIdContaining(match {
-                it.containsAll(setOf("someSender", "@bot:someServer", "@sms_1111111111:someServer"))
+                it.containsAll(setOf("someSender", "@sms_1111111111:someServer"))
             })
         }
     }
@@ -234,7 +236,7 @@ class SendSmsCommandHelperTest {
                                     true
                             ) to MemberOfProperties(2),
                             AppserviceUser(
-                                    "botUser",
+                                    "@bot:someServer",
                                     true
                             ) to MemberOfProperties(2)
                     )
@@ -261,7 +263,7 @@ class SendSmsCommandHelperTest {
     }
 
     @Test
-    fun `should not send message when one room exists, but members does not match size`() {
+    fun `should not send message when one room exists, but managed members does not match size`() {
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }.returns(Flux.just(mockk {
             every { roomId }.returns("someRoomId")
         }))
@@ -272,7 +274,7 @@ class SendSmsCommandHelperTest {
                             mutableMapOf(
                                     AppserviceUser("someUser", true) to MemberOfProperties(1),
                                     AppserviceUser("someUserTooMany", true) to MemberOfProperties(1),
-                                    AppserviceUser("botUser", true) to MemberOfProperties(1)
+                                    AppserviceUser("@bot:someServer", true) to MemberOfProperties(1)
                             )
                     )
                 }))
@@ -286,6 +288,35 @@ class SendSmsCommandHelperTest {
                         receiverNumbers = listOf("+1111111111")
                 )
         ).assertNext { assertThat(it).isEqualTo("disabled room creation +1111111111") }
+                .verifyComplete()
+        verify { matrixClientMock wasNot Called }
+    }
+
+    @Test
+    fun `should not send message when one room exists, but bot is not member`() {
+        every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }.returns(Flux.just(mockk {
+            every { roomId }.returns("someRoomId")
+        }))
+        every { roomRepositoryMock.findById("someRoomId") }
+                .returns(Mono.just(mockk {
+                    every { roomId }.returns("someRoomId")
+                    every { members }.returns(
+                            mutableMapOf(
+                                    AppserviceUser("someUser", true) to MemberOfProperties(1),
+                                    AppserviceUser("someOtherUser", false) to MemberOfProperties(1)
+                            )
+                    )
+                }))
+
+        StepVerifier.create(
+                cut.createRoomAndSendMessage(
+                        body = "some text",
+                        sender = "someSender",
+                        roomCreationMode = NO,
+                        roomName = "room name",
+                        receiverNumbers = listOf("+1111111111")
+                )
+        ).assertNext { assertThat(it).isEqualTo("bot not member +1111111111") }
                 .verifyComplete()
         verify { matrixClientMock wasNot Called }
     }

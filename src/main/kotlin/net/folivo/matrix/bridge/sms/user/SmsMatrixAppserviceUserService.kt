@@ -41,9 +41,13 @@ class SmsMatrixAppserviceUserService(
     }
 
     override fun saveUser(userId: String): Mono<Void> {
-        return helper.isManagedUser(userId)
-                .flatMap { appserviceUserRepository.save(AppserviceUser(userId, it)) }
-                .then()
+        return appserviceUserRepository.existsById(userId)
+                .flatMap { exists ->
+                    if (!exists) {
+                        helper.isManagedUser(userId)
+                                .flatMap { appserviceUserRepository.save(AppserviceUser(userId, it)) }
+                    } else Mono.empty()
+                }.then()
     }
 
     fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {

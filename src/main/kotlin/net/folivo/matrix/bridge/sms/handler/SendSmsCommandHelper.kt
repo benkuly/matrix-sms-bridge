@@ -46,7 +46,7 @@ class SendSmsCommandHelper(
                 sender,
                 *receiverIds.toTypedArray()
         )
-        val members = setOf(*membersWithoutBot.toTypedArray(), "@${botProperties.username}:${botProperties.serverName}")
+        val members = setOf(*membersWithoutBot.toTypedArray())
         return roomRepository.findByMembersUserIdContaining(members)
                 .limitRequest(2)
                 .collectList()
@@ -87,22 +87,25 @@ class SendSmsCommandHelper(
                     } else if (rooms.size == 1) {
                         LOG.debug("only send message")
                         roomRepository.findById(rooms[0].roomId)
-                                .map { room ->
-                                    room.members.keys.count { it.isManaged } == receiverIds.size + 1
-                                }.flatMap { membersMatch ->
+                                .flatMap { room ->
                                     if (body.isNullOrBlank()) {
                                         Mono.just(smsBridgeProperties.templates.botSmsSendNoMessage)
-                                    } else if (membersMatch) {
-                                        matrixClient.roomsApi.sendRoomEvent(
-                                                roomId = rooms[0].roomId,
-                                                eventContent = TextMessageEventContent(
-                                                        smsBridgeProperties.templates.botSmsSendNewRoomMessage
-                                                                .replace("{sender}", sender)
-                                                                .replace("{body}", body)
-                                                )
-                                        ).map { smsBridgeProperties.templates.botSmsSendSendMessage }
+                                    } else if (room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } == null) {
+                                        Mono.just(smsBridgeProperties.templates.botSmsSendBotNotMember)
                                     } else {
-                                        Mono.just(smsBridgeProperties.templates.botSmsSendDisabledRoomCreation)
+                                        val membersMatch = room.members.keys.count { it.isManaged } == receiverIds.size + 1
+                                        if (membersMatch) {
+                                            matrixClient.roomsApi.sendRoomEvent(
+                                                    roomId = rooms[0].roomId,
+                                                    eventContent = TextMessageEventContent(
+                                                            smsBridgeProperties.templates.botSmsSendNewRoomMessage
+                                                                    .replace("{sender}", sender)
+                                                                    .replace("{body}", body)
+                                                    )
+                                            ).map { smsBridgeProperties.templates.botSmsSendSendMessage }
+                                        } else {
+                                            Mono.just(smsBridgeProperties.templates.botSmsSendDisabledRoomCreation)
+                                        }
                                     }
                                 }
 

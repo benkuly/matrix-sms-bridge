@@ -72,6 +72,8 @@ class SmsMatrixAppserviceUserServiceTest {
     @Test
     fun `should save managed user in database`() {
         val user = AppserviceUser("someUserId", true)
+        every { appserviceUserRepositoryMock.existsById(any<String>()) }
+                .returns(Mono.just(false))
         every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
                 .returns(Mono.just(user))
         every { helperMock.isManagedUser("someUserId") }.returns(Mono.just(true))
@@ -86,6 +88,8 @@ class SmsMatrixAppserviceUserServiceTest {
     @Test
     fun `should save not managed user in database`() {
         val user = AppserviceUser("someUserId", false)
+        every { appserviceUserRepositoryMock.existsById(any<String>()) }
+                .returns(Mono.just(true))
         every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
                 .returns(Mono.just(user))
         every { helperMock.isManagedUser("someUserId") }.returns(Mono.just(false))
@@ -94,7 +98,23 @@ class SmsMatrixAppserviceUserServiceTest {
                 .create(cut.saveUser("someUserId"))
                 .verifyComplete()
 
-        verify { appserviceUserRepositoryMock.save(user) }
+        verify(exactly = 0) { appserviceUserRepositoryMock.save(user) }
+    }
+
+    @Test
+    fun `should not save user if already exists`() {
+        val user = AppserviceUser("someUserId", true)
+        every { appserviceUserRepositoryMock.existsById(any<String>()) }
+                .returns(Mono.just(true))
+        every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
+                .returns(Mono.just(user))
+        every { helperMock.isManagedUser("someUserId") }.returns(Mono.just(true))
+
+        StepVerifier
+                .create(cut.saveUser("someUserId"))
+                .verifyComplete()
+
+        verify(exactly = 0) { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
     }
 
     @Test
