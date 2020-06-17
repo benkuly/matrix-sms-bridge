@@ -60,7 +60,7 @@ class SendSmsCommandHelper(
                         ).flatMap { roomId ->
                             Flux.fromIterable(receiverIds)
                                     .flatMap { receiverId ->
-                                        matrixClient.roomsApi.joinRoom(
+                                        matrixClient.roomsApi.joinRoom(// FIXME because of autojoin one of the both will always throw an exception
                                                 roomIdOrAlias = roomId,
                                                 asUserId = receiverId
                                         ).onErrorResume { error ->
@@ -99,6 +99,7 @@ class SendSmsCommandHelper(
                                                 if (botIsMember) {
                                                     Mono.just(true)
                                                 } else {
+                                                    LOG.debug("try to invite sms bot user to room ${room.roomId}")
                                                     matrixClient.roomsApi.inviteUser(
                                                             roomId = room.roomId,
                                                             userId = "@${botProperties.username}:${botProperties.serverName}",
@@ -106,6 +107,7 @@ class SendSmsCommandHelper(
                                                     ).thenReturn(true)
                                                 }
                                             }.flatMap {
+                                                LOG.debug("send message to room ${room.roomId}")
                                                 matrixClient.roomsApi.sendRoomEvent(
                                                         roomId = rooms[0].roomId,
                                                         eventContent = TextMessageEventContent(
@@ -128,7 +130,7 @@ class SendSmsCommandHelper(
                     }
                 }.map { it.replace("{receiverNumbers}", receiverNumbers.joinToString()) }
                 .onErrorResume {
-                    LOG.warn("trying to create room, join room or send message failed", it)
+                    LOG.warn("trying to create room, join room or send message failed")
                     Mono.just(
                             smsBridgeProperties.templates.botSmsSendError
                                     .replace("{error}", it.message ?: "unknown")
