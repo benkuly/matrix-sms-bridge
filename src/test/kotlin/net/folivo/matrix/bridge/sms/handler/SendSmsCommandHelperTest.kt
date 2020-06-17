@@ -61,7 +61,6 @@ class SendSmsCommandHelperTest {
         every { smsBridgePropertiesMock.templates.botSmsSendDisabledRoomCreation }.returns("disabled room creation {receiverNumbers}")
         every { smsBridgePropertiesMock.templates.botSmsSendError }.returns("error {error} {receiverNumbers}")
         every { smsBridgePropertiesMock.templates.botSmsSendNoMessage }.returns("no message {receiverNumbers}")
-        every { smsBridgePropertiesMock.templates.botSmsSendBotNotMember }.returns("bot not member {receiverNumbers}")
 
     }
 
@@ -293,7 +292,8 @@ class SendSmsCommandHelperTest {
     }
 
     @Test
-    fun `should not send message when one room exists, but bot is not member`() {
+    fun `should invite bot and send message when one room exists, but bot is not member`() {
+        every { matrixClientMock.roomsApi.inviteUser(any(), any(), any()) }.returns(Mono.empty())
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }.returns(Flux.just(mockk {
             every { roomId }.returns("someRoomId")
         }))
@@ -302,8 +302,8 @@ class SendSmsCommandHelperTest {
                     every { roomId }.returns("someRoomId")
                     every { members }.returns(
                             mutableMapOf(
-                                    AppserviceUser("someUser", true) to MemberOfProperties(1),
-                                    AppserviceUser("someOtherUser", false) to MemberOfProperties(1)
+                                    AppserviceUser("someOtherUser", false) to MemberOfProperties(1),
+                                    AppserviceUser("@sms_1111111111:someServer", true) to MemberOfProperties(1)
                             )
                     )
                 }))
@@ -316,9 +316,20 @@ class SendSmsCommandHelperTest {
                         roomName = "room name",
                         receiverNumbers = listOf("+1111111111")
                 )
-        ).assertNext { assertThat(it).isEqualTo("bot not member +1111111111") }
+        ).assertNext { assertThat(it).isEqualTo("send message +1111111111") }
                 .verifyComplete()
-        verify { matrixClientMock wasNot Called }
+        verify {
+            matrixClientMock.roomsApi.inviteUser(
+                    roomId = "someRoomId",
+                    userId = "@bot:someServer",
+                    asUserId = "@sms_1111111111:someServer"
+            )
+            matrixClientMock.roomsApi.sendRoomEvent(
+                    roomId = "someRoomId",
+                    eventContent = match<TextMessageEventContent> { it.body == "newRoomMessage someSender some text" },
+                    txnId = any()
+            )
+        }
     }
 
     @Test

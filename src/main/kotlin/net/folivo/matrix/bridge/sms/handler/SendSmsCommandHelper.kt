@@ -90,19 +90,31 @@ class SendSmsCommandHelper(
                                 .flatMap { room ->
                                     if (body.isNullOrBlank()) {
                                         Mono.just(smsBridgeProperties.templates.botSmsSendNoMessage)
-                                    } else if (room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } == null) {
-                                        Mono.just(smsBridgeProperties.templates.botSmsSendBotNotMember)
                                     } else {
-                                        val membersMatch = room.members.keys.count { it.isManaged } == receiverIds.size + 1
+                                        val botIsMember = room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } != null
+                                        val expectedManagedMemberSize = if (botIsMember) receiverIds.size + 1 else receiverIds.size
+                                        val membersMatch = room.members.keys.count { it.isManaged } == expectedManagedMemberSize
                                         if (membersMatch) {
-                                            matrixClient.roomsApi.sendRoomEvent(
-                                                    roomId = rooms[0].roomId,
-                                                    eventContent = TextMessageEventContent(
-                                                            smsBridgeProperties.templates.botSmsSendNewRoomMessage
-                                                                    .replace("{sender}", sender)
-                                                                    .replace("{body}", body)
-                                                    )
-                                            ).map { smsBridgeProperties.templates.botSmsSendSendMessage }
+                                            Mono.defer {
+                                                if (botIsMember) {
+                                                    Mono.just(true)
+                                                } else {
+                                                    matrixClient.roomsApi.inviteUser(
+                                                            roomId = room.roomId,
+                                                            userId = "@${botProperties.username}:${botProperties.serverName}",
+                                                            asUserId = receiverIds.first()
+                                                    ).thenReturn(true)
+                                                }
+                                            }.flatMap {
+                                                matrixClient.roomsApi.sendRoomEvent(
+                                                        roomId = rooms[0].roomId,
+                                                        eventContent = TextMessageEventContent(
+                                                                smsBridgeProperties.templates.botSmsSendNewRoomMessage
+                                                                        .replace("{sender}", sender)
+                                                                        .replace("{body}", body)
+                                                        )
+                                                ).map { smsBridgeProperties.templates.botSmsSendSendMessage }
+                                            }
                                         } else {
                                             Mono.just(smsBridgeProperties.templates.botSmsSendDisabledRoomCreation)
                                         }
