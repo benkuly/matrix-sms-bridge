@@ -1,26 +1,23 @@
 package net.folivo.matrix.bridge.sms.room
 
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.folivo.matrix.appservice.api.room.CreateRoomParameter
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
-import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bot.config.MatrixBotProperties
-import net.folivo.matrix.bridge.sms.user.AppserviceUser
-import net.folivo.matrix.bridge.sms.user.AppserviceUserRepository
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
+import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
 import net.folivo.matrix.restclient.MatrixClient
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
 
 @Service
 class SmsMatrixAppserviceRoomService(
         private val roomRepository: AppserviceRoomRepository,
-        private val userRepository: AppserviceUserRepository,
+        private val userService: SmsMatrixAppserviceUserService,
         private val matrixClient: MatrixClient,
-        private val helper: MatrixAppserviceServiceHelper,
         private val botProperties: MatrixBotProperties
 ) : MatrixAppserviceRoomService {
 
@@ -28,106 +25,75 @@ class SmsMatrixAppserviceRoomService(
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    override fun roomExistingState(roomAlias: String): Mono<RoomExistingState> {
-        return Mono.just(DOES_NOT_EXISTS)
+    override suspend fun roomExistingState(roomAlias: String): RoomExistingState {
+        return DOES_NOT_EXISTS
     }
 
-    override fun getCreateRoomParameter(roomAlias: String): Mono<CreateRoomParameter> {
-        return Mono.just(CreateRoomParameter())
+    override suspend fun getCreateRoomParameter(roomAlias: String): CreateRoomParameter {
+        return CreateRoomParameter()
     }
 
-    override fun saveRoom(roomAlias: String, roomId: String): Mono<Void> {
-        return Mono.empty()
+    override suspend fun saveRoom(roomAlias: String, roomId: String) {
+
     }
 
-    override fun saveRoomJoin(roomId: String, userId: String): Mono<Void> {
-        return saveRoomJoinAndGet(roomId, userId).then()
+    override suspend fun saveRoomJoin(roomId: String, userId: String) {
+        val room = getRoom(roomId, userId)
+        LOG.debug("saveRoomJoin in room $roomId of user $userId")
+        val user = userService.getUser(userId)
+
+        if (!room.members.containsKey(user)) {
+            val mappingToken = userService.getLastMappingToken(userId)
+
+            room.members[user] = MemberOfProperties(mappingToken + 1)
+            roomRepository.save(room).awaitFirst()
+        }
     }
 
-    fun saveRoomJoinAndGet(roomId: String, userId: String): Mono<AppserviceRoom> {
-        return roomRepository.findById(roomId)
-                .switchIfEmpty(roomRepository.save((AppserviceRoom(roomId))))
-                .flatMap { room ->
-                    LOG.debug("saveRoomJoin in room $roomId of user $userId")
-                    if (room.members.isEmpty()) {
-                        LOG.debug("collect all members in room $roomId because we didn't save it yet")
-                        matrixClient.roomsApi.getJoinedMembers(roomId)
-                                .flatMapMany { response -> Flux.fromIterable(response.joined.keys) }
-                                .flatMap { joinedUserId ->
-                                    Mono.zip(
-                                            findOrCreateUser(joinedUserId),
-                                            userRepository.findLastMappingTokenByUserId(joinedUserId)
-                                                    .switchIfEmpty(Mono.just(0))
-                                    )
-                                }.collectList()
-                                .flatMap { members ->
-                                    members.forEach { room.members[it.t1] = MemberOfProperties(it.t2 + 1) }
-                                    roomRepository.save(room)
-                                }
-                    } else {
-                        LOG.debug("save single join in room $roomId")
-                        Mono.zip(
-                                findOrCreateUser(userId),
-                                userRepository.findLastMappingTokenByUserId(userId)
-                                        .switchIfEmpty(Mono.just(0))
-                        ).flatMap {
-                            val user = it.t1
-                            val mappingToken = it.t2 + 1
-
-                            room.members[user] = MemberOfProperties(mappingToken)
-                            roomRepository.save(room)
-                        }
-                    }
-                }
-    }
-
-    private fun findOrCreateUser(userId: String): Mono<AppserviceUser> {
-        return userRepository.findById(userId)
-                .switchIfEmpty(
-                        helper.isManagedUser(userId)
-                                .flatMap { userRepository.save(AppserviceUser(userId, it)) })
-    }
-
-    override fun saveRoomLeave(roomId: String, userId: String): Mono<Void> {
+    override suspend fun saveRoomLeave(roomId: String, userId: String) {
         LOG.debug("saveRoomLeave in room $roomId of user $userId") // TODO remove old rooms
-        return roomRepository.findById(roomId)
-                .flatMap { room ->
-                    val user = room.members.keys.find { it.userId == userId }
-                    if (user != null) {
-                        room.members.remove(user)
+        val room = getRoom(roomId, userId)
+        val user = room.members.keys.find { it.userId == userId }
+        if (user != null) {
+            room.members.remove(user)
 
-                        Flux.fromIterable(room.members.keys)
-                                .map { it.isManaged }
-                                .collectList()
-                                .map { !it.contains(false) }
-                                .flatMap { onlyManagedUsers ->
-                                    if (onlyManagedUsers) {
-                                        Flux.fromIterable(room.members.keys)
-                                                .flatMap {
-                                                    if (it.userId == "@${botProperties.username}:${botProperties.serverName}")
-                                                        matrixClient.roomsApi.leaveRoom(roomId)
-                                                    else matrixClient.roomsApi.leaveRoom(roomId, it.userId)
-                                                }
-                                                .then(roomRepository.delete(room))
-                                    } else {
-                                        roomRepository.save(room)
-                                    }
-                                }
-                    } else {
-                        Mono.empty()
+            val hasOnlyManagedUsers = !room.members.keys
+                    .map { it.isManaged }
+                    .contains(false)
+            if (hasOnlyManagedUsers) {
+                room.members.keys
+                        .map {
+                            if (it.userId == "@${botProperties.username}:${botProperties.serverName}")
+                                matrixClient.roomsApi.leaveRoom(roomId)
+                            else matrixClient.roomsApi.leaveRoom(roomId, it.userId)
+                        }
+                roomRepository.delete(room)
+            } else {
+                roomRepository.save(room)
+            }
+        }
+    }
+
+//    fun isMemberOf(userId: String, roomId: String): Boolean { //FIXME old?
+//        val room = roomRepository.findById(roomId)
+//        return room.members.keys.find { it.userId == userId }?.let { true } ?: false
+//    }
+
+    suspend fun getRoom(roomId: String, userId: String): AppserviceRoom {
+        val room = roomRepository.findById(roomId).awaitFirstOrNull()
+                   ?: roomRepository.save(AppserviceRoom(roomId)).awaitFirst()
+        if (room.members.isEmpty()) {
+            LOG.debug("collect all members in room $roomId because we didn't save it yet")
+            matrixClient.roomsApi.getJoinedMembers(roomId).joined.keys
+                    .map { joinedUserId ->
+                        val user = userService.getUser(joinedUserId)
+                        val mappingToken = userService.getLastMappingToken(joinedUserId)
+                        Pair(user, mappingToken)
+                    }.forEach { (user, mappingToken) ->
+                        room.members[user] = MemberOfProperties(mappingToken + 1)
                     }
-                }.then()
-    }
-
-    fun isMemberOf(userId: String, roomId: String): Mono<Boolean> {
-        return roomRepository.findById(roomId)
-                .map { room ->
-                    room.members.keys.find { it.userId == userId }?.let { true } ?: false
-                }
-    }
-
-    fun getRoomOrCreateAndJoin(roomId: String, userId: String): Mono<AppserviceRoom> {
-        return roomRepository.findById(roomId)
-                .switchIfEmpty(Mono.defer { saveRoomJoinAndGet(roomId, userId) })
+            return roomRepository.save(room).awaitFirst()
+        }
+        return room
     }
 }

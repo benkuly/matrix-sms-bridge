@@ -4,6 +4,7 @@ import io.mockk.*
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.appservice.api.AppserviceHandlerHelper
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
@@ -24,7 +25,6 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.http.HttpStatus.FORBIDDEN
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.test.StepVerifier
 
 @ExtendWith(MockKExtension::class)
 class SendSmsCommandHelperTest {
@@ -50,10 +50,10 @@ class SendSmsCommandHelperTest {
     fun beforeEach() {
         every { botPropertiesMock.username }.returns("bot")
         every { botPropertiesMock.serverName }.returns("someServer")
-        every { matrixClientMock.roomsApi.createRoom(allAny()) }.returns(Mono.just("someRoomId"))
-        every { matrixClientMock.roomsApi.joinRoom(allAny()) }.returns(Mono.empty())
-        every { matrixClientMock.roomsApi.sendRoomEvent(allAny(), any()) }.returns(Mono.just("someEventId"))
-        every { helperMock.registerAndSaveUser(any()) }.returns(Mono.just(true))
+        coEvery { matrixClientMock.roomsApi.createRoom(allAny()) }.returns("someRoomId")
+        coEvery { matrixClientMock.roomsApi.joinRoom(allAny()) }.returns("someRoomId")
+        coEvery { matrixClientMock.roomsApi.sendRoomEvent(allAny(), any()) }.returns("someEventId")
+        coEvery { helperMock.registerAndSaveUser(any()) } just Runs
         every { smsBridgePropertiesMock.templates.botSmsSendNewRoomMessage }.returns("newRoomMessage {sender} {body}")
         every { smsBridgePropertiesMock.templates.botSmsSendCreatedRoomAndSendMessage }.returns("create room and send message {receiverNumbers}")
         every { smsBridgePropertiesMock.templates.botSmsSendSendMessage }.returns("send message {receiverNumbers}")
@@ -69,17 +69,18 @@ class SendSmsCommandHelperTest {
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
                 .returns(Flux.empty())
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "some text",
-                        sender = "someSender",
-                        roomCreationMode = ALWAYS,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111")
-                )
-        ).assertNext { assertThat(it).isEqualTo("create room and send message +1111111111") }
-                .verifyComplete()
-        verifyAll {
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = ALWAYS,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111")
+            )
+        }
+        assertThat(result).isEqualTo("create room and send message +1111111111")
+
+        coVerifyAll {
             matrixClientMock.roomsApi.createRoom(
                     name = "room name",
                     invite = setOf(
@@ -105,17 +106,18 @@ class SendSmsCommandHelperTest {
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
                 .returns(Flux.just(mockk(), mockk()))
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "some text",
-                        sender = "someSender",
-                        roomCreationMode = ALWAYS,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111", "+22222222")
-                )
-        ).assertNext { assertThat(it).isEqualTo("create room and send message +1111111111, +22222222") }
-                .verifyComplete()
-        verifyAll {
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = ALWAYS,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111", "+22222222")
+            )
+        }
+        assertThat(result).isEqualTo("create room and send message +1111111111, +22222222")
+
+        coVerifyAll {
             matrixClientMock.roomsApi.createRoom(
                     name = "room name",
                     invite = setOf(
@@ -143,18 +145,19 @@ class SendSmsCommandHelperTest {
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
                 .returns(Flux.just(mockk(), mockk()))
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "  ",
-                        sender = "someSender",
-                        roomCreationMode = ALWAYS,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111", "+22222222")
-                )
-        ).assertNext { assertThat(it).isEqualTo("create room and send message +1111111111, +22222222") }
-                .verifyComplete()
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "  ",
+                    sender = "someSender",
+                    roomCreationMode = ALWAYS,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111", "+22222222")
+            )
+        }
+        assertThat(result).isEqualTo("create room and send message +1111111111, +22222222")
+
         val roomsApi = matrixClientMock.roomsApi
-        verifyAll {
+        coVerifyAll {
             roomsApi.createRoom(
                     name = "room name",
                     invite = setOf(
@@ -170,7 +173,7 @@ class SendSmsCommandHelperTest {
                 it.containsAll(setOf("someSender", "@sms_1111111111:someServer", "@sms_22222222:someServer"))
             })
         }
-        verify(exactly = 0) {
+        coVerify(exactly = 0) {
             roomsApi.sendRoomEvent(any(), any(), any(), any(), any())
         }
     }
@@ -179,26 +182,26 @@ class SendSmsCommandHelperTest {
     fun `should create user and join when user does not exists`() {
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
                 .returns(Flux.just(mockk(), mockk()))
-        every { matrixClientMock.roomsApi.joinRoom(allAny()) }.returnsMany(
-                Mono.error(
+        coEvery { matrixClientMock.roomsApi.joinRoom(allAny()) }
+                .throws(
                         MatrixServerException(
                                 FORBIDDEN,
                                 ErrorResponse("FORBIDDEN", "user does not exists")
                         )
-                ), Mono.just("someRoomId")
-        )
+                ).coAndThen { "someRoomId" }
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "some text",
-                        sender = "someSender",
-                        roomCreationMode = ALWAYS,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111")
-                )
-        ).assertNext { assertThat(it).isEqualTo("create room and send message +1111111111") }
-                .verifyComplete()
-        verifyAll {
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = ALWAYS,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111")
+            )
+        }
+        assertThat(result).isEqualTo("create room and send message +1111111111")
+
+        coVerifyAll {
             matrixClientMock.roomsApi.createRoom(
                     name = "room name",
                     invite = setOf(
@@ -242,17 +245,18 @@ class SendSmsCommandHelperTest {
             )
         }))
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "some text",
-                        sender = "someSender",
-                        roomCreationMode = NO,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111")
-                )
-        ).assertNext { assertThat(it).isEqualTo("send message +1111111111") }
-                .verifyComplete()
-        verify {
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = NO,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111")
+            )
+        }
+        assertThat(result).isEqualTo("send message +1111111111")
+
+        coVerify {
             matrixClientMock.roomsApi.sendRoomEvent(
                     roomId = "someRoomId",
                     eventContent = match<TextMessageEventContent> { it.body == "newRoomMessage someSender some text" },
@@ -278,22 +282,23 @@ class SendSmsCommandHelperTest {
                     )
                 }))
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "some text",
-                        sender = "someSender",
-                        roomCreationMode = NO,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111")
-                )
-        ).assertNext { assertThat(it).isEqualTo("disabled room creation +1111111111") }
-                .verifyComplete()
-        verify { matrixClientMock wasNot Called }
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = NO,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111")
+            )
+        }
+        assertThat(result).isEqualTo("disabled room creation +1111111111")
+
+        coVerify { matrixClientMock wasNot Called }
     }
 
     @Test
     fun `should invite bot and send message when one room exists, but bot is not member`() {
-        every { matrixClientMock.roomsApi.inviteUser(any(), any(), any()) }.returns(Mono.empty())
+        coEvery { matrixClientMock.roomsApi.inviteUser(any(), any(), any()) } just Runs
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }.returns(Flux.just(mockk {
             every { roomId }.returns("someRoomId")
         }))
@@ -308,17 +313,18 @@ class SendSmsCommandHelperTest {
                     )
                 }))
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "some text",
-                        sender = "someSender",
-                        roomCreationMode = NO,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111")
-                )
-        ).assertNext { assertThat(it).isEqualTo("send message +1111111111") }
-                .verifyComplete()
-        verify {
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = NO,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111")
+            )
+        }
+        assertThat(result).isEqualTo("send message +1111111111")
+
+        coVerify {
             matrixClientMock.roomsApi.inviteUser(
                     roomId = "someRoomId",
                     userId = "@bot:someServer",
@@ -348,16 +354,17 @@ class SendSmsCommandHelperTest {
                     )
                 }))
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = null,
-                        sender = "someSender",
-                        roomCreationMode = NO,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111")
-                )
-        ).assertNext { assertThat(it).isEqualTo("no message +1111111111") }
-                .verifyComplete()
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = null,
+                    sender = "someSender",
+                    roomCreationMode = NO,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111")
+            )
+        }
+        assertThat(result).isEqualTo("no message +1111111111")
+
         verify { matrixClientMock wasNot Called }
     }
 
@@ -366,16 +373,17 @@ class SendSmsCommandHelperTest {
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
                 .returns(Flux.just(mockk(), mockk()))
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "some text",
-                        sender = "someSender",
-                        roomCreationMode = NO,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111")
-                )
-        ).assertNext { assertThat(it).isEqualTo("too many rooms +1111111111") }
-                .verifyComplete()
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = NO,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111")
+            )
+        }
+        assertThat(result).isEqualTo("too many rooms +1111111111")
+
         verify { matrixClientMock wasNot Called }
     }
 
@@ -384,16 +392,17 @@ class SendSmsCommandHelperTest {
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
                 .returns(Flux.empty())
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "some text",
-                        sender = "someSender",
-                        roomCreationMode = NO,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111")
-                )
-        ).assertNext { assertThat(it).isEqualTo("disabled room creation +1111111111") }
-                .verifyComplete()
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = NO,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111")
+            )
+        }
+        assertThat(result).isEqualTo("disabled room creation +1111111111")
+
         verify { matrixClientMock wasNot Called }
     }
 
@@ -401,23 +410,22 @@ class SendSmsCommandHelperTest {
     fun `should not send message but catch errors`() {
         every { roomRepositoryMock.findByMembersUserIdContaining(allAny()) }
                 .returns(Flux.empty())
-        every { matrixClientMock.roomsApi.createRoom(allAny()) }.returns(Mono.error(RuntimeException("unicorn")))
+        coEvery { matrixClientMock.roomsApi.createRoom(allAny()) }.throws(RuntimeException("unicorn"))
 
-        StepVerifier.create(
-                cut.createRoomAndSendMessage(
-                        body = "some text",
-                        sender = "someSender",
-                        roomCreationMode = ALWAYS,
-                        roomName = "room name",
-                        receiverNumbers = listOf("+1111111111")
-                )
-        ).assertNext { assertThat(it).isEqualTo("error unicorn +1111111111") }
-                .verifyComplete()
-        val roomsApiMock = matrixClientMock.roomsApi
-        verify(exactly = 0) {
-            roomsApiMock.sendRoomEvent(allAny(), any())
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = ALWAYS,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111")
+            )
         }
-        verify(exactly = 0) {
+        assertThat(result).isEqualTo("error unicorn +1111111111")
+
+        val roomsApiMock = matrixClientMock.roomsApi
+        coVerify(exactly = 0) {
+            roomsApiMock.sendRoomEvent(allAny(), any())
             roomsApiMock.joinRoom(allAny())
         }
     }

@@ -4,13 +4,13 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
+import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.appservice.api.event.MatrixAppserviceEventService.EventProcessingState.NOT_PROCESSED
 import net.folivo.matrix.appservice.api.event.MatrixAppserviceEventService.EventProcessingState.PROCESSED
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import reactor.core.publisher.Mono
-import reactor.test.StepVerifier
 
 @ExtendWith(MockKExtension::class)
 class SmsMatrixAppserviceEventServiceTest {
@@ -25,10 +25,10 @@ class SmsMatrixAppserviceEventServiceTest {
         every { eventTransactionRepositoryMock.findByTnxIdAndEventIdElseType("someTnxId", "someEventIdOrType") }
                 .returns(Mono.just(EventTransaction("someTnxId", "someEventIdOrType")))
 
-        StepVerifier
-                .create(cut.eventProcessingState("someTnxId", "someEventIdOrType"))
-                .assertNext { assertThat(it).isEqualTo(PROCESSED) }
-                .verifyComplete()
+        val result = runBlocking {
+            cut.eventProcessingState("someTnxId", "someEventIdOrType")
+        }
+        assertThat(result).isEqualTo(PROCESSED)
     }
 
     @Test
@@ -38,10 +38,10 @@ class SmsMatrixAppserviceEventServiceTest {
         every { eventTransactionRepositoryMock.findByTnxIdAndEventIdElseType("someTnxId", "someEventIdOrType") }
                 .returns(Mono.empty())
 
-        StepVerifier
-                .create(cut.eventProcessingState("someTnxId", "someEventIdOrType"))
-                .assertNext { assertThat(it).isEqualTo(NOT_PROCESSED) }
-                .verifyComplete()
+        val result = runBlocking {
+            cut.eventProcessingState("someTnxId", "someEventIdOrType")
+        }
+        assertThat(result).isEqualTo(NOT_PROCESSED)
     }
 
     @Test
@@ -51,9 +51,7 @@ class SmsMatrixAppserviceEventServiceTest {
         every { eventTransactionRepositoryMock.save<EventTransaction>(any()) }
                 .returns(Mono.just(EventTransaction("someTnxId", "someEventIdOrType")))
 
-        StepVerifier
-                .create(cut.saveEventProcessed("someTnxId", "someEventIdOrType"))
-                .verifyComplete()
+        runBlocking { cut.saveEventProcessed("someTnxId", "someEventIdOrType") }
 
         verify { eventTransactionRepositoryMock.save(EventTransaction("someTnxId", "someEventIdOrType")) }
     }

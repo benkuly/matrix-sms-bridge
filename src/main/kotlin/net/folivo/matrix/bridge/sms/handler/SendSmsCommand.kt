@@ -8,6 +8,7 @@ import com.github.ajalt.clikt.parameters.types.enum
 import com.google.i18n.phonenumbers.NumberParseException
 import com.google.i18n.phonenumbers.NumberParseException.ErrorType.NOT_A_NUMBER
 import com.google.i18n.phonenumbers.PhoneNumberUtil
+import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
@@ -46,27 +47,28 @@ class SendSmsCommand(
             }
             if (useGroup) {
                 LOG.debug("use group and send message")
-                helper.createRoomAndSendMessage(
-                        body = body,
-                        sender = sender,
-                        receiverNumbers = receiverNumbers,
-                        roomName = roomName,
-                        roomCreationMode = roomCreationMode
-                )
-                        .blockOptional()
-                        .ifPresent { echo(it) }
-            } else {
-                LOG.debug("use one room for each number and send message")
-                receiverNumbers.forEach { number ->
+                echo(runBlocking {
                     helper.createRoomAndSendMessage(
                             body = body,
                             sender = sender,
-                            receiverNumbers = listOf(number),
+                            receiverNumbers = receiverNumbers,
                             roomName = roomName,
                             roomCreationMode = roomCreationMode
                     )
-                            .blockOptional()
-                            .ifPresent { echo(it) }
+                })
+            } else {
+                LOG.debug("use one room for each number and send message")
+                receiverNumbers.forEach { number ->
+                    echo(
+                            runBlocking {
+                                helper.createRoomAndSendMessage(
+                                        body = body,
+                                        sender = sender,
+                                        receiverNumbers = listOf(number),
+                                        roomName = roomName,
+                                        roomCreationMode = roomCreationMode
+                                )
+                            })
                 }
             }
         } catch (ex: NumberParseException) {

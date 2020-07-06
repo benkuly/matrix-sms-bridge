@@ -1,20 +1,20 @@
 package net.folivo.matrix.bridge.sms.user
 
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
+import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState.*
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import reactor.core.publisher.Mono
-import reactor.test.StepVerifier
 
 @ExtendWith(MockKExtension::class)
 class SmsMatrixAppserviceUserServiceTest {
@@ -35,10 +35,8 @@ class SmsMatrixAppserviceUserServiceTest {
         every { appserviceUserRepositoryMock.existsById("someUserId") }
                 .returns(Mono.just(true))
 
-        StepVerifier
-                .create(cut.userExistingState("someUserId"))
-                .assertNext { Assertions.assertThat(it).isEqualTo(EXISTS) }
-                .verifyComplete()
+        val result = runBlocking { cut.userExistingState("someUserId") }
+        assertThat(result).isEqualTo(EXISTS)
     }
 
     @Test
@@ -46,13 +44,10 @@ class SmsMatrixAppserviceUserServiceTest {
         every { appserviceUserRepositoryMock.existsById("someUserId") }
                 .returns(Mono.just(false))
 
-        every { helperMock.isManagedUser("someUserId") }
-                .returns(Mono.just(true))
+        coEvery { helperMock.isManagedUser("someUserId") }.returns(true)
 
-        StepVerifier
-                .create(cut.userExistingState("someUserId"))
-                .assertNext { Assertions.assertThat(it).isEqualTo(CAN_BE_CREATED) }
-                .verifyComplete()
+        val result = runBlocking { cut.userExistingState("someUserId") }
+        assertThat(result).isEqualTo(CAN_BE_CREATED)
     }
 
     @Test
@@ -60,13 +55,10 @@ class SmsMatrixAppserviceUserServiceTest {
         every { appserviceUserRepositoryMock.existsById("someUserId") }
                 .returns(Mono.just(false))
 
-        every { helperMock.isManagedUser("someUserId") }
-                .returns(Mono.just(false))
+        coEvery { helperMock.isManagedUser("someUserId") }.returns(false)
 
-        StepVerifier
-                .create(cut.userExistingState("someUserId"))
-                .assertNext { Assertions.assertThat(it).isEqualTo(DOES_NOT_EXISTS) }
-                .verifyComplete()
+        val result = runBlocking { cut.userExistingState("someUserId") }
+        assertThat(result).isEqualTo(DOES_NOT_EXISTS)
     }
 
     @Test
@@ -76,11 +68,9 @@ class SmsMatrixAppserviceUserServiceTest {
                 .returns(Mono.just(false))
         every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
                 .returns(Mono.just(user))
-        every { helperMock.isManagedUser("someUserId") }.returns(Mono.just(true))
+        coEvery { helperMock.isManagedUser("someUserId") }.returns(true)
 
-        StepVerifier
-                .create(cut.saveUser("someUserId"))
-                .verifyComplete()
+        runBlocking { cut.saveUser("someUserId") }
 
         verify { appserviceUserRepositoryMock.save(user) }
     }
@@ -92,11 +82,9 @@ class SmsMatrixAppserviceUserServiceTest {
                 .returns(Mono.just(true))
         every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
                 .returns(Mono.just(user))
-        every { helperMock.isManagedUser("someUserId") }.returns(Mono.just(false))
+        coEvery { helperMock.isManagedUser("someUserId") }.returns(false)
 
-        StepVerifier
-                .create(cut.saveUser("someUserId"))
-                .verifyComplete()
+        runBlocking { cut.saveUser("someUserId") }
 
         verify(exactly = 0) { appserviceUserRepositoryMock.save(user) }
     }
@@ -108,21 +96,18 @@ class SmsMatrixAppserviceUserServiceTest {
                 .returns(Mono.just(true))
         every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
                 .returns(Mono.just(user))
-        every { helperMock.isManagedUser("someUserId") }.returns(Mono.just(true))
+        coEvery { helperMock.isManagedUser("someUserId") }.returns(true)
 
-        StepVerifier
-                .create(cut.saveUser("someUserId"))
-                .verifyComplete()
+        runBlocking { cut.saveUser("someUserId") }
+
 
         verify(exactly = 0) { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
     }
 
     @Test
     fun `should createUserParameter`() {
-        StepVerifier
-                .create(cut.getCreateUserParameter("@sms_1234567:someServer"))
-                .assertNext { assertThat(it.displayName).isEqualTo("+1234567 (SMS)") }
-                .verifyComplete()
+        val result = runBlocking { cut.getCreateUserParameter("@sms_1234567:someServer") }
+        assertThat(result.displayName).isEqualTo("+1234567 (SMS)")
     }
 
     @Test
@@ -139,10 +124,8 @@ class SmsMatrixAppserviceUserServiceTest {
                                 )
                         )
                 )
-        StepVerifier
-                .create(cut.getRoomId("someUserId", 24))
-                .assertNext { assertThat(it).isEqualTo("someRoomId2") }
-                .verifyComplete()
+        val result = runBlocking { cut.getRoomId("someUserId", 24) }
+        assertThat(result).isEqualTo("someRoomId2")
     }
 
     @Test
@@ -158,10 +141,9 @@ class SmsMatrixAppserviceUserServiceTest {
                                 )
                         )
                 )
-        StepVerifier
-                .create(cut.getRoomId("someUserId", 12))
-                .assertNext { assertThat(it).isEqualTo("someRoomId1") }
-                .verifyComplete()
+        val result = runBlocking { cut.getRoomId("someUserId", 12) }
+        assertThat(result).isEqualTo("someRoomId1")
+
     }
 
     @Test
@@ -177,18 +159,16 @@ class SmsMatrixAppserviceUserServiceTest {
                                 )
                         )
                 )
-        StepVerifier
-                .create(cut.getRoomId("someUserId", 24))
-                .assertNext { assertThat(it).isEqualTo("someRoomId1") }
-                .verifyComplete()
+        val result = runBlocking { cut.getRoomId("someUserId", 24) }
+        assertThat(result).isEqualTo("someRoomId1")
+
     }
 
     @Test
     fun `should not get roomId`() {
         every { appserviceUserRepositoryMock.findById("someUserId") }
                 .returns(Mono.just(AppserviceUser("someUserId", true, mutableMapOf())))
-        StepVerifier
-                .create(cut.getRoomId("someUserId", 24))
-                .verifyComplete()
+        val result = runBlocking { cut.getRoomId("someUserId", 24) }
+        assertThat(result).isNull()
     }
 }

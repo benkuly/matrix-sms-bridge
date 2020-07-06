@@ -1,67 +1,66 @@
 package net.folivo.matrix.bridge.sms.user
 
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.reactive.awaitFirstOrDefault
+import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.folivo.matrix.appservice.api.user.CreateUserParameter
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService
+import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState
+import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState.*
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import org.springframework.stereotype.Service
-import reactor.core.publisher.Mono
 
 @Service
 class SmsMatrixAppserviceUserService(
         private val helper: MatrixAppserviceServiceHelper,
+        private val userRepository: AppserviceUserRepository,
         private val appserviceUserRepository: AppserviceUserRepository,
         private val smsBridgeProperties: SmsBridgeProperties
 ) : MatrixAppserviceUserService {
 
-    override fun userExistingState(userId: String): Mono<MatrixAppserviceUserService.UserExistingState> {
-        return appserviceUserRepository.existsById(userId)
-                .flatMap { isInDatabase ->
-                    if (isInDatabase) {
-                        Mono.just(MatrixAppserviceUserService.UserExistingState.EXISTS)
-                    } else {
-                        helper.isManagedUser(userId)
-                                .map { shouldCreateUser ->
-                                    if (shouldCreateUser) {
-                                        MatrixAppserviceUserService.UserExistingState.CAN_BE_CREATED
-                                    } else {
-                                        MatrixAppserviceUserService.UserExistingState.DOES_NOT_EXISTS
-                                    }
-                                }
-                    }
-                }
-    }
-
-    override fun getCreateUserParameter(userId: String): Mono<CreateUserParameter> {
-        return Mono.create {
-            val telephoneNumber = userId.removePrefix("@sms_").substringBefore(":")
-            val displayName = "+$telephoneNumber (SMS)"
-            it.success(CreateUserParameter(displayName))
+    override suspend fun userExistingState(userId: String): UserExistingState {
+        val userExists = appserviceUserRepository.existsById(userId).awaitFirst()
+        return if (userExists) {
+            EXISTS
+        } else {
+            if (helper.isManagedUser(userId)) CAN_BE_CREATED else DOES_NOT_EXISTS
         }
     }
 
-    override fun saveUser(userId: String): Mono<Void> {
-        return appserviceUserRepository.existsById(userId)
-                .flatMap { exists ->
-                    if (!exists) {
-                        helper.isManagedUser(userId)
-                                .flatMap { appserviceUserRepository.save(AppserviceUser(userId, it)) }
-                    } else Mono.empty()
-                }.then()
+    override suspend fun getCreateUserParameter(userId: String): CreateUserParameter {
+        val telephoneNumber = userId.removePrefix("@sms_").substringBefore(":")
+        val displayName = "+$telephoneNumber (SMS)"
+        return CreateUserParameter(displayName)
     }
 
-    fun getRoomId(userId: String, mappingToken: Int?): Mono<String> {
-        return appserviceUserRepository.findById(userId)
-                .flatMap { user ->
-                    val rooms = user.rooms.keys
-                    if (rooms.size == 1 && smsBridgeProperties.allowMappingWithoutToken) {
-                        Mono.just(rooms.first().roomId)
-                    } else {
-                        Mono.justOrEmpty(
-                                user.rooms.entries
-                                        .find { it.value.mappingToken == mappingToken }
-                                        ?.key?.roomId)
-                    }
-                }
+    override suspend fun saveUser(userId: String) {
+        val userExists = appserviceUserRepository.existsById(userId).awaitFirst()
+        if (!userExists) {
+            helper.isManagedUser(userId)
+                    .let { appserviceUserRepository.save(AppserviceUser(userId, it)).awaitFirst() }
+        }
+    }
+
+    suspend fun getRoomId(userId: String, mappingToken: Int?): String? {
+        val user = getUser(userId)
+        val rooms = user.rooms.keys
+        return if (rooms.size == 1 && smsBridgeProperties.allowMappingWithoutToken) {
+            rooms.first().roomId
+        } else {
+            user.rooms.entries
+                    .find { it.value.mappingToken == mappingToken }
+                    ?.key?.roomId
+        }
+    }
+
+    suspend fun getUser(userId: String): AppserviceUser {
+        return userRepository.findById(userId).awaitFirstOrNull()
+               ?: helper.isManagedUser(userId)
+                       .let { userRepository.save(AppserviceUser(userId, it)).awaitFirst() }
+    }
+
+    suspend fun getLastMappingToken(userId: String): Int {
+        return userRepository.findLastMappingTokenByUserId(userId).awaitFirstOrDefault(0)
     }
 }

@@ -1,12 +1,10 @@
 package net.folivo.matrix.bridge.sms.handler
 
-import io.mockk.Called
-import io.mockk.every
+import io.mockk.*
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import io.mockk.mockk
-import io.mockk.verify
+import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
@@ -20,8 +18,6 @@ import net.folivo.matrix.core.model.events.m.room.message.UnknownMessageEventCon
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import reactor.core.publisher.Mono
-import reactor.test.StepVerifier
 
 @ExtendWith(MockKExtension::class)
 class SmsAppserviceMessageHandlerTest {
@@ -57,10 +53,10 @@ class SmsAppserviceMessageHandlerTest {
         every { botPropertiesMock.username } returns "smsbot"
         every { contextMock.roomId } returns "someRoomId"
         every { contextMock.originalEvent.sender } returns "someSender"
-        every { roomServiceMock.getRoomOrCreateAndJoin("someRoomId", "someSender") }.returns(Mono.just(roomMock))
+        coEvery { roomServiceMock.getRoom("someRoomId", "someSender") }.returns(roomMock)
 
-        every { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) } returns Mono.empty()
-        every { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any()) } returns Mono.just(false)
+        coEvery { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) } just Runs
+        coEvery { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any()) }.returns(false)
     }
 
     @Test
@@ -82,22 +78,18 @@ class SmsAppserviceMessageHandlerTest {
                     } to MemberOfProperties(1)
             )
         }
-        every { roomServiceMock.getRoomOrCreateAndJoin("someRoomId", "someSender") }.returnsMany(
-                Mono.just(roomMock1), Mono.just(roomMock2)
+        coEvery { roomServiceMock.getRoom("someRoomId", "someSender") }.returnsMany(
+                roomMock1, roomMock2
         )
 
-        StepVerifier
-                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
-                .verifyComplete()
+        runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        verify { sendSmsServiceMock.sendSms(roomMock1, "someBody", "someSender", contextMock, true) }
+        coVerify { sendSmsServiceMock.sendSms(roomMock1, "someBody", "someSender", contextMock, true) }
 
         // also try when more then one member
-        StepVerifier
-                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
-                .verifyComplete()
+        runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        verify { sendSmsServiceMock.sendSms(roomMock2, "someBody", "someSender", contextMock, true) }
+        coVerify { sendSmsServiceMock.sendSms(roomMock2, "someBody", "someSender", contextMock, true) }
     }
 
     @Test
@@ -108,11 +100,9 @@ class SmsAppserviceMessageHandlerTest {
                 } to MemberOfProperties(1)
         )
 
-        StepVerifier
-                .create(cut.handleMessage(UnknownMessageEventContent("someBody", "image"), contextMock))
-                .verifyComplete()
+        runBlocking { cut.handleMessage(UnknownMessageEventContent("someBody", "image"), contextMock) }
 
-        verify { sendSmsServiceMock.sendSms(roomMock, "someBody", "someSender", contextMock, false) }
+        coVerify { sendSmsServiceMock.sendSms(roomMock, "someBody", "someSender", contextMock, false) }
     }
 
     @Test
@@ -123,16 +113,14 @@ class SmsAppserviceMessageHandlerTest {
                 } to MemberOfProperties(1)
         )
 
-        StepVerifier
-                .create(cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock))
-                .verifyComplete()
+        runBlocking { cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock) }
 
-        verify { sendSmsServiceMock wasNot Called }
+        coVerify { sendSmsServiceMock wasNot Called }
     }
 
     @Test
     fun `should delegate to SmsBotHandler when room contains bot and not delegate to SendSmsService`() {
-        every { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any()) } returns Mono.just(true)
+        coEvery { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any()) } returns true
 
         every { roomMock.members } returns mutableMapOf(
                 mockk<AppserviceUser> {
@@ -140,12 +128,10 @@ class SmsAppserviceMessageHandlerTest {
                 } to MemberOfProperties(1)
         )
 
-        StepVerifier
-                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
-                .verifyComplete()
+        runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        verify { smsBotMessageHandlerMock.handleMessageToSmsBot(roomMock, "someBody", "someSender", contextMock) }
-        verify { sendSmsServiceMock wasNot Called }
+        coVerify { smsBotMessageHandlerMock.handleMessageToSmsBot(roomMock, "someBody", "someSender", contextMock) }
+        coVerify { sendSmsServiceMock wasNot Called }
     }
 
     @Test
@@ -156,12 +142,10 @@ class SmsAppserviceMessageHandlerTest {
                 } to MemberOfProperties(1)
         )
 
-        StepVerifier
-                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
-                .verifyComplete()
+        runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        verify { smsBotMessageHandlerMock wasNot Called }
-        verify { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) }
+        coVerify { smsBotMessageHandlerMock wasNot Called }
+        coVerify { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -172,22 +156,18 @@ class SmsAppserviceMessageHandlerTest {
                 } to MemberOfProperties(1)
         )
 
-        StepVerifier
-                .create(cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock))
-                .verifyComplete()
+        runBlocking { cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock) }
 
-        verify { smsBotMessageHandlerMock wasNot Called }
-        verify { sendSmsServiceMock wasNot Called }
+        coVerify { smsBotMessageHandlerMock wasNot Called }
+        coVerify { sendSmsServiceMock wasNot Called }
     }
 
     @Test
     fun `should ignore messages to default room`() {
         every { contextMock.roomId } returns "defaultRoomId"
 
-        StepVerifier
-                .create(cut.handleMessage(TextMessageEventContent("someBody"), contextMock))
-                .verifyComplete()
+        runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        verify { sendSmsServiceMock wasNot Called }
+        coVerify { sendSmsServiceMock wasNot Called }
     }
 }

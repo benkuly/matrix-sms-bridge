@@ -1,7 +1,6 @@
 package net.folivo.matrix.bridge.sms.provider
 
 import org.slf4j.LoggerFactory
-import reactor.core.publisher.Mono
 
 class NoOpSmsProvider : SmsProvider {
     companion object {
@@ -14,8 +13,7 @@ class NoOpSmsProvider : SmsProvider {
         LOG.error(errorMessage)
     }
 
-    override fun sendSms(receiver: String, body: String): Mono<Void> {
+    override suspend fun sendSms(receiver: String, body: String) {
         LOG.error(errorMessage)
-        return Mono.empty()
     }
 }

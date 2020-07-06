@@ -8,8 +8,6 @@ import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
 
 @Service
 class SendSmsService(
@@ -22,35 +20,38 @@ class SendSmsService(
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    fun sendSms(
+    suspend fun sendSms(
             room: AppserviceRoom,
             body: String,
             sender: String,
             context: MessageContext,
             isTextMessage: Boolean
-    ): Mono<Void> {
-        return Flux.fromIterable(room.members.entries)
+    ) {
+
+        room.members.entries
                 .filter { it.key.userId != sender }
                 .map { Triple(it.key, it.value, it.key.userId.removePrefix("@sms_").substringBefore(":")) }
                 .filter { it.third.matches(Regex("[0-9]{6,15}")) }
-                .flatMap { (member, memberOfProps, receiver) ->
+                .map { (member, memberOfProps, receiver) ->
                     if (isTextMessage) {
                         LOG.debug("send SMS from ${room.roomId} to +$receiver")
-                        insertBodyAndSend(
-                                sender = sender,
-                                receiver = receiver,
-                                body = body,
-                                mappingToken = memberOfProps.mappingToken,
-                                needsToken = member.rooms.size > 1
-                        ).onErrorResume {
+                        try {
+                            insertBodyAndSend(
+                                    sender = sender,
+                                    receiver = receiver,
+                                    body = body,
+                                    mappingToken = memberOfProps.mappingToken,
+                                    needsToken = member.rooms.size > 1
+                            )
+                        } catch (error: Throwable) {
                             LOG.error(
-                                    "Could not send sms from room ${room.roomId} and $sender with body '$body'. " +
-                                    "This should be handled, e.g. by queuing messages.", it
+                                    "Could not send sms from room ${room.roomId} and $sender. " +
+                                    "This should be fixed.", error
                             )
                             context.answer(
                                     NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsError),
                                     asUserId = member.userId
-                            ).then()
+                            )
                         }
                     } else {
                         LOG.debug("cannot send SMS from ${room.roomId} to +$receiver because of incompatible message type")
@@ -60,16 +61,15 @@ class SendSmsService(
                         )
                     }
                 }
-                .then()
     }
 
-    private fun insertBodyAndSend(
+    private suspend fun insertBodyAndSend(
             sender: String,
             receiver: String,
             body: String,
             mappingToken: Int,
             needsToken: Boolean
-    ): Mono<Void> {
+    ) {
         val messageTemplate =
                 if (sender == "@${smsBotProperties.username}:${smsBotProperties.serverName}")
                     smsBridgeProperties.templates.outgoingMessageFromBot
@@ -82,6 +82,6 @@ class SendSmsService(
                 .replace("{body}", body)
                 .replace("{token}", "#$mappingToken")
 
-        return smsProvider.sendSms(receiver = "+$receiver", body = templateBody)
+        smsProvider.sendSms(receiver = "+$receiver", body = templateBody)
     }
 }

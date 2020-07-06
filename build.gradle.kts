@@ -3,18 +3,18 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     base
-    id("org.springframework.boot") version "2.3.0.RELEASE"
-    id("io.spring.dependency-management") version "1.0.9.RELEASE"
-    kotlin("jvm") version "1.3.72"
-    kotlin("kapt") version "1.3.72"
-    kotlin("plugin.spring") version "1.3.72"
+    id("org.springframework.boot") version Versions.springBoot
+    id("io.spring.dependency-management") version Versions.springDependencyManagement
+    kotlin("jvm") version Versions.kotlin
+    kotlin("kapt") version Versions.kotlin
+    kotlin("plugin.spring") version Versions.kotlin
 }
 
 allprojects {
     apply(plugin = "kotlin")
 
     group = "net.folivo"
-    version = "0.2.5.RELEASE"
+    version = "0.3.0.RELEASE"
     java.sourceCompatibility = JavaVersion.VERSION_11
 
     repositories {
@@ -28,26 +28,30 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    api("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-starter:1.1.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.kotlinxCoroutines}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${Versions.kotlinxCoroutines}")
+    implementation("com.michael-bull.kotlin-retry:kotlin-retry:${Versions.kotlinRetry}")
 
-    implementation("net.folivo:matrix-spring-boot-bot:0.2.11.RELEASE")
+    api("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-starter:${Versions.neo4jrx}")
 
-    implementation("com.github.ajalt:clikt-multiplatform:2.7.1")
-    implementation("org.apache.ant:ant:1.10.8") {
+    implementation("net.folivo:matrix-spring-boot-bot:${Versions.matrixSDK}")
+
+    implementation("com.github.ajalt:clikt-multiplatform:${Versions.clikt}")
+    implementation("org.apache.ant:ant:${Versions.ant}") {
         exclude(group = "org.apache.ant", module = "ant-launcher")
     }
-    implementation("com.googlecode.libphonenumber:libphonenumber:8.12.5")
+    implementation("com.googlecode.libphonenumber:libphonenumber:${Versions.libphonenumber}")
 
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
-    testImplementation("com.ninja-squad:springmockk:2.0.1")
+    testImplementation("com.ninja-squad:springmockk:${Versions.springMockk}")
     testImplementation("io.projectreactor:reactor-test")
-    testImplementation("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-test-autoconfigure:1.0.1") {
+    testImplementation("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-test-autoconfigure:${Versions.neo4jrx}") {
         exclude(group = "org.neo4j.test", module = "harness")
     }
-    testImplementation("org.testcontainers:junit-jupiter:1.14.1")
-    testImplementation("org.testcontainers:neo4j:1.14.1")
+    testImplementation("org.testcontainers:junit-jupiter:${Versions.testcontainers}")
+    testImplementation("org.testcontainers:neo4j:${Versions.testcontainers}")
 
     testImplementation("com.squareup.okhttp3:mockwebserver")
 

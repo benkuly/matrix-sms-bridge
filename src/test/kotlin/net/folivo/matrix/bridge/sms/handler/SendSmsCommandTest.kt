@@ -2,18 +2,18 @@ package net.folivo.matrix.bridge.sms.handler
 
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.output.CliktConsole
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.coVerifyAll
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import io.mockk.verify
-import io.mockk.verifyAll
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import reactor.core.publisher.Mono
 
 @ExtendWith(MockKExtension::class)
 class SendSmsCommandTest {
@@ -31,8 +31,7 @@ class SendSmsCommandTest {
 
     @BeforeEach
     fun beforeEach() {
-        every { helper.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
-                .returns(Mono.just("answer"))
+        coEvery { helper.createRoomAndSendMessage(any(), any(), any(), any(), any()) }.returns("answer")
         every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
         every { smsBridgePropertiesMock.templates.botSmsSendInvalidTelephoneNumber }.returns("invalid")
         cut = SendSmsCommand("someSender", helper, smsBridgePropertiesMock)
@@ -43,7 +42,7 @@ class SendSmsCommandTest {
     fun `should send message`() {
         cut.parse(listOf("some text", "-t", "017331111111", "-t", "017332222222"))
 
-        verifyAll {
+        coVerifyAll {
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
@@ -65,7 +64,7 @@ class SendSmsCommandTest {
     fun `should send message to group and use name`() {
         cut.parse(listOf("some text", "-t", "017331111111", "-t", "017332222222", "-n", "some name", "-g"))
 
-        verify {
+        coVerify {
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
@@ -80,7 +79,7 @@ class SendSmsCommandTest {
     fun `should send message and create room`() {
         cut.parse(listOf("some text", "-t", "017331111111", "-m", "always"))
 
-        verify {
+        coVerify {
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
@@ -96,7 +95,7 @@ class SendSmsCommandTest {
         cut.parse(listOf("some text", "-t", "017331111111"))
         cut.parse(listOf("some text", "-t", "017331111111", "-g"))
 
-        verify(exactly = 2) { consoleMock.print("answer", any()) }
+        coVerify(exactly = 2) { consoleMock.print("answer", any()) }
     }
 
     @Test
@@ -105,6 +104,6 @@ class SendSmsCommandTest {
         cut.parse(listOf("some text", "-t", "123456789123456789"))
         cut.parse(listOf("some text", "-t", "012345678 DINO"))
 
-        verify(exactly = 3) { consoleMock.print("invalid", any()) }
+        coVerify(exactly = 3) { consoleMock.print("invalid", any()) }
     }
 }

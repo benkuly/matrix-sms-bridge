@@ -8,7 +8,7 @@ import reactor.core.publisher.Flux
 
 @Repository
 interface AppserviceRoomRepository : ReactiveCrudRepository<AppserviceRoom, String> {
-    
+
     @Transactional
     @Query(
             "MATCH (user:AppserviceUser)-[:MEMBER_OF]->(room:AppserviceRoom) " +

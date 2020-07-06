@@ -1,11 +1,13 @@
 package net.folivo.matrix.bridge.sms.handler
 
 import io.mockk.Called
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import io.mockk.verify
+import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
@@ -15,8 +17,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import reactor.core.publisher.Mono
-import reactor.test.StepVerifier
 
 @ExtendWith(MockKExtension::class)
 class SmsBotMessageHandlerTest {
@@ -39,7 +39,7 @@ class SmsBotMessageHandlerTest {
     fun beforeEach() {
         every { smsBridgePropertiesMock.templates.botTooManyMembers }.returns("tooMany")
         every { smsBridgePropertiesMock.templates.botHelp }.returns("help")
-        every { contextMock.answer(any(), any()) }.returns(Mono.empty())
+        coEvery { contextMock.answer(any(), any()) }.returns("someMessageId")
         every { roomMock.members.size }.returns(2)
         every { roomMock.members.keys }.returns(
                 mutableSetOf(
@@ -51,21 +51,19 @@ class SmsBotMessageHandlerTest {
 
     @Test
     fun `should run command`() {
-        every { sendSmsCommandHelperMock.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
-                .returns(Mono.just("message send"))
+        coEvery { sendSmsCommandHelperMock.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
+                .returns("message send")
         every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
-        StepVerifier
-                .create(
-                        cut.handleMessageToSmsBot(
-                                roomMock,
-                                "sms send -t 017392837462 'some Text'",
-                                "someUserId2",
-                                contextMock
-                        )
-                )
-                .assertNext { assertThat(it).isTrue() }
-                .verifyComplete()
-        verify(exactly = 1) {
+        val result = runBlocking {
+            cut.handleMessageToSmsBot(
+                    roomMock,
+                    "sms send -t 017392837462 'some Text'",
+                    "someUserId2",
+                    contextMock
+            )
+        }
+        assertThat(result).isTrue()
+        coVerify(exactly = 1) {
             contextMock.answer(match<NoticeMessageEventContent> { it.body == "message send" })
         }
     }
@@ -80,33 +78,35 @@ class SmsBotMessageHandlerTest {
                         AppserviceUser("someUserId3", false)
                 )
         )
-        StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "sms bla", "someUserId2", contextMock))
-                .assertNext { assertThat(it).isTrue() }
-                .verifyComplete()
-        verify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "tooMany" }) }
+        val result = runBlocking {
+            cut.handleMessageToSmsBot(roomMock, "sms bla", "someUserId2", contextMock)
+        }
+        assertThat(result).isTrue()
+        coVerify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "tooMany" }) }
     }
 
     @Test
     fun `should answer with help when not sms command`() {
-        StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "bla", "someUserId2", contextMock))
-                .assertNext { assertThat(it).isTrue() }
-                .verifyComplete()
-        verify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "help" }) }
+        val result = runBlocking {
+            cut.handleMessageToSmsBot(roomMock, "bla", "someUserId2", contextMock)
+        }
+        assertThat(result).isTrue()
+        coVerify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "help" }) }
     }
 
     @Test
     fun `should not allow managed user to run command`() {
-        StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "sms send", "someUserId1", contextMock))
-                .assertNext { assertThat(it).isFalse() }
-                .verifyComplete()
-        StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "sms send", "notKnownUserId", contextMock))
-                .assertNext { assertThat(it).isFalse() }
-                .verifyComplete()
-        verify { contextMock wasNot Called }
+        val result1 = runBlocking {
+            cut.handleMessageToSmsBot(roomMock, "sms send", "someUserId1", contextMock)
+        }
+        assertThat(result1).isFalse()
+
+        val result2 = runBlocking {
+            cut.handleMessageToSmsBot(roomMock, "sms send", "notKnownUserId", contextMock)
+        }
+        assertThat(result2).isFalse()
+
+        coVerify { contextMock wasNot Called }
     }
 
     @Test
@@ -117,11 +117,11 @@ class SmsBotMessageHandlerTest {
                         AppserviceUser("someUserId2", true)
                 )
         )
-        StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "bla", "someUserId1", contextMock))
-                .assertNext { assertThat(it).isFalse() }
-                .verifyComplete()
-        verify { contextMock wasNot Called }
+        val result = runBlocking {
+            cut.handleMessageToSmsBot(roomMock, "bla", "someUserId1", contextMock)
+        }
+        assertThat(result).isFalse()
+        coVerify { contextMock wasNot Called }
     }
 
     @Test
@@ -134,19 +134,25 @@ class SmsBotMessageHandlerTest {
                         AppserviceUser("someUserId3", false)
                 )
         )
-        StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "bla", "someUserId2", contextMock))
-                .assertNext { assertThat(it).isFalse() }
-                .verifyComplete()
-        verify { contextMock wasNot Called }
+        val result = runBlocking {
+            cut.handleMessageToSmsBot(roomMock, "bla", "someUserId2", contextMock)
+        }
+        assertThat(result).isFalse()
+        coVerify { contextMock wasNot Called }
     }
 
     @Test
     fun `should catch errors`() {
-        StepVerifier
-                .create(cut.handleMessageToSmsBot(roomMock, "sms send bla", "someUserId2", contextMock))
-                .assertNext { assertThat(it).isTrue() }
-                .verifyComplete()
-        verify { contextMock.answer(match<NoticeMessageEventContent> { it.body.contains("Error") }) }
+        val result = runBlocking {
+            cut.handleMessageToSmsBot(roomMock, "sms send bla", "someUserId2", contextMock)
+        }
+        assertThat(result).isTrue()
+        coVerify {
+            contextMock.answer(match<NoticeMessageEventContent> {
+                it.body.contains(
+                        "Error"
+                )
+            })
+        }
     }
 }
