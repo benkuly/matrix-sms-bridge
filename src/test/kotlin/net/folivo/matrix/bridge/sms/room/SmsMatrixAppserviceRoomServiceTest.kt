@@ -179,24 +179,4 @@ class SmsMatrixAppserviceRoomServiceTest {
             matrixClientMock.roomsApi.leaveRoom("someRoomId", null)
         }
     }
-
-//    @Test//FIXME old?
-//    fun `user should be member of room`() {
-//        val user = AppserviceUser("someUserId", true)
-//        val room = AppserviceRoom("someRoomId", mutableMapOf(user to MemberOfProperties(1)))
-//        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
-//
-//        val result = runBlocking { cut.isMemberOf("someUserId", "someRoomId") }
-//        assertThat(result).isTrue()
-//    }
-//
-//    @Test
-//    fun `user should not be member of room`() {
-//        val user = AppserviceUser("someUserId", true)
-//        val room = AppserviceRoom("someRoomId", mutableMapOf(user to MemberOfProperties(1)))
-//        every { appserviceRoomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
-//
-//        StepVerifier.create(cut.isMemberOf("someOtherUserId", "someRoomId"))
-//        assertThat(result).isFalse()
-//    }
 }

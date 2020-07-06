@@ -51,7 +51,7 @@ class SmsMatrixAppserviceRoomService(
     }
 
     override suspend fun saveRoomLeave(roomId: String, userId: String) {
-        LOG.debug("saveRoomLeave in room $roomId of user $userId") // TODO remove old rooms
+        LOG.debug("saveRoomLeave in room $roomId of user $userId")
         val room = getRoom(roomId, userId)
         val user = room.members.keys.find { it.userId == userId }
         if (user != null) {
@@ -73,11 +73,6 @@ class SmsMatrixAppserviceRoomService(
             }
         }
     }
-
-//    fun isMemberOf(userId: String, roomId: String): Boolean { //FIXME old?
-//        val room = roomRepository.findById(roomId)
-//        return room.members.keys.find { it.userId == userId }?.let { true } ?: false
-//    }
 
     suspend fun getRoom(roomId: String, userId: String): AppserviceRoom {
         val room = roomRepository.findById(roomId).awaitFirstOrNull()
