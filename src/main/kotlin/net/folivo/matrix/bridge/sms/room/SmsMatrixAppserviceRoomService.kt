@@ -2,8 +2,6 @@ package net.folivo.matrix.bridge.sms.room
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
@@ -15,11 +13,9 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
-import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -88,42 +84,10 @@ class SmsMatrixAppserviceRoomService(
         }
     }
 
-    //FIXME test
-    suspend fun syncUserRooms(syncUserId: String) {
-        val syncUser = userService.getUser(syncUserId)
-        try {
-            matrixClient.roomsApi.getJoinedRooms(asUserId = syncUserId)
-                    .map { joinedRoomId ->
-                        matrixClient.roomsApi.getJoinedMembers(
-                                roomId = joinedRoomId,
-                                asUserId = syncUserId
-                        ).joined.map { it.key }
-                    }.first()
-                    .forEach { roomId ->
-                        val room = roomRepository.findById(roomId).awaitFirstOrNull()
-                                   ?: roomRepository.save(AppserviceRoom(roomId)).awaitFirst()
-                        room.members.clear()
-                        matrixClient.roomsApi.getJoinedMembers(roomId).joined.keys
-                                .map { joinedUserId ->
-                                    val user = if (joinedUserId != syncUserId) userService.getUser(joinedUserId) else syncUser
-                                    val mappingToken = userService.getLastMappingToken(joinedUserId)
-                                    Pair(user, mappingToken)
-                                }.forEach { (user, mappingToken) ->
-                                    room.members[user] = MemberOfProperties(mappingToken + 1)
-                                }
-                        roomRepository.save(room).awaitFirst()
-                    }
-        } catch (error: Throwable) {
-            if (error is MatrixServerException && error.statusCode == FORBIDDEN) {
-                LOG.debug("does not sync user, because it seems to be completely new")
-            } else LOG.warn("user sync failed due to: ${error.message}")
-        }
-    }
-
     suspend fun getRoom(roomId: String): AppserviceRoom {
         val room = roomRepository.findById(roomId).awaitFirstOrNull()
                    ?: roomRepository.save(AppserviceRoom(roomId)).awaitFirst()
-        if (room.members.isEmpty()) {
+        if (room.members.isEmpty()) {// TODO remove this because it should never happen
             LOG.debug("collect all members in room $roomId because we didn't save it yet")
             matrixClient.roomsApi.getJoinedMembers(roomId).joined.keys
                     .map { joinedUserId ->

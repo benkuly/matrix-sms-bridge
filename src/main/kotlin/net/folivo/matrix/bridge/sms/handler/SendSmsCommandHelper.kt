@@ -2,14 +2,12 @@ package net.folivo.matrix.bridge.sms.handler
 
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
-import net.folivo.matrix.appservice.api.AppserviceHandlerHelper
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
 import net.folivo.matrix.bridge.sms.room.RoomMessage
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
-import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import net.folivo.matrix.restclient.api.rooms.Preset.TRUSTED_PRIVATE
@@ -20,8 +18,6 @@ import org.springframework.stereotype.Component
 @Component
 class SendSmsCommandHelper(
         private val roomService: SmsMatrixAppserviceRoomService,
-        private val userService: SmsMatrixAppserviceUserService,
-        private val helper: AppserviceHandlerHelper,
         private val matrixClient: MatrixClient,
         private val botProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
@@ -60,9 +56,8 @@ class SendSmsCommandHelper(
                 )
 
                 if (!body.isNullOrBlank()) {
-                    userService.sendMessageLater(
+                    roomService.sendMessageLater(
                             RoomMessage(
-                                    senderId = null,
                                     roomId = createdRoomId,
                                     body = smsBridgeProperties.templates.botSmsSendNewRoomMessage
                                             .replace("{sender}", sender)

@@ -1,11 +1,13 @@
 package net.folivo.matrix.bridge.sms.provider.gammu
 
+import com.google.i18n.phonenumbers.PhoneNumberUtil
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.awaitFirst
+import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.core.api.ErrorResponse
@@ -35,7 +37,8 @@ import kotlin.text.Charsets.UTF_8
 @EnableConfigurationProperties(GammuSmsProviderProperties::class)
 class GammuSmsProvider(
         private val properties: GammuSmsProviderProperties,
-        private val receiveSmsService: ReceiveSmsService
+        private val receiveSmsService: ReceiveSmsService,
+        private val smsBridgeProperties: SmsBridgeProperties
 ) : SmsProvider {
 
     companion object {
@@ -45,6 +48,8 @@ class GammuSmsProvider(
     init {
         LOG.info("Using Gammu as SmsProvider.")
     }
+
+    private val phoneNumberUtil = PhoneNumberUtil.getInstance()
 
     @EventListener(ContextRefreshedEvent::class)
     suspend fun startNewMessageLookupLoop() {
@@ -122,12 +127,15 @@ class GammuSmsProvider(
 
     }
 
+    //FIXME test
     suspend fun receiveSms(
             sender: String,
             body: String
-    ) {// FIXME use telephone number utility, because it seems to be possible that sender does not match international regex
-        receiveSmsService.receiveSms(body = body, sender = sender)
-                ?.also { sendSms(receiver = sender, body = it) }
-
+    ) {
+        val phoneNumber = phoneNumberUtil.parse(sender, smsBridgeProperties.defaultRegion).let {
+            "+${it.countryCode}${it.nationalNumber}"
+        }
+        receiveSmsService.receiveSms(body = body, sender = phoneNumber)
+                ?.also { sendSms(receiver = phoneNumber, body = it) }
     }
 }

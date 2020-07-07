@@ -43,15 +43,7 @@ class ReceiveSmsService(
         val roomId = roomService.getRoom(
                 userId = userId,
                 mappingToken = mappingToken
-        ).let {
-            if (it == null) {
-                roomService.syncUserRooms(userId)
-                roomService.getRoom(
-                        userId = userId,
-                        mappingToken = mappingToken
-                )
-            } else it
-        }?.roomId
+        )?.roomId
 
         if (roomId != null) {
             LOG.debug("receive SMS from $sender to $roomId")
@@ -62,7 +54,7 @@ class ReceiveSmsService(
                 LOG.error("could not send SMS message to room $roomId as user $userId")
                 throw error
             }
-        } else {//FIXME use api to find out if user is in room, that does not exist in database
+        } else {
             val defaultRoomId = smsBridgeProperties.defaultRoomId
             if (defaultRoomId != null) {
                 LOG.debug("receive SMS without or wrong mappingToken from $sender to default room $defaultRoomId")
