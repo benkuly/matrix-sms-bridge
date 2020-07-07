@@ -1,24 +1,26 @@
 package net.folivo.matrix.bridge.sms.handler
 
-import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import net.folivo.matrix.appservice.api.AppserviceHandlerHelper
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
-import net.folivo.matrix.bridge.sms.room.AppserviceRoomRepository
-import net.folivo.matrix.core.api.MatrixServerException
+import net.folivo.matrix.bridge.sms.room.RoomMessage
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
+import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import net.folivo.matrix.restclient.api.rooms.Preset.TRUSTED_PRIVATE
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Component
 
 
 @Component
 class SendSmsCommandHelper(
-        private val roomRepository: AppserviceRoomRepository,
+        private val roomService: SmsMatrixAppserviceRoomService,
+        private val userService: SmsMatrixAppserviceUserService,
         private val helper: AppserviceHandlerHelper,
         private val matrixClient: MatrixClient,
         private val botProperties: MatrixBotProperties,
@@ -44,49 +46,35 @@ class SendSmsCommandHelper(
         val membersWithoutBot = setOf(sender, *receiverIds.toTypedArray())
         val members = setOf(*membersWithoutBot.toTypedArray())
 
-        val rooms = roomRepository.findByMembersUserIdContaining(members)
-                .limitRequest(2)
-                .collectList()
-                .awaitFirst()
+        val rooms = roomService.getRoomsWithUsers(members)
+                .take(2)
+                .toList()
 
         try {
-            val answer = if (rooms.size == 0 && roomCreationMode == AUTO || roomCreationMode == ALWAYS) {
+            val answer = if (rooms.isEmpty() && roomCreationMode == AUTO || roomCreationMode == ALWAYS) {
                 LOG.debug("create room and send message")
-                //FIXME register all members that does not exist in db?
                 val createdRoomId = matrixClient.roomsApi.createRoom(
                         name = roomName,
                         invite = membersWithoutBot,
                         preset = TRUSTED_PRIVATE
                 )
 
-                receiverIds.forEach { receiverId ->
-                    try {
-                        matrixClient.roomsApi.joinRoom(// FIXME because of autojoin one of the both will always throw an exception
-                                // FIXME maybe add version when fixed
-                                roomIdOrAlias = createdRoomId,
-                                asUserId = receiverId
-                        )
-                    } catch (error: Throwable) {//FIXME remove when registered before
-                        registerOnMatrixException(receiverId, error)
-
-                        matrixClient.roomsApi.joinRoom(
-                                roomIdOrAlias = createdRoomId,
-                                asUserId = receiverId
-                        )
-                    }
+                if (!body.isNullOrBlank()) {
+                    userService.sendMessageLater(
+                            RoomMessage(
+                                    senderId = null,
+                                    roomId = createdRoomId,
+                                    body = smsBridgeProperties.templates.botSmsSendNewRoomMessage
+                                            .replace("{sender}", sender)
+                                            .replace("{body}", body),
+                                    requiredReceiverIds = receiverIds.toSet()
+                            )
+                    )
                 }
-                if (!body.isNullOrBlank()) matrixClient.roomsApi.sendRoomEvent(
-                        roomId = createdRoomId,
-                        eventContent = TextMessageEventContent(
-                                smsBridgeProperties.templates.botSmsSendNewRoomMessage
-                                        .replace("{sender}", sender)
-                                        .replace("{body}", body)
-                        )
-                )
                 smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage
             } else if (rooms.size == 1) {
                 LOG.debug("only send message")
-                val room = roomRepository.findById(rooms[0].roomId).awaitFirst()
+                val room = roomService.getRoom(rooms[0].roomId)
                 if (body.isNullOrBlank()) {
                     smsBridgeProperties.templates.botSmsSendNoMessage
                 } else {
@@ -128,13 +116,6 @@ class SendSmsCommandHelper(
             return smsBridgeProperties.templates.botSmsSendError
                     .replace("{error}", error.message ?: "unknown")
                     .replace("{receiverNumbers}", receiverNumbers.joinToString())
-        }
-    }
-
-    private suspend fun registerOnMatrixException(userId: String, error: Throwable) {
-        if (error is MatrixServerException && error.statusCode == FORBIDDEN) {
-            LOG.warn("try to register user because of ${error.errorResponse}")
-            helper.registerAndSaveUser(userId)
         }
     }
 }

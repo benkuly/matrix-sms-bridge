@@ -26,5 +26,4 @@ class SmsMatrixAppserviceEventService(
     override suspend fun saveEventProcessed(tnxId: String, eventIdOrType: String) {
         eventTransactionRepository.save(EventTransaction(tnxId, eventIdOrType)).awaitFirstOrNull()
     }
-
 }

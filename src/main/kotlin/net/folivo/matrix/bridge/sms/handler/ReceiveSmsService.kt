@@ -2,7 +2,7 @@ package net.folivo.matrix.bridge.sms.handler
 
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service
 @Service
 class ReceiveSmsService(
         private val matrixClient: MatrixClient,
-        private val userService: SmsMatrixAppserviceUserService,
+        private val roomService: SmsMatrixAppserviceRoomService,
         private val matrixBotProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
 ) {
@@ -40,10 +40,18 @@ class ReceiveSmsService(
         val mappingToken = Regex("#[0-9]{1,9}").find(body)
                 ?.value?.substringAfter('#')?.toInt()
 
-        val roomId = userService.getRoomId(
+        val roomId = roomService.getRoom(
                 userId = userId,
                 mappingToken = mappingToken
-        )
+        ).let {
+            if (it == null) {
+                roomService.syncUserRooms(userId)
+                roomService.getRoom(
+                        userId = userId,
+                        mappingToken = mappingToken
+                )
+            } else it
+        }?.roomId
 
         if (roomId != null) {
             LOG.debug("receive SMS from $sender to $roomId")

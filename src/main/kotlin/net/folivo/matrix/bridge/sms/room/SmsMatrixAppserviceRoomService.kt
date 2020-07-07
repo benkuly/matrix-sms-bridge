@@ -1,5 +1,10 @@
 package net.folivo.matrix.bridge.sms.room
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.folivo.matrix.appservice.api.room.CreateRoomParameter
@@ -7,18 +12,26 @@ import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
 import net.folivo.matrix.bot.config.MatrixBotProperties
+import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
+import net.folivo.matrix.core.api.MatrixServerException
+import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
 @Service
 class SmsMatrixAppserviceRoomService(
         private val roomRepository: AppserviceRoomRepository,
+        private val messageRepository: RoomMessageRepository,
         private val userService: SmsMatrixAppserviceUserService,
         private val matrixClient: MatrixClient,
-        private val botProperties: MatrixBotProperties
+        private val botProperties: MatrixBotProperties,
+        private val smsBridgeProperties: SmsBridgeProperties
 ) : MatrixAppserviceRoomService {
 
     companion object {
@@ -38,7 +51,7 @@ class SmsMatrixAppserviceRoomService(
     }
 
     override suspend fun saveRoomJoin(roomId: String, userId: String) {
-        val room = getRoom(roomId, userId)
+        val room = getRoom(roomId)
         LOG.debug("saveRoomJoin in room $roomId of user $userId")
         val user = userService.getUser(userId)
 
@@ -48,11 +61,12 @@ class SmsMatrixAppserviceRoomService(
             room.members[user] = MemberOfProperties(mappingToken + 1)
             roomRepository.save(room).awaitFirst()
         }
+        sendMessages(roomId)//FIXME test
     }
 
     override suspend fun saveRoomLeave(roomId: String, userId: String) {
         LOG.debug("saveRoomLeave in room $roomId of user $userId")
-        val room = getRoom(roomId, userId)
+        val room = getRoom(roomId)
         val user = room.members.keys.find { it.userId == userId }
         if (user != null) {
             room.members.remove(user)
@@ -74,7 +88,39 @@ class SmsMatrixAppserviceRoomService(
         }
     }
 
-    suspend fun getRoom(roomId: String, userId: String): AppserviceRoom {
+    //FIXME test
+    suspend fun syncUserRooms(syncUserId: String) {
+        val syncUser = userService.getUser(syncUserId)
+        try {
+            matrixClient.roomsApi.getJoinedRooms(asUserId = syncUserId)
+                    .map { joinedRoomId ->
+                        matrixClient.roomsApi.getJoinedMembers(
+                                roomId = joinedRoomId,
+                                asUserId = syncUserId
+                        ).joined.map { it.key }
+                    }.first()
+                    .forEach { roomId ->
+                        val room = roomRepository.findById(roomId).awaitFirstOrNull()
+                                   ?: roomRepository.save(AppserviceRoom(roomId)).awaitFirst()
+                        room.members.clear()
+                        matrixClient.roomsApi.getJoinedMembers(roomId).joined.keys
+                                .map { joinedUserId ->
+                                    val user = if (joinedUserId != syncUserId) userService.getUser(joinedUserId) else syncUser
+                                    val mappingToken = userService.getLastMappingToken(joinedUserId)
+                                    Pair(user, mappingToken)
+                                }.forEach { (user, mappingToken) ->
+                                    room.members[user] = MemberOfProperties(mappingToken + 1)
+                                }
+                        roomRepository.save(room).awaitFirst()
+                    }
+        } catch (error: Throwable) {
+            if (error is MatrixServerException && error.statusCode == FORBIDDEN) {
+                LOG.debug("does not sync user, because it seems to be completely new")
+            } else LOG.warn("user sync failed due to: ${error.message}")
+        }
+    }
+
+    suspend fun getRoom(roomId: String): AppserviceRoom {
         val room = roomRepository.findById(roomId).awaitFirstOrNull()
                    ?: roomRepository.save(AppserviceRoom(roomId)).awaitFirst()
         if (room.members.isEmpty()) {
@@ -90,5 +136,58 @@ class SmsMatrixAppserviceRoomService(
             return roomRepository.save(room).awaitFirst()
         }
         return room
+    }
+
+    suspend fun getRoom(userId: String, mappingToken: Int?): AppserviceRoom? {
+        val user = userService.getUser(userId)
+        val rooms = user.rooms.keys
+        return if (rooms.size == 1 && smsBridgeProperties.allowMappingWithoutToken) {
+            rooms.first()
+        } else {
+            user.rooms.entries
+                    .find { it.value.mappingToken == mappingToken }
+                    ?.key
+        }
+    }
+
+    // FIXME test
+    suspend fun getRoomsWithUsers(members: Set<String>): Flow<AppserviceRoom> {
+        return roomRepository.findByMembersUserIdContaining(members).asFlow()
+    }
+
+    // FIXME test
+    suspend fun sendMessages(roomId: String) {
+        val room = getRoom(roomId)
+        messageRepository.findByRoomId(roomId).asFlow().collect { message ->
+            val containsReceivers = room.members.keys.map { it.userId }.containsAll(message.requiredReceiverIds)
+            if (LocalDateTime.now().isAfter(message.sendAfter)) {
+                if (containsReceivers) {
+                    try {
+                        matrixClient.roomsApi.sendRoomEvent(
+                                roomId = message.roomId,
+                                eventContent = TextMessageEventContent(message.body)
+                        )
+                    } catch (error: Throwable) {
+                        LOG.warn(
+                                "Could not send cached message to room $roomId. This happens when the bot was kicked " +
+                                "out of the room, before the required receivers did join. Error: ${error.message}"
+                        )
+                        // TODO directly notify user
+                    } finally {
+                        messageRepository.delete(message)
+                    }
+                } else if (message.sendAfter.until(LocalDateTime.now(), ChronoUnit.MINUTES) > 30) {
+                    LOG.warn(
+                            "We have cached messages for the room $roomId, but the required receivers " +
+                            "${message.requiredReceiverIds.joinToString()} didn't join since 30 minutes. " +
+                            "This usually should never happen!"
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun sendMessageLater(message: RoomMessage) {
+        messageRepository.save(message).awaitFirst()
     }
 }
