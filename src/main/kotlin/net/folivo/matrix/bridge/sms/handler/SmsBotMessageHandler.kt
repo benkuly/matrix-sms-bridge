@@ -1,10 +1,11 @@
 package net.folivo.matrix.bridge.sms.handler
 
 import com.github.ajalt.clikt.core.*
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.apache.tools.ant.types.Commandline
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component
 @Component
 class SmsBotMessageHandler(
         private val helper: SendSmsCommandHelper,
+        private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties
 ) {
     companion object {
@@ -25,9 +27,9 @@ class SmsBotMessageHandler(
             body: String,
             sender: String,
             context: MessageContext
-    ): Boolean = coroutineScope {
-        if (room.members.keys.find { it.userId == sender && !it.isManaged } == null) {
-            LOG.debug("ignore message from not managed user")
+    ): Boolean {
+        return if (room.members.keys.find { it.userId == sender }?.isManaged != false) {
+            LOG.debug("ignore message from managed (or unknown) user")
             false
         } else if (body.startsWith("sms")) {
             if (room.members.size > 2) {
@@ -40,11 +42,11 @@ class SmsBotMessageHandler(
                 val args = Commandline.translateCommandline(body.removePrefix("sms"))
 
                 //TODO test
-                launch {
+                GlobalScope.launch {
                     val answerConsole = SmsBotConsole(context)
                     try {
                         SmsCommand().context { console = answerConsole }
-                                .subcommands(SendSmsCommand(sender, helper, smsBridgeProperties))
+                                .subcommands(SendSmsCommand(sender, helper, phoneNumberService, smsBridgeProperties))
                                 .parse(args)
                     } catch (e: PrintHelpMessage) {
                         answerConsole.print(e.command.getFormattedHelp(), false)

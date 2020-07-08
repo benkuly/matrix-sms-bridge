@@ -16,7 +16,7 @@ matrix:
       provider:
         gammu:
           enabled: true
-      defaultRoomId: "!qbEsipeNUMCYjFYaUA:matrix-local"
+      defaultRoomId: "!tRraLABExGeUDmOWvF:matrix-local"
       defaultRegion: DE
   bot:
     serverName: matrix-local

@@ -10,6 +10,7 @@ import io.mockk.junit5.MockKExtension
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
@@ -22,6 +23,9 @@ import org.junit.jupiter.api.extension.ExtendWith
 class SmsBotMessageHandlerTest {
     @MockK
     lateinit var sendSmsCommandHelperMock: SendSmsCommandHelper
+
+    @MockK
+    lateinit var phoneNumberServiceMock: PhoneNumberService
 
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
@@ -54,6 +58,8 @@ class SmsBotMessageHandlerTest {
         coEvery { sendSmsCommandHelperMock.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
                 .returns("message send")
         every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
+        every { phoneNumberServiceMock.parseToInternationalNumber(any()) }.returns("+4917392837462")
+
         val result = runBlocking {
             cut.handleMessageToSmsBot(
                     roomMock,

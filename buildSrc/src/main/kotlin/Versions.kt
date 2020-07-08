@@ -5,7 +5,7 @@ object Versions {
     const val springBoot = "2.3.1.RELEASE"
     const val springDependencyManagement = "1.0.9.RELEASE"
     const val springMockk = "2.0.1"
-    const val matrixSDK = "0.3.0.RELEASE"
+    const val matrixSDK = "0.3.1.RELEASE"
     const val clikt = "2.7.1"
     const val ant = "1.10.8"
     const val libphonenumber = "8.12.5"

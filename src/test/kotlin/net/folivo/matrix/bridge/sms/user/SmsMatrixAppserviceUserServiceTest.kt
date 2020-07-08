@@ -1,5 +1,6 @@
 package net.folivo.matrix.bridge.sms.user
 
+import io.mockk.Called
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
@@ -9,8 +10,7 @@ import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState.*
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
-import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bot.config.MatrixBotProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -25,7 +25,7 @@ class SmsMatrixAppserviceUserServiceTest {
     lateinit var appserviceUserRepositoryMock: AppserviceUserRepository
 
     @MockK
-    lateinit var smsBridgePropertiesMock: SmsBridgeProperties
+    lateinit var botPropertiesMock: MatrixBotProperties
 
     @InjectMockKs
     lateinit var cut: SmsMatrixAppserviceUserService
@@ -62,113 +62,27 @@ class SmsMatrixAppserviceUserServiceTest {
     }
 
     @Test
-    fun `should save managed user in database`() {
-        val user = AppserviceUser("someUserId", true)
-        every { appserviceUserRepositoryMock.existsById(any<String>()) }
-                .returns(Mono.just(false))
-        every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
-                .returns(Mono.just(user))
-        coEvery { helperMock.isManagedUser("someUserId") }.returns(true)
-
+    fun `should not save user to prevent concurrency transactions`() {
         runBlocking { cut.saveUser("someUserId") }
 
-        verify { appserviceUserRepositoryMock.save(user) }
+        verify { appserviceUserRepositoryMock wasNot Called }
     }
 
     @Test
-    fun `should save not managed user in database`() {
-        val user = AppserviceUser("someUserId", false)
-        every { appserviceUserRepositoryMock.existsById(any<String>()) }
-                .returns(Mono.just(true))
-        every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
-                .returns(Mono.just(user))
-        coEvery { helperMock.isManagedUser("someUserId") }.returns(false)
+    fun `should createUserParameter for managed user`() {
+        every { botPropertiesMock.username }.returns("bot")
+        every { botPropertiesMock.serverName }.returns("someServer")
 
-        runBlocking { cut.saveUser("someUserId") }
-
-        verify(exactly = 0) { appserviceUserRepositoryMock.save(user) }
-    }
-
-    @Test
-    fun `should not save user if already exists`() {
-        val user = AppserviceUser("someUserId", true)
-        every { appserviceUserRepositoryMock.existsById(any<String>()) }
-                .returns(Mono.just(true))
-        every { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
-                .returns(Mono.just(user))
-        coEvery { helperMock.isManagedUser("someUserId") }.returns(true)
-
-        runBlocking { cut.saveUser("someUserId") }
-
-
-        verify(exactly = 0) { appserviceUserRepositoryMock.save<AppserviceUser>(any()) }
-    }
-
-    @Test
-    fun `should createUserParameter`() {
         val result = runBlocking { cut.getCreateUserParameter("@sms_1234567:someServer") }
         assertThat(result.displayName).isEqualTo("+1234567 (SMS)")
     }
 
     @Test
-    fun `should get roomId`() {
-        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
-        every { appserviceUserRepositoryMock.findById("someUserId") }
-                .returns(
-                        Mono.just(
-                                AppserviceUser(
-                                        "someUserId", true, mutableMapOf(
-                                        AppserviceRoom("someRoomId1") to MemberOfProperties(12),
-                                        AppserviceRoom("someRoomId2") to MemberOfProperties(24)
-                                )
-                                )
-                        )
-                )
-        val result = runBlocking { cut.getRoomId("someUserId", 24) }
-        assertThat(result).isEqualTo("someRoomId2")
-    }
+    fun `should createUserParameter for bot user`() {
+        every { botPropertiesMock.username }.returns("bot")
+        every { botPropertiesMock.serverName }.returns("someServer")
 
-    @Test
-    fun `should get roomId when mapping token forced`() {
-        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
-        every { appserviceUserRepositoryMock.findById("someUserId") }
-                .returns(
-                        Mono.just(
-                                AppserviceUser(
-                                        "someUserId", true, mutableMapOf(
-                                        AppserviceRoom("someRoomId1") to MemberOfProperties(12)
-                                )
-                                )
-                        )
-                )
-        val result = runBlocking { cut.getRoomId("someUserId", 12) }
-        assertThat(result).isEqualTo("someRoomId1")
-
-    }
-
-    @Test
-    fun `should get first roomId when mapping token can be ignored`() {
-        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
-        every { appserviceUserRepositoryMock.findById("someUserId") }
-                .returns(
-                        Mono.just(
-                                AppserviceUser(
-                                        "someUserId", true, mutableMapOf(
-                                        AppserviceRoom("someRoomId1") to MemberOfProperties(12)
-                                )
-                                )
-                        )
-                )
-        val result = runBlocking { cut.getRoomId("someUserId", 24) }
-        assertThat(result).isEqualTo("someRoomId1")
-
-    }
-
-    @Test
-    fun `should not get roomId`() {
-        every { appserviceUserRepositoryMock.findById("someUserId") }
-                .returns(Mono.just(AppserviceUser("someUserId", true, mutableMapOf())))
-        val result = runBlocking { cut.getRoomId("someUserId", 24) }
-        assertThat(result).isNull()
+        val result = runBlocking { cut.getCreateUserParameter("@bot:someServer") }
+        assertThat(result.displayName).isEqualTo("SMS Bot")
     }
 }

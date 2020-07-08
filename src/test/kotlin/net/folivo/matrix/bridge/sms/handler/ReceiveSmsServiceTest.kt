@@ -10,7 +10,8 @@ import io.mockk.junit5.MockKExtension
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
+import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -29,7 +30,7 @@ class ReceiveSmsServiceTest {
     lateinit var matrixClientMock: MatrixClient
 
     @MockK
-    lateinit var userServiceMock: SmsMatrixAppserviceUserService
+    lateinit var roomServiceMock: SmsMatrixAppserviceRoomService
 
     @MockK(relaxed = true)
     lateinit var matrixBotPropertiesMock: MatrixBotProperties
@@ -49,8 +50,8 @@ class ReceiveSmsServiceTest {
     fun `should receive with mapping token to matrix room`() {
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns("someEventId")
-        coEvery { userServiceMock.getRoomId("@sms_0123456789:someServerName", 123) }
-                .returns("someRoomId")
+        coEvery { roomServiceMock.getRoom("@sms_0123456789:someServerName", 123) }
+                .returns(AppserviceRoom("someRoomId"))
 
         val result = runBlocking { cut.receiveSms("#123someBody", "+0123456789") }
         assertThat(result).isNull()
@@ -71,7 +72,7 @@ class ReceiveSmsServiceTest {
                 .returns("someEventId")
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns("someMissingTokenWithDefaultRoom")
-        coEvery { userServiceMock.getRoomId("@sms_0123456789:someServerName", 123) }
+        coEvery { roomServiceMock.getRoom("@sms_0123456789:someServerName", 123) }
                 .returns(null)
         every { smsBridgePropertiesMock.templates.defaultRoomIncomingMessage }.returns("{sender}: {body}")
 
@@ -91,7 +92,7 @@ class ReceiveSmsServiceTest {
     fun `should receive without mapping token to default matrix room, when given`() {
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns("someEventId")
-        coEvery { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+        coEvery { roomServiceMock.getRoom("@sms_0123456789:someServerName", null) }
                 .returns(null)
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns(null)
@@ -115,7 +116,7 @@ class ReceiveSmsServiceTest {
                 .returns("someEventId")
         every { smsBridgePropertiesMock.defaultRoomId }.returns(null)
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithoutDefaultRoom }.returns("someMissingTokenWithoutDefaultRoom")
-        coEvery { userServiceMock.getRoomId("@sms_0123456789:someServerName", 123) }
+        coEvery { roomServiceMock.getRoom("@sms_0123456789:someServerName", 123) }
                 .returns(null)
 
         val result = runBlocking { cut.receiveSms("#123someBody", "+0123456789") }
@@ -128,7 +129,7 @@ class ReceiveSmsServiceTest {
     fun `should not answer when no template missingTokenWithDefaultRoom given`() {
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns("someEventId")
-        coEvery { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+        coEvery { roomServiceMock.getRoom("@sms_0123456789:someServerName", null) }
                 .returns(null)
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns(null)
@@ -141,7 +142,7 @@ class ReceiveSmsServiceTest {
     fun `should not answer when empty template answerInvalidTokenWithDefaultRoom given`() {
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns("someEventId")
-        coEvery { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+        coEvery { roomServiceMock.getRoom("@sms_0123456789:someServerName", null) }
                 .returns(null)
         every { smsBridgePropertiesMock.defaultRoomId }.returns("defaultRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithDefaultRoom }.returns("")
@@ -154,7 +155,7 @@ class ReceiveSmsServiceTest {
     fun `should not answer when no template answerInvalidTokenWithoutDefaultRoom given`() {
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns("someEventId")
-        coEvery { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+        coEvery { roomServiceMock.getRoom("@sms_0123456789:someServerName", null) }
                 .returns(null)
         every { smsBridgePropertiesMock.defaultRoomId }.returns(null)
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithoutDefaultRoom }.returns(null)
@@ -177,7 +178,7 @@ class ReceiveSmsServiceTest {
     fun `should have error, when message could not be send to matrix room`() {
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .throws(MatrixServerException(I_AM_A_TEAPOT, ErrorResponse("TEA")))
-        coEvery { userServiceMock.getRoomId("@sms_0123456789:someServerName", null) }
+        coEvery { roomServiceMock.getRoom("@sms_0123456789:someServerName", null) }
                 .returns(null)
         every { smsBridgePropertiesMock.defaultRoomId }.returns("someRoomId")
         every { smsBridgePropertiesMock.templates.answerInvalidTokenWithoutDefaultRoom }.returns(null)

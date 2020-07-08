@@ -8,12 +8,14 @@ import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState.*
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
+import net.folivo.matrix.bot.config.MatrixBotProperties
 import org.springframework.stereotype.Service
 
 @Service
 class SmsMatrixAppserviceUserService(
         private val helper: MatrixAppserviceServiceHelper,
-        private val userRepository: AppserviceUserRepository
+        private val userRepository: AppserviceUserRepository,
+        private val botProperties: MatrixBotProperties
 ) : MatrixAppserviceUserService {
 
     override suspend fun userExistingState(userId: String): UserExistingState {
@@ -26,21 +28,17 @@ class SmsMatrixAppserviceUserService(
     }
 
     override suspend fun getCreateUserParameter(userId: String): CreateUserParameter {
-        val telephoneNumber = userId.removePrefix("@sms_").substringBefore(":")
-        val displayName = "+$telephoneNumber (SMS)"
-        return CreateUserParameter(displayName)
-    }
-
-    override suspend fun saveUser(userId: String) {
-        if (!userExists(userId)) {
-            helper.isManagedUser(userId)
-                    .let { userRepository.save(AppserviceUser(userId, it)).awaitFirst() }
+        return if (userId == "@${botProperties.username}:${botProperties.serverName}") {
+            CreateUserParameter("SMS Bot")
+        } else {
+            val telephoneNumber = userId.removePrefix("@sms_").substringBefore(":")
+            val displayName = "+$telephoneNumber (SMS)"
+            CreateUserParameter(displayName)
         }
     }
 
-    // FIXME test
-    suspend fun userExists(userId: String): Boolean {
-        return userRepository.existsById(userId).awaitFirst()
+    override suspend fun saveUser(userId: String) {
+        
     }
 
     suspend fun getUser(userId: String): AppserviceUser {

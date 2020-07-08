@@ -53,7 +53,7 @@ class SmsAppserviceMessageHandlerTest {
         every { botPropertiesMock.username } returns "smsbot"
         every { contextMock.roomId } returns "someRoomId"
         every { contextMock.originalEvent.sender } returns "someSender"
-        coEvery { roomServiceMock.getRoom("someRoomId", "someSender") }.returns(roomMock)
+        coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }.returns(roomMock)
 
         coEvery { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) } just Runs
         coEvery { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any()) }.returns(false)
@@ -78,7 +78,7 @@ class SmsAppserviceMessageHandlerTest {
                     } to MemberOfProperties(1)
             )
         }
-        coEvery { roomServiceMock.getRoom("someRoomId", "someSender") }.returnsMany(
+        coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }.returnsMany(
                 roomMock1, roomMock2
         )
 

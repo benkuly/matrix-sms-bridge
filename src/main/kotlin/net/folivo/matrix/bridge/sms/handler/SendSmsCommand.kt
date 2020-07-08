@@ -6,25 +6,23 @@ import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.enum
 import com.google.i18n.phonenumbers.NumberParseException
-import com.google.i18n.phonenumbers.NumberParseException.ErrorType.NOT_A_NUMBER
-import com.google.i18n.phonenumbers.PhoneNumberUtil
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
+import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import org.slf4j.LoggerFactory
 
 class SendSmsCommand(
         private val sender: String,
         private val helper: SendSmsCommandHelper,
+        private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties
 ) : CliktCommand(name = "send") {
 
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
-
-    private val phoneNumberUtil = PhoneNumberUtil.getInstance()
 
     private val body by argument().optional()
 
@@ -35,16 +33,7 @@ class SendSmsCommand(
 
     override fun run() {
         try {
-            val receiverNumbers = telephoneNumbers.map { rawNumber ->
-                phoneNumberUtil.parse(rawNumber, smsBridgeProperties.defaultRegion)
-                        .let {
-                            if (!phoneNumberUtil.isValidNumber(it)) throw NumberParseException(
-                                    NOT_A_NUMBER,
-                                    "not a valid number"
-                            )
-                            "+${it.countryCode}${it.nationalNumber}"
-                        }
-            }
+            val receiverNumbers = telephoneNumbers.map { phoneNumberService.parseToInternationalNumber(it) }
             if (useGroup) {
                 LOG.debug("use group and send message")
                 echo(runBlocking {

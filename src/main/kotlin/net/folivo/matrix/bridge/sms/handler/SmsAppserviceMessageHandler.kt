@@ -33,7 +33,7 @@ class SmsAppserviceMessageHandler(
             LOG.debug("ignored message to default room")
             return
         } else {
-            val room = roomService.getRoom(roomId, sender)
+            val room = roomService.getOrCreateRoom(roomId)
             val wasForBot = if (content is TextMessageEventContent && room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } != null) {
                 smsBotMessageHandler.handleMessageToSmsBot(
                         room = room,

@@ -1,14 +1,8 @@
 package net.folivo.matrix.bridge.sms.provider.gammu
 
-import com.google.i18n.phonenumbers.PhoneNumberUtil
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.reactive.awaitFirst
-import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import kotlinx.coroutines.reactor.mono
 import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
+import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
@@ -21,11 +15,14 @@ import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.stereotype.Component
+import reactor.core.Disposable
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.text.Charsets.UTF_8
 
@@ -38,7 +35,7 @@ import kotlin.text.Charsets.UTF_8
 class GammuSmsProvider(
         private val properties: GammuSmsProviderProperties,
         private val receiveSmsService: ReceiveSmsService,
-        private val smsBridgeProperties: SmsBridgeProperties
+        private val phoneNumberService: PhoneNumberService
 ) : SmsProvider {
 
     companion object {
@@ -49,38 +46,38 @@ class GammuSmsProvider(
         LOG.info("Using Gammu as SmsProvider.")
     }
 
-    private val phoneNumberUtil = PhoneNumberUtil.getInstance()
+    private var disposable: Disposable? = null
 
     @EventListener(ContextRefreshedEvent::class)
-    suspend fun startNewMessageLookupLoop() {
-        GlobalScope.launch {
-            while (true) {
-                try {
-                    Path.of(properties.inboxPath).toFile().walkTopDown().asFlow()
-                            .collect { file ->
-                                val sender = file.name.substringBeforeLast('_').substringAfterLast('_')
-                                val message = Flux.fromStream(Files.lines(file.toPath(), UTF_8))
-                                        .skipUntil { it.startsWith("[SMSBackup000]") }
-                                        .filter { it.startsWith("; ") }
-                                        .map { it.removePrefix("; ") }
-                                        .collectList()
-                                        .map { it.joinToString(separator = "") }
-                                        .doOnSuccess {
-                                            Files.move(
-                                                    file.toPath(),
-                                                    Path.of(properties.inboxProcessedPath, file.name),
-                                                    StandardCopyOption.REPLACE_EXISTING
-                                            )
-                                        }.awaitFirst()
-                                receiveSms(sender, message)
+    fun startNewMessageLookupLoop() {
+        disposable = Mono.just(true) // TODO is there a less hacky way? Without that line, repeat does not work
+                .flatMapMany { Flux.fromStream(Files.list(Path.of(properties.inboxPath))) }
+                .map { it.toFile() }
+                .flatMap { file ->
+                    val name = file.name
+                    val sender = name.substringBeforeLast('_').substringAfterLast('_')
+                    Flux.fromStream(Files.lines(file.toPath(), UTF_8))
+                            .skipUntil { it.startsWith("[SMSBackup000]") }
+                            .filter { it.startsWith("; ") }
+                            .map { it.removePrefix("; ") }
+                            .collectList()
+                            .map { Pair(sender, it.joinToString(separator = "")) }
+                            .doOnSuccess {
+                                Files.move(
+                                        file.toPath(),
+                                        Path.of(properties.inboxProcessedPath, file.name),
+                                        StandardCopyOption.REPLACE_EXISTING
+                                )
                             }
-                    LOG.debug("read inbox")
-                } catch (error: Throwable) {
-                    LOG.error("something unexpected happened while scanning directories for new sms", error)
+                }.flatMap { message ->
+                    receiveSms(message.first, message.second)
                 }
-                delay(10000)
-            }
-        }
+                .doOnComplete { LOG.debug("read inbox") }
+                .doOnError { LOG.error("something happened while scanning directories for new sms", it) }
+                .delaySubscription(Duration.ofSeconds(10))
+                .repeat()
+                .retry()
+                .subscribe()
     }
 
     override suspend fun sendSms(receiver: String, body: String) {
@@ -127,15 +124,14 @@ class GammuSmsProvider(
 
     }
 
-    //FIXME test
-    suspend fun receiveSms(
+    fun receiveSms(
             sender: String,
             body: String
-    ) {
-        val phoneNumber = phoneNumberUtil.parse(sender, smsBridgeProperties.defaultRegion).let {
-            "+${it.countryCode}${it.nationalNumber}"
-        }
-        receiveSmsService.receiveSms(body = body, sender = phoneNumber)
-                ?.also { sendSms(receiver = phoneNumber, body = it) }
+    ): Mono<Void> {
+        return mono {
+            val phoneNumber = phoneNumberService.parseToInternationalNumber(sender)
+            receiveSmsService.receiveSms(body = body, sender = phoneNumber)
+                    ?.also { sendSms(receiver = phoneNumber, body = it) }
+        }.then()
     }
 }

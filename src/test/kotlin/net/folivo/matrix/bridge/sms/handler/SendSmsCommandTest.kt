@@ -2,6 +2,8 @@ package net.folivo.matrix.bridge.sms.handler
 
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.output.CliktConsole
+import com.google.i18n.phonenumbers.NumberParseException
+import com.google.i18n.phonenumbers.NumberParseException.ErrorType.NOT_A_NUMBER
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyAll
@@ -11,6 +13,7 @@ import io.mockk.junit5.MockKExtension
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
+import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -19,6 +22,9 @@ import org.junit.jupiter.api.extension.ExtendWith
 class SendSmsCommandTest {
     @MockK
     lateinit var helper: SendSmsCommandHelper
+
+    @MockK
+    lateinit var phoneNumberServiceMock: PhoneNumberService
 
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
@@ -32,9 +38,10 @@ class SendSmsCommandTest {
     @BeforeEach
     fun beforeEach() {
         coEvery { helper.createRoomAndSendMessage(any(), any(), any(), any(), any()) }.returns("answer")
-        every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
         every { smsBridgePropertiesMock.templates.botSmsSendInvalidTelephoneNumber }.returns("invalid")
-        cut = SendSmsCommand("someSender", helper, smsBridgePropertiesMock)
+        every { phoneNumberServiceMock.parseToInternationalNumber("017331111111") }.returns("+4917331111111")
+        every { phoneNumberServiceMock.parseToInternationalNumber("017332222222") }.returns("+4917332222222")
+        cut = SendSmsCommand("someSender", helper, phoneNumberServiceMock, smsBridgePropertiesMock)
         cut.context { console = consoleMock }
     }
 
@@ -100,10 +107,14 @@ class SendSmsCommandTest {
 
     @Test
     fun `should fail and echo when wrong telephone number`() {
-        cut.parse(listOf("some text", "-t", "abc"))
-        cut.parse(listOf("some text", "-t", "123456789123456789"))
+        every { phoneNumberServiceMock.parseToInternationalNumber(any()) }.throws(
+                NumberParseException(
+                        NOT_A_NUMBER,
+                        "not a valid number"
+                )
+        )
         cut.parse(listOf("some text", "-t", "012345678 DINO"))
 
-        coVerify(exactly = 3) { consoleMock.print("invalid", any()) }
+        coVerify { consoleMock.print("invalid", any()) }
     }
 }
