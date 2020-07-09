@@ -60,6 +60,8 @@ matrix:
       allowMappingWithoutToken: true
       # The default region to use for telephone numbers.
       defaultRegion: DE
+      # (optional) The default timezone to use for `sms send` `-a` argument
+      defaultTimeZone: Europe/Berlin
       # (optional) In this section you can override the default templates.
       templates:
         # See SmsBridgeProperties.kt for the keys.
