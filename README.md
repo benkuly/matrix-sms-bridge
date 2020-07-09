@@ -10,7 +10,7 @@ Features:
 * send SMS
 * receive SMS
 * bot for automated sms sending
-    * create rooms for you
+    * creates rooms for you
     * writes messages for you
     * allows you to send SMS at a specific time (in future)
 * provider:
