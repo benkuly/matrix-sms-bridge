@@ -55,7 +55,7 @@ class SmsBotMessageHandlerTest {
 
     @Test
     fun `should run command`() {
-        coEvery { sendSmsCommandHelperMock.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
+        coEvery { sendSmsCommandHelperMock.createRoomAndSendMessage(any(), any(), any(), any(), any(), any()) }
                 .returns("message send")
         every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
         every { phoneNumberServiceMock.parseToInternationalNumber(any()) }.returns("+4917392837462")

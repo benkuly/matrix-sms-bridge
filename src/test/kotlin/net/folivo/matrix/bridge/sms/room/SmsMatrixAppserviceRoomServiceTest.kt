@@ -24,7 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.http.HttpStatus.FORBIDDEN
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.time.LocalDateTime
+import java.time.Instant
 
 @ExtendWith(MockKExtension::class)
 class SmsMatrixAppserviceRoomServiceTest {
@@ -54,6 +54,8 @@ class SmsMatrixAppserviceRoomServiceTest {
         every { botPropertiesMock.username }.returns("bot")
         every { botPropertiesMock.serverName }.returns("someServer")
         every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
+        every { messageRepositoryMock.delete(any()) }.returns(Mono.empty())
+
 
         cut = spyk(
                 SmsMatrixAppserviceRoomService(
@@ -85,7 +87,6 @@ class SmsMatrixAppserviceRoomServiceTest {
 
     @Test
     fun `should save user join to room in database`() {
-        coEvery { cut.sendMessages(any()) } just Runs
         val room = AppserviceRoom("someRoomId", mutableMapOf(mockk<AppserviceUser>() to mockk()))
         val user = AppserviceUser("someUserId", true)
         every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
@@ -103,12 +104,10 @@ class SmsMatrixAppserviceRoomServiceTest {
                 && it.members[user] == MemberOfProperties(24)
             })
         }
-        coVerify { cut.sendMessages("someRoomId") }
     }
 
     @Test
     fun `should save user join to room in database even if room does not exists yet`() {
-        coEvery { cut.sendMessages(any()) } just Runs
         val user = AppserviceUser("someUserId", true)
         val existingUser = AppserviceUser("someExistingUserId", false)
         val roomWithoutMember = AppserviceRoom("someRoomId")
@@ -140,7 +139,6 @@ class SmsMatrixAppserviceRoomServiceTest {
         verify {
             roomRepositoryMock.save<AppserviceRoom>(roomWithMember)
         }
-        coVerify { cut.sendMessages("someRoomId") }
     }
 
     @Test
@@ -184,8 +182,8 @@ class SmsMatrixAppserviceRoomServiceTest {
         )
         )
         every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
-        every { roomRepositoryMock.delete(any()) }.returns(Mono.empty())
         coEvery { matrixClientMock.roomsApi.leaveRoom(allAny()) } just Runs
+        every { roomRepositoryMock.delete(any()) }.returns(Mono.empty())
 
         runBlocking {
             cut.saveRoomLeave("someRoomId", "someUserId1")
@@ -319,7 +317,7 @@ class SmsMatrixAppserviceRoomServiceTest {
 
     @Test
     fun `should send message later`() {
-        val message = RoomMessage("someRoomId", "some body", LocalDateTime.of(1955, 11, 5, 12, 0))
+        val message = RoomMessage(mockk(), "some body", Instant.ofEpochMilli(123))
         every { messageRepositoryMock.save<RoomMessage>(any()) }.returns(Mono.just(message))
         runBlocking { cut.sendMessageLater(message) }
         verify { messageRepositoryMock.save<RoomMessage>(message) }
@@ -333,21 +331,17 @@ class SmsMatrixAppserviceRoomServiceTest {
                 AppserviceUser("someUserId2", true) to MemberOfProperties(24)
         )
         )
-        val message1 = RoomMessage(
-                "someRoomId",
+        val message = RoomMessage(
+                room,
                 "some body 1",
-                LocalDateTime.of(1955, 11, 5, 12, 0),
+                Instant.ofEpochMilli(123),
                 setOf("someUserId1", "someUserId2")
         )
-        val message2 = RoomMessage("someRoomId", "some body 2", LocalDateTime.of(1955, 11, 5, 12, 0))
 
-        coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
-        every { messageRepositoryMock.findByRoomId("someRoomId") }
-                .returns(Flux.just(message1, message2))
-        every { messageRepositoryMock.delete(any()) }.returns(Mono.empty())
+
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), txnId = any()) }.returns("someId")
 
-        runBlocking { cut.sendMessages("someRoomId") }
+        runBlocking { cut.sendRoomMessage(message) }
 
         coVerifyAll {
             matrixClientMock.roomsApi.sendRoomEvent(
@@ -355,15 +349,9 @@ class SmsMatrixAppserviceRoomServiceTest {
                     match<TextMessageEventContent> { it.body == "some body 1" },
                     txnId = any()
             )
-            matrixClientMock.roomsApi.sendRoomEvent(
-                    "someRoomId",
-                    match<TextMessageEventContent> { it.body == "some body 2" },
-                    txnId = any()
-            )
         }
         verify {
-            messageRepositoryMock.delete(message1)
-            messageRepositoryMock.delete(message2)
+            messageRepositoryMock.delete(message)
         }
     }
 
@@ -374,12 +362,9 @@ class SmsMatrixAppserviceRoomServiceTest {
                 AppserviceUser("someUserId1", false) to MemberOfProperties(12)
         )
         )
-        val message = RoomMessage("someRoomId", "some body", LocalDateTime.of(1955, 11, 5, 12, 0))
+        val message = RoomMessage(room, "some body", Instant.ofEpochMilli(123))
 
-        coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
-        every { messageRepositoryMock.findByRoomId("someRoomId") }
-                .returns(Flux.just(message))
-        every { messageRepositoryMock.delete(any()) }.returns(Mono.empty())
+
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), txnId = any()) }.throws(
                 MatrixServerException(
                         FORBIDDEN,
@@ -387,7 +372,7 @@ class SmsMatrixAppserviceRoomServiceTest {
                 )
         )
 
-        runBlocking { cut.sendMessages("someRoomId") }
+        runBlocking { cut.sendRoomMessage(message) }
 
         coVerifyAll {
             matrixClientMock.roomsApi.sendRoomEvent(
@@ -408,16 +393,12 @@ class SmsMatrixAppserviceRoomServiceTest {
                 AppserviceUser("someUserId1", false) to MemberOfProperties(12)
         )
         )
-        val message = RoomMessage("someRoomId", "some body", LocalDateTime.of(1955, 11, 5, 12, 0))
+        val message = RoomMessage(room, "some body", Instant.ofEpochMilli(123))
 
-        coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
-        every { messageRepositoryMock.findByRoomId("someRoomId") }
-                .returns(Flux.just(message))
-        every { messageRepositoryMock.delete(any()) }.returns(Mono.empty())
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), txnId = any()) }
                 .throws(RuntimeException("woops"))
 
-        runBlocking { cut.sendMessages("someRoomId") }
+        runBlocking { cut.sendRoomMessage(message) }
 
         coVerify {
             matrixClientMock.roomsApi.sendRoomEvent(
@@ -438,15 +419,11 @@ class SmsMatrixAppserviceRoomServiceTest {
                 AppserviceUser("someUserId1", false) to MemberOfProperties(12)
         )
         )
-        val message = RoomMessage("someRoomId", "some body", LocalDateTime.now().plusYears(1))
+        val message = RoomMessage(room, "some body", Instant.now().plusSeconds(2000))
 
-        coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
-        every { messageRepositoryMock.findByRoomId("someRoomId") }
-                .returns(Flux.just(message))
-        every { messageRepositoryMock.delete(any()) }.returns(Mono.empty())
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), txnId = any()) }.returns("someId")
 
-        runBlocking { cut.sendMessages("someRoomId") }
+        runBlocking { cut.sendRoomMessage(message) }
 
         coVerify(exactly = 0) {
             matrixClientMock.roomsApi.sendRoomEvent(
@@ -468,20 +445,16 @@ class SmsMatrixAppserviceRoomServiceTest {
         )
         )
         val message = RoomMessage(
-                "someRoomId",
+                room,
                 "some body",
-                LocalDateTime.of(1955, 11, 5, 12, 0),
+                Instant.ofEpochMilli(123),
                 setOf("someUserId1", "someUserId2")
         )
 
-        coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
-        every { messageRepositoryMock.findByRoomId("someRoomId") }
-                .returns(Flux.just(message))
-        every { messageRepositoryMock.delete(any()) }.returns(Mono.empty())
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), txnId = any()) }
                 .throws(RuntimeException("woops"))
 
-        runBlocking { cut.sendMessages("someRoomId") }
+        runBlocking { cut.sendRoomMessage(message) }
 
         coVerify(exactly = 0) {
             matrixClientMock.roomsApi.sendRoomEvent(

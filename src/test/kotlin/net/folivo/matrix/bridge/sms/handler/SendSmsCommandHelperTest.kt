@@ -10,9 +10,11 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.NO
+import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
+import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import net.folivo.matrix.restclient.api.rooms.Preset.TRUSTED_PRIVATE
@@ -20,6 +22,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import java.time.LocalDateTime
 
 @ExtendWith(MockKExtension::class)
 class SendSmsCommandHelperTest {
@@ -38,13 +41,20 @@ class SendSmsCommandHelperTest {
     @InjectMockKs
     lateinit var cut: SendSmsCommandHelper
 
+    lateinit var room: AppserviceRoom
+
     @BeforeEach
     fun beforeEach() {
+        room = mockk {
+            every { roomId } returns "someRoomId"
+        }
         every { botPropertiesMock.username }.returns("bot")
         every { botPropertiesMock.serverName }.returns("someServer")
         coEvery { matrixClientMock.roomsApi.createRoom(allAny()) }.returns("someRoomId")
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }.returns("someId")
         coEvery { roomServiceMock.sendMessageLater(any()) } just Runs
+        coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }.returns(room)
+        every { smsBridgePropertiesMock.defaultTimeZone }.returns("Europe/Berlin")
         every { smsBridgePropertiesMock.templates.botSmsSendNewRoomMessage }.returns("newRoomMessage {sender} {body}")
         every { smsBridgePropertiesMock.templates.botSmsSendCreatedRoomAndSendMessage }.returns("create room and send message {receiverNumbers}")
         every { smsBridgePropertiesMock.templates.botSmsSendSendMessage }.returns("send message {receiverNumbers}")
@@ -52,6 +62,7 @@ class SendSmsCommandHelperTest {
         every { smsBridgePropertiesMock.templates.botSmsSendDisabledRoomCreation }.returns("disabled room creation {receiverNumbers}")
         every { smsBridgePropertiesMock.templates.botSmsSendError }.returns("error {error} {receiverNumbers}")
         every { smsBridgePropertiesMock.templates.botSmsSendNoMessage }.returns("no message {receiverNumbers}")
+        every { smsBridgePropertiesMock.templates.botSmsSendNoticeDelayedMessage }.returns("notice at {sendAfter}")
     }
 
     @Test
@@ -64,12 +75,13 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = ALWAYS,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111")
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("create room and send message +1111111111")
 
-        coVerifyAll {
+        coVerify {
             roomServiceMock.getRoomsWithUsers(match {
                 it.containsAll(listOf("someSender", "@sms_1111111111:someServer"))
             })
@@ -83,7 +95,7 @@ class SendSmsCommandHelperTest {
             )
             roomServiceMock.sendMessageLater(
                     match {
-                        it.roomId == "someRoomId"
+                        it.room == room
                         && it.body == "newRoomMessage someSender some text"
                         && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
                     }
@@ -102,12 +114,13 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = ALWAYS,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111", "+22222222")
+                    receiverNumbers = listOf("+1111111111", "+22222222"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("create room and send message +1111111111, +22222222")
 
-        coVerifyAll {
+        coVerify {
             roomServiceMock.getRoomsWithUsers(match {
                 it.containsAll(setOf("someSender", "@sms_1111111111:someServer", "@sms_22222222:someServer"))
             })
@@ -122,7 +135,7 @@ class SendSmsCommandHelperTest {
             )
             roomServiceMock.sendMessageLater(
                     match {
-                        it.roomId == "someRoomId"
+                        it.room == room
                         && it.body == "newRoomMessage someSender some text"
                         && it.requiredReceiverIds == setOf("@sms_1111111111:someServer", "@sms_22222222:someServer")
                     }
@@ -141,7 +154,8 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = ALWAYS,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111", "+22222222")
+                    receiverNumbers = listOf("+1111111111", "+22222222"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("create room and send message +1111111111, +22222222")
@@ -190,7 +204,8 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111")
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("send message +1111111111")
@@ -227,7 +242,8 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111")
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("disabled room creation +1111111111")
@@ -242,16 +258,20 @@ class SendSmsCommandHelperTest {
         coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
             every { roomId }.returns("someRoomId")
         }))
+        every { room.members }.returns(
+                mutableMapOf(
+                        AppserviceUser(
+                                "someOtherUser",
+                                false
+                        ) to MemberOfProperties(1),
+                        AppserviceUser(
+                                "@sms_1111111111:someServer",
+                                true
+                        ) to MemberOfProperties(1)
+                )
+        )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
-                .returns(mockk {
-                    every { roomId }.returns("someRoomId")
-                    every { members }.returns(
-                            mutableMapOf(
-                                    AppserviceUser("someOtherUser", false) to MemberOfProperties(1),
-                                    AppserviceUser("@sms_1111111111:someServer", true) to MemberOfProperties(1)
-                            )
-                    )
-                })
+                .returns(room)
 
         val result = runBlocking {
             cut.createRoomAndSendMessage(
@@ -259,7 +279,8 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111")
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("send message +1111111111")
@@ -272,7 +293,7 @@ class SendSmsCommandHelperTest {
             )
             roomServiceMock.sendMessageLater(
                     match {
-                        it.roomId == "someRoomId"
+                        it.room == room
                         && it.body == "newRoomMessage someSender some text"
                         && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
                     }
@@ -302,7 +323,8 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111")
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("no message +1111111111")
@@ -322,7 +344,8 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111")
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("too many rooms +1111111111")
@@ -342,7 +365,8 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111")
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("disabled room creation +1111111111")
@@ -363,7 +387,8 @@ class SendSmsCommandHelperTest {
                     sender = "someSender",
                     roomCreationMode = ALWAYS,
                     roomName = "room name",
-                    receiverNumbers = listOf("+1111111111")
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = null
             )
         }
         assertThat(result).isEqualTo("error unicorn +1111111111")
@@ -372,6 +397,169 @@ class SendSmsCommandHelperTest {
         coVerify(exactly = 0) {
             roomServiceMock.sendMessageLater(any())
             roomsApi.sendRoomEvent(any(), any(), any(), any(), any())
+        }
+    }
+
+
+    @Test
+    fun `should send message in future and notify user about that when bot is member`() {
+        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+            every { roomId }.returns("someRoomId")
+        }))
+        every { room.members }.returns(
+                mutableMapOf(
+                        AppserviceUser(
+                                "@bot:someServer",
+                                true
+                        ) to MemberOfProperties(1),
+                        AppserviceUser(
+                                "@sms_1111111111:someServer",
+                                true
+                        ) to MemberOfProperties(1)
+                )
+        )
+        coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
+                .returns(room)
+
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = NO,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = LocalDateTime.of(2055, 11, 9, 12, 0)
+            )
+        }
+        assertThat(result).isEqualTo("send message +1111111111")
+
+        coVerify {
+            roomServiceMock.sendMessageLater(
+                    match {
+                        it.room == room
+                        && it.body == "newRoomMessage someSender some text"
+                        && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
+                    }
+            )
+            matrixClientMock.roomsApi.sendRoomEvent(
+                    roomId = "someRoomId",
+                    eventContent = match<NoticeMessageEventContent> { it.body == "notice at 2055-11-09T12:00" },
+                    txnId = any()
+            )
+        }
+    }
+
+    @Test
+    fun `should send message in future and notify user about that when bot is not member`() {
+        coEvery { matrixClientMock.roomsApi.inviteUser(any(), any(), any()) } just Runs
+        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+            every { roomId }.returns("someRoomId")
+        }))
+        every { room.members }.returns(
+                mutableMapOf(
+                        AppserviceUser(
+                                "someOtherUser",
+                                false
+                        ) to MemberOfProperties(1),
+                        AppserviceUser(
+                                "@sms_1111111111:someServer",
+                                true
+                        ) to MemberOfProperties(1)
+                )
+        )
+        coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
+                .returns(room)
+
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = NO,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = LocalDateTime.of(2055, 11, 9, 12, 0)
+            )
+        }
+        assertThat(result).isEqualTo("send message +1111111111")
+
+        coVerify {
+            matrixClientMock.roomsApi.inviteUser(
+                    roomId = "someRoomId",
+                    userId = "@bot:someServer",
+                    asUserId = "@sms_1111111111:someServer"
+            )
+            roomServiceMock.sendMessageLater(
+                    match {
+                        it.room == room
+                        && it.body == "newRoomMessage someSender some text"
+                        && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
+                    }
+            )
+            roomServiceMock.sendMessageLater(
+                    match {
+                        it.room == room
+                        && it.body == "notice at 2055-11-09T12:00"
+                        && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun `should send message but not notify user about that, when in sendAfter is in past and bot is not member`() {
+        coEvery { matrixClientMock.roomsApi.inviteUser(any(), any(), any()) } just Runs
+        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+            every { roomId }.returns("someRoomId")
+        }))
+        every { room.members }.returns(
+                mutableMapOf(
+                        AppserviceUser(
+                                "someOtherUser",
+                                false
+                        ) to MemberOfProperties(1),
+                        AppserviceUser(
+                                "@sms_1111111111:someServer",
+                                true
+                        ) to MemberOfProperties(1)
+                )
+        )
+        coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
+                .returns(room)
+
+        val result = runBlocking {
+            cut.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    roomCreationMode = NO,
+                    roomName = "room name",
+                    receiverNumbers = listOf("+1111111111"),
+                    sendAfterLocal = LocalDateTime.of(1955, 11, 9, 12, 0)
+            )
+        }
+        assertThat(result).isEqualTo("send message +1111111111")
+
+        coVerify {
+            matrixClientMock.roomsApi.inviteUser(
+                    roomId = "someRoomId",
+                    userId = "@bot:someServer",
+                    asUserId = "@sms_1111111111:someServer"
+            )
+            roomServiceMock.sendMessageLater(
+                    match {
+                        it.room == room
+                        && it.body == "newRoomMessage someSender some text"
+                        && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
+                    }
+            )
+        }
+        coVerify(exactly = 0) {
+            roomServiceMock.sendMessageLater(
+                    match {
+                        it.room == room
+                        && it.body.startsWith("notice")
+                        && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
+                    }
+            )
         }
     }
 }

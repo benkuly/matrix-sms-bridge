@@ -5,6 +5,17 @@ This is a matrix bridge, which allows you to bridge matrix rooms to SMS with one
 
 You need help? Ask your questions in [#matrix-sms-bridge:imbitbu.de](https://matrix.to/#/#matrix-sms-bridge:imbitbu.de)
 
+Features:
+* use with one telephone number only
+* send SMS
+* receive SMS
+* bot for automated sms sending
+    * create rooms for you
+    * writes messages for you
+    * allows you to send SMS at a specific time (in future)
+* provider:
+    * modem (with [Gammu](https://github.com/gammu/gammu))
+
 ## User Guide
 ### Automated room creation
 Create a room with you and `@smsBot:yourHomeServer.org` only. Now you can write `sms send --help` which gives you a help, how to use this command.

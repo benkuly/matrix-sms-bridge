@@ -18,6 +18,7 @@ matrix:
           enabled: true
       defaultRoomId: "!tRraLABExGeUDmOWvF:matrix-local"
       defaultRegion: DE
+      defaultTimeZone: Europe/Berlin
   bot:
     serverName: matrix-local
   client:

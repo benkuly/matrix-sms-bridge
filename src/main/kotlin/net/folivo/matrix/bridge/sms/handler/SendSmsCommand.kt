@@ -12,6 +12,7 @@ import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMod
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import org.slf4j.LoggerFactory
+import java.time.LocalDateTime
 
 class SendSmsCommand(
         private val sender: String,
@@ -30,6 +31,7 @@ class SendSmsCommand(
     private val roomName by option("-n", "--roomName")
     private val roomCreationMode by option("-m", "--roomCreationMode").enum<RoomCreationMode>().default(AUTO)
     private val useGroup by option("-g", "--group").flag()
+    private val sendAfter by option("-a", "--sendAfter").convert { LocalDateTime.parse(it) }
 
     override fun run() {
         try {
@@ -42,7 +44,8 @@ class SendSmsCommand(
                             sender = sender,
                             receiverNumbers = receiverNumbers,
                             roomName = roomName,
-                            roomCreationMode = roomCreationMode
+                            roomCreationMode = roomCreationMode,
+                            sendAfterLocal = sendAfter
                     )
                 })
             } else {
@@ -55,7 +58,8 @@ class SendSmsCommand(
                                         sender = sender,
                                         receiverNumbers = listOf(number),
                                         roomName = roomName,
-                                        roomCreationMode = roomCreationMode
+                                        roomCreationMode = roomCreationMode,
+                                        sendAfterLocal = sendAfter
                                 )
                             })
                 }

@@ -6,5 +6,5 @@ import reactor.core.publisher.Flux
 
 @Repository
 interface RoomMessageRepository : ReactiveCrudRepository<RoomMessage, Long> {
-    fun findByRoomId(roomId: String): Flux<RoomMessage>
+    fun findByRoom(room: AppserviceRoom): Flux<RoomMessage>
 }

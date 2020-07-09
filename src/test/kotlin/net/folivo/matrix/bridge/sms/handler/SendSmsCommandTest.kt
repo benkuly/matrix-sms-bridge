@@ -17,6 +17,7 @@ import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import java.time.LocalDateTime
 
 @ExtendWith(MockKExtension::class)
 class SendSmsCommandTest {
@@ -37,7 +38,7 @@ class SendSmsCommandTest {
 
     @BeforeEach
     fun beforeEach() {
-        coEvery { helper.createRoomAndSendMessage(any(), any(), any(), any(), any()) }.returns("answer")
+        coEvery { helper.createRoomAndSendMessage(any(), any(), any(), any(), any(), any()) }.returns("answer")
         every { smsBridgePropertiesMock.templates.botSmsSendInvalidTelephoneNumber }.returns("invalid")
         every { phoneNumberServiceMock.parseToInternationalNumber("017331111111") }.returns("+4917331111111")
         every { phoneNumberServiceMock.parseToInternationalNumber("017332222222") }.returns("+4917332222222")
@@ -46,7 +47,7 @@ class SendSmsCommandTest {
     }
 
     @Test
-    fun `should send message`() {
+    fun `should send message to muliple numbers`() {
         cut.parse(listOf("some text", "-t", "017331111111", "-t", "017332222222"))
 
         coVerifyAll {
@@ -55,14 +56,32 @@ class SendSmsCommandTest {
                     sender = "someSender",
                     receiverNumbers = listOf("+4917331111111"),
                     roomName = null,
-                    roomCreationMode = AUTO
+                    roomCreationMode = AUTO,
+                    sendAfterLocal = null
             )
             helper.createRoomAndSendMessage(
                     body = "some text",
                     sender = "someSender",
                     receiverNumbers = listOf("+4917332222222"),
                     roomName = null,
-                    roomCreationMode = AUTO
+                    roomCreationMode = AUTO,
+                    sendAfterLocal = null
+            )
+        }
+    }
+
+    @Test
+    fun `should send message in future`() {
+        cut.parse(listOf("some text", "-t", "017331111111", "-a", "1955-11-09T12:00"))
+
+        coVerifyAll {
+            helper.createRoomAndSendMessage(
+                    body = "some text",
+                    sender = "someSender",
+                    receiverNumbers = listOf("+4917331111111"),
+                    roomName = null,
+                    roomCreationMode = AUTO,
+                    sendAfterLocal = LocalDateTime.of(1955, 11, 9, 12, 0)
             )
         }
     }
@@ -77,7 +96,8 @@ class SendSmsCommandTest {
                     sender = "someSender",
                     receiverNumbers = listOf("+4917331111111", "+4917332222222"),
                     roomName = "some name",
-                    roomCreationMode = AUTO
+                    roomCreationMode = AUTO,
+                    sendAfterLocal = null
             )
         }
     }
@@ -92,7 +112,8 @@ class SendSmsCommandTest {
                     sender = "someSender",
                     receiverNumbers = listOf("+4917331111111"),
                     roomName = null,
-                    roomCreationMode = ALWAYS
+                    roomCreationMode = ALWAYS,
+                    sendAfterLocal = null
             )
         }
     }
