@@ -149,10 +149,10 @@ class SmsMatrixAppserviceRoomService(
                             "Could not send cached message to room $roomId. Error: ${error.message}"
                     )
                 }
-            } else if (message.sendAfter.until(Instant.now(), ChronoUnit.MINUTES) > 30) {
+            } else if (message.sendAfter.until(Instant.now(), ChronoUnit.MINUTES) > 60) {
                 LOG.warn(
                         "We have cached messages for the room $roomId, but the required receivers " +
-                        "${message.requiredReceiverIds.joinToString()} didn't join since 30 minutes. " +
+                        "${message.requiredReceiverIds.joinToString()} didn't join since 60 minutes. " +
                         "This usually should never happen!"
                 )//TODO delete message
             } else {
@@ -169,12 +169,12 @@ class SmsMatrixAppserviceRoomService(
     private fun sendMessageLaterLoop() {
         GlobalScope.launch {
             while (true) {
+                delay(10000)
                 try {
                     messageRepository.findAll().asFlow().collect { sendRoomMessage(it) }
                 } catch (error: Throwable) {
                     LOG.warn("error while processing messages for deferred sending")
                 }
-                delay(10000)
             }
         }
     }

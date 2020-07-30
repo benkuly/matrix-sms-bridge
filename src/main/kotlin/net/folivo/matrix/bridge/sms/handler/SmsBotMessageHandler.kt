@@ -39,14 +39,22 @@ class SmsBotMessageHandler(
             } else {
                 LOG.debug("run sms command $body")
 
-                val args = Commandline.translateCommandline(body.removePrefix("sms"))
 
                 //TODO test
                 GlobalScope.launch {
                     val answerConsole = SmsBotConsole(context)
                     try {
+                        val args = Commandline.translateCommandline(body.removePrefix("sms"))
+
                         SmsCommand().context { console = answerConsole }
-                                .subcommands(SendSmsCommand(sender, helper, phoneNumberService, smsBridgeProperties))
+                                .subcommands(
+                                        SendSmsCommand(
+                                                sender,
+                                                helper,
+                                                phoneNumberService,
+                                                smsBridgeProperties
+                                        )
+                                )
                                 .parse(args)
                     } catch (e: PrintHelpMessage) {
                         answerConsole.print(e.command.getFormattedHelp(), false)
@@ -60,6 +68,14 @@ class SmsBotMessageHandler(
                         e.message?.also { answerConsole.print(it, true) }
                     } catch (e: Abort) {
                         answerConsole.print("Aborted!", true)
+                    } catch (error: Throwable) {
+                        context.answer(
+                                NoticeMessageEventContent(
+                                        smsBridgeProperties.templates.botSmsSendError
+                                                .replace("{error}", error.message ?: "unknown")
+                                                .replace("{receiverNumbers}", "unknown")
+                                )
+                        )
                     }
                 }.join()
                 true

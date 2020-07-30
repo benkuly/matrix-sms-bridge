@@ -43,6 +43,7 @@ class SmsBotMessageHandlerTest {
     fun beforeEach() {
         every { smsBridgePropertiesMock.templates.botTooManyMembers }.returns("tooMany")
         every { smsBridgePropertiesMock.templates.botHelp }.returns("help")
+        every { smsBridgePropertiesMock.templates.botSmsSendError }.returns("error {error} {receiverNumbers}")
         coEvery { contextMock.answer(any(), any()) }.returns("someMessageId")
         every { roomMock.members.size }.returns(2)
         every { roomMock.members.keys }.returns(
@@ -148,7 +149,7 @@ class SmsBotMessageHandlerTest {
     }
 
     @Test
-    fun `should catch errors`() {
+    fun `should catch errors from SMSCommand`() {
         val result = runBlocking {
             cut.handleMessageToSmsBot(roomMock, "sms send bla", "someUserId2", contextMock)
         }
@@ -158,6 +159,19 @@ class SmsBotMessageHandlerTest {
                 it.body.contains(
                         "Error"
                 )
+            })
+        }
+    }
+
+    @Test
+    fun `should catch errors from unparsable command`() {
+        val result = runBlocking {
+            cut.handleMessageToSmsBot(roomMock, "sms send \" bla", "someUserId2", contextMock)
+        }
+        assertThat(result).isTrue()
+        coVerify {
+            contextMock.answer(match<NoticeMessageEventContent> {
+                it.body == "error unbalanced quotes in  send \" bla unknown"
             })
         }
     }
