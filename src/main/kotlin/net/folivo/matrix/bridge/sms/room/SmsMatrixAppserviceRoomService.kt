@@ -154,7 +154,8 @@ class SmsMatrixAppserviceRoomService(
                         "We have cached messages for the room $roomId, but the required receivers " +
                         "${message.requiredReceiverIds.joinToString()} didn't join since 60 minutes. " +
                         "This usually should never happen!"
-                )//TODO delete message
+                )//TODO delete message but remember, that this also could happen, when message was send only seconds ago but send after was is the past.
+                // So maybe sendMessageLater should change sendAfter to now, if it was in past)
             } else {
                 LOG.debug("wait for required receivers to join")
             }
@@ -173,7 +174,7 @@ class SmsMatrixAppserviceRoomService(
                 try {
                     messageRepository.findAll().asFlow().collect { sendRoomMessage(it) }
                 } catch (error: Throwable) {
-                    LOG.warn("error while processing messages for deferred sending")
+                    LOG.warn("error while processing messages for deferred sending: ${error.message}")
                 }
             }
         }

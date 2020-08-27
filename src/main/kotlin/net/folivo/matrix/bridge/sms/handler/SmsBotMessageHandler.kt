@@ -39,7 +39,6 @@ class SmsBotMessageHandler(
             } else {
                 LOG.debug("run sms command $body")
 
-
                 //TODO test
                 GlobalScope.launch {
                     val answerConsole = SmsBotConsole(context)
