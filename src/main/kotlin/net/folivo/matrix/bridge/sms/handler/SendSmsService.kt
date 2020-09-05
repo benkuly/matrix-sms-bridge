@@ -82,6 +82,10 @@ class SendSmsService(
                 .replace("{body}", body)
                 .replace("{token}", "#$mappingToken")
 
-        smsProvider.sendSms(receiver = "+$receiver", body = templateBody)
+        try {
+            smsProvider.sendSms(receiver = "+$receiver", body = templateBody)
+        } catch (error: Throwable) {
+            LOG.warn("could not send sms: ${error.message}")//FIXME catch in higher abstraction level and try again later
+        }
     }
 }
