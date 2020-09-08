@@ -45,6 +45,12 @@ dependencies {
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
+    testImplementation("io.kotest:kotest-runner-junit5:${Versions.kotest}")
+    testImplementation("io.kotest:kotest-assertions-core:${Versions.kotest}")
+    testImplementation("io.kotest:kotest-property:${Versions.kotest}")
+    testImplementation("io.kotest:kotest-extensions-spring:${Versions.kotest}")
+    testImplementation("io.kotest:kotest-extensions-mockserver:${Versions.kotest}")
+    testImplementation("io.kotest:kotest-extensions-testcontainers:${Versions.kotest}")
     testImplementation("com.ninja-squad:springmockk:${Versions.springMockk}")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-test-autoconfigure:${Versions.neo4jrx}") {

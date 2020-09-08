@@ -19,9 +19,9 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 
+// FIXME test
 @Component
 class AndroidSmsProvider(
-        private val properties: AndroidSmsProviderProperties,
         private val receiveSmsService: ReceiveSmsService,
         private val phoneNumberService: PhoneNumberService,
         private val batchRepository: AndroidSmsBatchRepository,

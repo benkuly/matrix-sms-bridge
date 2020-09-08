@@ -7,6 +7,7 @@ import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
 import java.util.*
 
+//FIXME test
 @Configuration
 class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProviderProperties) {
     @Bean
