@@ -12,20 +12,16 @@ import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
-import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 
 // FIXME test
-@Component
 class AndroidSmsProvider(
         private val receiveSmsService: ReceiveSmsService,
         private val phoneNumberService: PhoneNumberService,
         private val batchRepository: AndroidSmsBatchRepository,
-        @Qualifier("androidSmsProviderWebClient")
         private val webClient: WebClient
 ) : SmsProvider {
 
@@ -40,7 +36,7 @@ class AndroidSmsProvider(
                 )
     }
 
-    @EventListener(ContextRefreshedEvent::class)
+    @EventListener(ApplicationReadyEvent::class)
     fun startNewMessageLookupLoop() {
         GlobalScope.launch {
             while (true) {

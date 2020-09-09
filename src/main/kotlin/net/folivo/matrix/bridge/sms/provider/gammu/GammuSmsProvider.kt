@@ -8,8 +8,9 @@ import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.context.event.ContextRefreshedEvent
+import org.springframework.context.annotation.Profile
 import org.springframework.context.event.EventListener
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
@@ -28,6 +29,7 @@ import kotlin.text.Charsets.UTF_8
 
 
 // TODO Tests!
+@Profile("!initialsync")
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @ConditionalOnProperty(prefix = "matrix.bridge.sms.provider.gammu", name = ["enabled"], havingValue = "true")
@@ -48,7 +50,7 @@ class GammuSmsProvider(
 
     private var disposable: Disposable? = null
 
-    @EventListener(ContextRefreshedEvent::class)
+    @EventListener(ApplicationReadyEvent::class)
     fun startNewMessageLookupLoop() {
         disposable = Mono.just(true) // TODO is there a less hacky way? Without that line, repeat does not work
                 .flatMapMany { Flux.fromStream(Files.list(Path.of(properties.inboxPath))) }

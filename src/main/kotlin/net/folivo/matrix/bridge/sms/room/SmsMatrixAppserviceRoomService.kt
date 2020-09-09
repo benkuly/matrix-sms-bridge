@@ -1,10 +1,7 @@
 package net.folivo.matrix.bridge.sms.room
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
@@ -21,8 +18,6 @@ import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventCont
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import org.slf4j.LoggerFactory
-import org.springframework.boot.context.event.ApplicationStartedEvent
-import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -66,6 +61,7 @@ class SmsMatrixAppserviceRoomService(
         }
     }
 
+    // FIXME why this is not working properly
     override suspend fun saveRoomLeave(roomId: String, userId: String) {
         LOG.debug("saveRoomLeave in room $roomId of user $userId")
         val room = getOrCreateRoom(roomId)
@@ -73,10 +69,10 @@ class SmsMatrixAppserviceRoomService(
         if (user != null) {
             room.members.remove(user)
 
-            val hasOnlyManagedUsers = !room.members.keys
+            val hasOnlyManagedUsersLeft = !room.members.keys
                     .map { it.isManaged }
                     .contains(false)
-            if (hasOnlyManagedUsers) {
+            if (hasOnlyManagedUsersLeft) {
                 room.members.keys
                         .map {
                             if (it.userId == "@${botProperties.username}:${botProperties.serverName}")
@@ -124,10 +120,12 @@ class SmsMatrixAppserviceRoomService(
         return roomRepository.findByMembersUserIdContaining(members).asFlow()
     }
 
+    // FIXME test
     suspend fun sendRoomMessage(message: RoomMessage) {
         if (Instant.now().isAfter(message.sendAfter)) {
             val containsReceivers = message.room.members.keys.map { it.userId }.containsAll(message.requiredReceiverIds)
             val roomId = message.room.roomId
+            val isNew = message.id == null
             if (containsReceivers) {
                 try {
                     matrixClient.roomsApi.sendRoomEvent(
@@ -135,48 +133,39 @@ class SmsMatrixAppserviceRoomService(
                             eventContent = if (message.isNotice) NoticeMessageEventContent(message.body)
                             else TextMessageEventContent(message.body)
                     )
-                    messageRepository.delete(message).awaitFirstOrNull()
-                    LOG.debug("sent and deleted cached message to room $roomId")
+                    LOG.debug("sent cached message to room $roomId")
                 } catch (error: MatrixServerException) {
                     LOG.warn(
                             "Could not send cached message to room $roomId. This happens e.g. when the bot was kicked " +
                             "out of the room, before the required receivers did join. Error: ${error.message}"
                     )
-                    messageRepository.delete(message).awaitFirstOrNull()
                     // TODO directly notify user
                 } catch (error: Throwable) {
                     LOG.warn(
                             "Could not send cached message to room $roomId. Error: ${error.message}"
                     )
+                } finally {
+                    messageRepository.delete(message).awaitFirstOrNull()
                 }
-            } else if (message.sendAfter.until(Instant.now(), ChronoUnit.MINUTES) > 60) {
+            } else if (!isNew && message.sendAfter.until(Instant.now(), ChronoUnit.DAYS) > 3) {
                 LOG.warn(
                         "We have cached messages for the room $roomId, but the required receivers " +
-                        "${message.requiredReceiverIds.joinToString()} didn't join since 60 minutes. " +
-                        "This usually should never happen!"
-                )//TODO delete message but remember, that this also could happen, when message was send only seconds ago but send after was is the past.
-                // So maybe sendMessageLater should change sendAfter to now, if it was in past)
+                        "${message.requiredReceiverIds.joinToString()} didn't join since 3 days. " +
+                        "This usually should never happen! The message will now be deleted."
+                )
+                messageRepository.delete(message).awaitFirstOrNull()
+            } else if (isNew) {
+                // prevent, that messages with sendAfter in large future are deleted, although it was send a few minutes ago
+                messageRepository.save(message.copy(sendAfter = Instant.now())).awaitFirst()
             } else {
                 LOG.debug("wait for required receivers to join")
             }
+        } else {
+            messageRepository.save(message).awaitFirst()
         }
     }
 
-    suspend fun sendMessageLater(message: RoomMessage) {
-        messageRepository.save(message).awaitFirst()
-    }
-
-    @EventListener(ApplicationStartedEvent::class)
-    private fun sendMessageLaterLoop() {
-        GlobalScope.launch {
-            while (true) {
-                delay(10000)
-                try {
-                    messageRepository.findAll().asFlow().collect { sendRoomMessage(it) }
-                } catch (error: Throwable) {
-                    LOG.warn("error while processing messages for deferred sending: ${error.message}")
-                }
-            }
-        }
+    suspend fun processMessageQueue() {
+        messageRepository.findAll().asFlow().collect { sendRoomMessage(it) }
     }
 }

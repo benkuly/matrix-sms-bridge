@@ -9,8 +9,6 @@ import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMod
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.RoomMessage
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
-import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
-import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import net.folivo.matrix.restclient.api.rooms.Preset.TRUSTED_PRIVATE
 import org.slf4j.LoggerFactory
@@ -56,7 +54,7 @@ class SendSmsCommandHelper(
         val sendAfter = sendAfterLocal?.atZone(ZoneId.of(smsBridgeProperties.defaultTimeZone))?.toInstant()
         try {
             val answer = if (rooms.isEmpty() && roomCreationMode == AUTO || roomCreationMode == ALWAYS) {
-                LOG.debug("create room and send message")
+                LOG.debug("create room")
                 val createdRoomId = matrixClient.roomsApi.createRoom(
                         name = roomName,
                         invite = membersWithoutBot,
@@ -65,7 +63,7 @@ class SendSmsCommandHelper(
 
                 if (!body.isNullOrBlank()) {
                     val room = roomService.getOrCreateRoom(createdRoomId)
-                    sendMessageLater(room, sender, body, receiverIds, sendAfter, sendAfterLocal)
+                    sendMessageToRoom(room, sender, body, receiverIds, sendAfter, sendAfterLocal)
                 }
                 smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage
             } else if (rooms.size == 1) {
@@ -78,29 +76,16 @@ class SendSmsCommandHelper(
                     val expectedManagedMemberSize = if (botIsMember) receiverIds.size + 1 else receiverIds.size
                     val membersMatch = room.members.keys.count { it.isManaged } == expectedManagedMemberSize
                     if (membersMatch) {
-                        LOG.debug("send message to room ${room.roomId}")
-                        if (botIsMember) {
-                            if (sendAfter == null) {
-                                matrixClient.roomsApi.sendRoomEvent(
-                                        roomId = rooms[0].roomId,
-                                        eventContent = TextMessageEventContent(
-                                                smsBridgeProperties.templates.botSmsSendNewRoomMessage
-                                                        .replace("{sender}", sender)
-                                                        .replace("{body}", body)
-                                        )
-                                )
-                            } else {
-                                sendMessageLater(room, sender, body, receiverIds, sendAfter, sendAfterLocal, true)
-                            }
-                        } else {
+                        if (!botIsMember) {
                             LOG.debug("try to invite sms bot user to room ${room.roomId} and send message later")
                             matrixClient.roomsApi.inviteUser(
                                     roomId = room.roomId,
                                     userId = "@${botProperties.username}:${botProperties.serverName}",
                                     asUserId = receiverIds.first()
                             )
-                            sendMessageLater(room, sender, body, receiverIds, sendAfter, sendAfterLocal)
                         }
+                        sendMessageToRoom(room, sender, body, receiverIds, sendAfter, sendAfterLocal)
+
                         smsBridgeProperties.templates.botSmsSendSendMessage
                     } else {
                         smsBridgeProperties.templates.botSmsSendDisabledRoomCreation
@@ -121,16 +106,28 @@ class SendSmsCommandHelper(
         }
     }
 
-    private suspend fun sendMessageLater(
+    private suspend fun sendMessageToRoom(
             room: AppserviceRoom,
             sender: String,
             body: String,
             receiverIds: List<String>,
             sendAfter: Instant?,
-            sendAfterLocal: LocalDateTime?,
-            notifyDirectly: Boolean = false
+            sendAfterLocal: LocalDateTime?
     ) {
-        roomService.sendMessageLater(
+        if (sendAfter != null && Instant.now().until(sendAfter, ChronoUnit.SECONDS) > 15) {
+            LOG.debug("notify room ${room.roomId} that message will be send later")
+            roomService.sendRoomMessage(
+                    RoomMessage(
+                            room = room,
+                            body = smsBridgeProperties.templates.botSmsSendNoticeDelayedMessage
+                                    .replace("{sendAfter}", sendAfterLocal.toString()),
+                            requiredReceiverIds = receiverIds.toSet(),
+                            isNotice = true
+                    )
+            )
+        }
+        LOG.debug("send message to room ${room.roomId}")
+        roomService.sendRoomMessage(
                 RoomMessage(
                         room = room,
                         body = smsBridgeProperties.templates.botSmsSendNewRoomMessage
@@ -140,27 +137,6 @@ class SendSmsCommandHelper(
                         sendAfter = sendAfter ?: Instant.now()
                 )
         )
-
-        if (sendAfter != null && Instant.now().until(sendAfter, ChronoUnit.SECONDS) > 15) {
-            if (notifyDirectly) {
-                matrixClient.roomsApi.sendRoomEvent(
-                        roomId = room.roomId,
-                        eventContent = NoticeMessageEventContent(
-                                smsBridgeProperties.templates.botSmsSendNoticeDelayedMessage
-                                        .replace("{sendAfter}", sendAfterLocal.toString())
-                        )
-                )
-            } else {
-                roomService.sendMessageLater(
-                        RoomMessage(
-                                room = room,
-                                body = smsBridgeProperties.templates.botSmsSendNoticeDelayedMessage
-                                        .replace("{sendAfter}", sendAfterLocal.toString()),
-                                requiredReceiverIds = receiverIds.toSet(),
-                                isNotice = true
-                        )
-                )
-            }
-        }
     }
+
 }
