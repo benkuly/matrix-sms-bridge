@@ -3,7 +3,9 @@ package net.folivo.matrix.bridge.sms.provider
 import org.slf4j.LoggerFactory
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
+import org.springframework.stereotype.Component
 
+@Component
 @Order(Ordered.LOWEST_PRECEDENCE)
 class NoOpSmsProvider : SmsProvider {
     companion object {

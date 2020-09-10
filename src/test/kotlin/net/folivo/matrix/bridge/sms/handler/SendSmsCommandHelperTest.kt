@@ -52,7 +52,7 @@ class SendSmsCommandHelperTest {
         every { botPropertiesMock.serverName }.returns("someServer")
         coEvery { matrixClientMock.roomsApi.createRoom(allAny()) }.returns("someRoomId")
         coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }.returns("someId")
-        coEvery { roomServiceMock.sendMessageLater(any()) } just Runs
+        coEvery { roomServiceMock.sendRoomMessage(any()) } just Runs
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }.returns(room)
         every { smsBridgePropertiesMock.defaultTimeZone }.returns("Europe/Berlin")
         every { smsBridgePropertiesMock.templates.botSmsSendNewRoomMessage }.returns("newRoomMessage {sender} {body}")
@@ -93,7 +93,7 @@ class SendSmsCommandHelperTest {
                     ),
                     preset = TRUSTED_PRIVATE
             )
-            roomServiceMock.sendMessageLater(
+            roomServiceMock.sendRoomMessage(
                     match {
                         it.room == room
                         && it.body == "newRoomMessage someSender some text"
@@ -133,7 +133,7 @@ class SendSmsCommandHelperTest {
                     ),
                     preset = TRUSTED_PRIVATE
             )
-            roomServiceMock.sendMessageLater(
+            roomServiceMock.sendRoomMessage(
                     match {
                         it.room == room
                         && it.body == "newRoomMessage someSender some text"
@@ -174,7 +174,7 @@ class SendSmsCommandHelperTest {
                     preset = TRUSTED_PRIVATE
             )
         }
-        coVerify(exactly = 0) { roomServiceMock.sendMessageLater(any()) }
+        coVerify(exactly = 0) { roomServiceMock.sendRoomMessage(any()) }
     }
 
     @Test
@@ -249,7 +249,7 @@ class SendSmsCommandHelperTest {
         assertThat(result).isEqualTo("disabled room creation +1111111111")
 
         coVerify { matrixClientMock wasNot Called }
-        coVerify(exactly = 0) { roomServiceMock.sendMessageLater(any()) }
+        coVerify(exactly = 0) { roomServiceMock.sendRoomMessage(any()) }
     }
 
     @Test
@@ -291,7 +291,7 @@ class SendSmsCommandHelperTest {
                     userId = "@bot:someServer",
                     asUserId = "@sms_1111111111:someServer"
             )
-            roomServiceMock.sendMessageLater(
+            roomServiceMock.sendRoomMessage(
                     match {
                         it.room == room
                         && it.body == "newRoomMessage someSender some text"
@@ -330,7 +330,7 @@ class SendSmsCommandHelperTest {
         assertThat(result).isEqualTo("no message +1111111111")
 
         verify { matrixClientMock wasNot Called }
-        coVerify(exactly = 0) { roomServiceMock.sendMessageLater(any()) }
+        coVerify(exactly = 0) { roomServiceMock.sendRoomMessage(any()) }
     }
 
     @Test
@@ -351,7 +351,7 @@ class SendSmsCommandHelperTest {
         assertThat(result).isEqualTo("too many rooms +1111111111")
 
         verify { matrixClientMock wasNot Called }
-        coVerify(exactly = 0) { roomServiceMock.sendMessageLater(any()) }
+        coVerify(exactly = 0) { roomServiceMock.sendRoomMessage(any()) }
     }
 
     @Test
@@ -372,7 +372,7 @@ class SendSmsCommandHelperTest {
         assertThat(result).isEqualTo("disabled room creation +1111111111")
 
         verify { matrixClientMock wasNot Called }
-        coVerify(exactly = 0) { roomServiceMock.sendMessageLater(any()) }
+        coVerify(exactly = 0) { roomServiceMock.sendRoomMessage(any()) }
     }
 
     @Test
@@ -395,7 +395,7 @@ class SendSmsCommandHelperTest {
 
         val roomsApi = matrixClientMock.roomsApi
         coVerify(exactly = 0) {
-            roomServiceMock.sendMessageLater(any())
+            roomServiceMock.sendRoomMessage(any())
             roomsApi.sendRoomEvent(any(), any(), any(), any(), any())
         }
     }
@@ -434,7 +434,7 @@ class SendSmsCommandHelperTest {
         assertThat(result).isEqualTo("send message +1111111111")
 
         coVerify {
-            roomServiceMock.sendMessageLater(
+            roomServiceMock.sendRoomMessage(
                     match {
                         it.room == room
                         && it.body == "newRoomMessage someSender some text"
@@ -488,14 +488,14 @@ class SendSmsCommandHelperTest {
                     userId = "@bot:someServer",
                     asUserId = "@sms_1111111111:someServer"
             )
-            roomServiceMock.sendMessageLater(
+            roomServiceMock.sendRoomMessage(
                     match {
                         it.room == room
                         && it.body == "newRoomMessage someSender some text"
                         && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
                     }
             )
-            roomServiceMock.sendMessageLater(
+            roomServiceMock.sendRoomMessage(
                     match {
                         it.room == room
                         && it.body == "notice at 2055-11-09T12:00"
@@ -544,7 +544,7 @@ class SendSmsCommandHelperTest {
                     userId = "@bot:someServer",
                     asUserId = "@sms_1111111111:someServer"
             )
-            roomServiceMock.sendMessageLater(
+            roomServiceMock.sendRoomMessage(
                     match {
                         it.room == room
                         && it.body == "newRoomMessage someSender some text"
@@ -553,7 +553,7 @@ class SendSmsCommandHelperTest {
             )
         }
         coVerify(exactly = 0) {
-            roomServiceMock.sendMessageLater(
+            roomServiceMock.sendRoomMessage(
                     match {
                         it.room == room
                         && it.body.startsWith("notice")

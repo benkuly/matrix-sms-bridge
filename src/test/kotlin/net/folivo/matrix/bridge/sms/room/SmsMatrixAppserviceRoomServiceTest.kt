@@ -319,7 +319,7 @@ class SmsMatrixAppserviceRoomServiceTest {
     fun `should send message later`() {
         val message = RoomMessage(mockk(), "some body", Instant.ofEpochMilli(123))
         every { messageRepositoryMock.save<RoomMessage>(any()) }.returns(Mono.just(message))
-        runBlocking { cut.sendMessageLater(message) }
+        runBlocking { cut.sendRoomMessage(message) }
         verify { messageRepositoryMock.save<RoomMessage>(message) }
     }
 

@@ -168,4 +168,8 @@ class SmsMatrixAppserviceRoomService(
     suspend fun processMessageQueue() {
         messageRepository.findAll().asFlow().collect { sendRoomMessage(it) }
     }
+
+    suspend fun deleteAllRooms() {
+        roomRepository.deleteAll().awaitFirstOrNull()
+    }
 }

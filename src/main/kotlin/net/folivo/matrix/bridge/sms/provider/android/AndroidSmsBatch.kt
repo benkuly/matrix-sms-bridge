@@ -5,7 +5,7 @@ import org.neo4j.springframework.data.core.schema.Node
 import org.neo4j.springframework.data.core.schema.Property
 import org.springframework.data.annotation.Version
 
-@Node("EventMessage")
+@Node("AndroidSmsBatch")
 data class AndroidSmsBatch(
         @Id
         val id: Long,

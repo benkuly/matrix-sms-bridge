@@ -1,14 +1,46 @@
 package net.folivo.matrix.bridge.sms.sync
 
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.runBlocking
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
+import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
+import net.folivo.matrix.restclient.MatrixClient
+import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
-import org.springframework.context.event.EventListener
-import org.springframework.stereotype.Service
+import org.springframework.context.ApplicationListener
+import org.springframework.context.annotation.Profile
+import org.springframework.stereotype.Component
 
-@Service
-class InitialSyncService {
+@Component
+@Profile("initialsync")
+class InitialSyncService(
+        private val userService: SmsMatrixAppserviceUserService,
+        private val roomService: SmsMatrixAppserviceRoomService,
+        private val api: MatrixClient
+) : ApplicationListener<ApplicationReadyEvent> {
 
-    @EventListener(ApplicationReadyEvent::class)
-    fun initialSync() {
+    companion object {
+        private val LOG = LoggerFactory.getLogger(this::class.java)
+    }
 
+    // FIXME test
+    override fun onApplicationEvent(event: ApplicationReadyEvent) {
+        LOG.info("started initial sync")
+
+        runBlocking {
+            LOG.info("delete all users and rooms")
+            roomService.deleteAllRooms()
+            userService.deleteAllUsers() // FIXME force api call when room for sms-user not found
+
+            LOG.info("collect all joined rooms (of bot user)")
+            api.roomsApi.getJoinedRooms()
+                    .collect { room ->
+                        api.roomsApi.getJoinedMembers(room).joined.keys.forEach { user ->
+                            roomService.saveRoomJoin(room, user)
+                        }
+                    }
+
+            LOG.info("finished initial sync")
+        }
     }
 }

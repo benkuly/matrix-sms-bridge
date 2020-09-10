@@ -5,7 +5,7 @@ import org.neo4j.springframework.data.core.schema.Relationship.Direction.INCOMIN
 import org.springframework.data.annotation.Version
 import java.time.Instant
 
-@Node("EventMessage")
+@Node("RoomMessage")
 data class RoomMessage(
         @Relationship(type = "MEMBER_OF", direction = INCOMING)
         val room: AppserviceRoom,

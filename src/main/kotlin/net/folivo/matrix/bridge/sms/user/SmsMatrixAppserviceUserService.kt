@@ -38,7 +38,7 @@ class SmsMatrixAppserviceUserService(
     }
 
     override suspend fun saveUser(userId: String) {
-        
+
     }
 
     suspend fun getUser(userId: String): AppserviceUser {
@@ -49,5 +49,9 @@ class SmsMatrixAppserviceUserService(
 
     suspend fun getLastMappingToken(userId: String): Int {
         return userRepository.findLastMappingTokenByUserId(userId).awaitFirstOrDefault(0)
+    }
+
+    suspend fun deleteAllUsers() {
+        userRepository.deleteAll().awaitFirstOrNull()
     }
 }
