@@ -96,9 +96,6 @@ class InitialSyncServiceIT {
                 .returns(flowOf("someRoomId1"))
         coEvery { api.roomsApi.getJoinedMembers("someRoomId1") }
                 .returns(GetJoinedMembersResponse(mapOf("someUserId1" to RoomMember(), "someUserId3" to RoomMember())))
-//        coEvery { api.userApi.register(allAny()) }.returns(RegisterResponse("reg"))
-//        coEvery { api.userApi.setDisplayName(allAny()) } just Runs
-
     }
 
     @Test

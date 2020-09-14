@@ -1,6 +1,5 @@
 package net.folivo.matrix.bridge.sms.sync
 
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
@@ -33,12 +32,7 @@ class InitialSyncService(
             userService.deleteAllUsers() // FIXME force api call when room for sms-user not found
 
             LOG.info("collect all joined rooms (of bot user)")
-            api.roomsApi.getJoinedRooms()
-                    .collect { room ->
-                        api.roomsApi.getJoinedMembers(room).joined.keys.forEach { user ->
-                            roomService.saveRoomJoin(room, user)
-                        }
-                    }
+            roomService.syncUserAndItsRooms()
 
             LOG.info("finished initial sync")
         }

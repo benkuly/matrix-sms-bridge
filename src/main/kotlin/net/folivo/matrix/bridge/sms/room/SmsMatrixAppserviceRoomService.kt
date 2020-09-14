@@ -13,7 +13,6 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
-import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
@@ -106,7 +105,16 @@ class SmsMatrixAppserviceRoomService(
 
     suspend fun getRoom(userId: String, mappingToken: Int?): AppserviceRoom? {
         val user = userService.getUser(userId)
-        val rooms = user.rooms.keys
+        val rooms = user.rooms.keys.let {
+            if (it.isEmpty()) { // FIXME test
+                try {
+                    syncUserAndItsRooms(userId)
+                    userService.getUser(userId).rooms.keys // FIXME do I need a new fetch or is it already inserted?
+                } catch (error: Throwable) {
+                    it
+                }
+            } else it
+        }
         return if (rooms.size == 1 && smsBridgeProperties.allowMappingWithoutToken) {
             rooms.first()
         } else {
@@ -116,11 +124,19 @@ class SmsMatrixAppserviceRoomService(
         }
     }
 
+    suspend fun syncUserAndItsRooms(asUserId: String? = null) {//FIXME test
+        matrixClient.roomsApi.getJoinedRooms(asUserId = asUserId)
+                .collect { room ->
+                    matrixClient.roomsApi.getJoinedMembers(room).joined.keys.forEach { user ->
+                        saveRoomJoin(room, user)
+                    }
+                }
+    }
+
     suspend fun getRoomsWithUsers(members: Set<String>): Flow<AppserviceRoom> {
         return roomRepository.findByMembersUserIdContaining(members).asFlow()
     }
 
-    // FIXME test
     suspend fun sendRoomMessage(message: RoomMessage) {
         if (Instant.now().isAfter(message.sendAfter)) {
             val containsReceivers = message.room.members.keys.map { it.userId }.containsAll(message.requiredReceiverIds)
@@ -134,18 +150,21 @@ class SmsMatrixAppserviceRoomService(
                             else TextMessageEventContent(message.body)
                     )
                     LOG.debug("sent cached message to room $roomId")
-                } catch (error: MatrixServerException) {
-                    LOG.warn(
+                    messageRepository.delete(message).awaitFirstOrNull()
+                } catch (error: Throwable) {
+                    LOG.debug(
                             "Could not send cached message to room $roomId. This happens e.g. when the bot was kicked " +
                             "out of the room, before the required receivers did join. Error: ${error.message}"
                     )
-                    // TODO directly notify user
-                } catch (error: Throwable) {
-                    LOG.warn(
-                            "Could not send cached message to room $roomId. Error: ${error.message}"
-                    )
-                } finally {
-                    messageRepository.delete(message).awaitFirstOrNull()
+                    if (message.sendAfter.until(Instant.now(), ChronoUnit.DAYS) > 3) {
+                        LOG.warn(
+                                "We have cached messages for the room $roomId, but sending the message " +
+                                "didn't worked since 3 days. " +
+                                "This usually should never happen! The message will now be deleted."
+                        )
+                        messageRepository.delete(message).awaitFirstOrNull()
+                        // TODO directly notify user
+                    }
                 }
             } else if (!isNew && message.sendAfter.until(Instant.now(), ChronoUnit.DAYS) > 3) {
                 LOG.warn(
@@ -154,8 +173,8 @@ class SmsMatrixAppserviceRoomService(
                         "This usually should never happen! The message will now be deleted."
                 )
                 messageRepository.delete(message).awaitFirstOrNull()
+                // TODO directly notify user
             } else if (isNew) {
-                // prevent, that messages with sendAfter in large future are deleted, although it was send a few minutes ago
                 messageRepository.save(message.copy(sendAfter = Instant.now())).awaitFirst()
             } else {
                 LOG.debug("wait for required receivers to join")
