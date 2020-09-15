@@ -1,7 +1,10 @@
 package net.folivo.matrix.bridge.sms.room
 
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 import io.mockk.*
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
@@ -16,16 +19,18 @@ import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventConten
 import net.folivo.matrix.restclient.MatrixClient
 import net.folivo.matrix.restclient.api.rooms.GetJoinedMembersResponse
 import net.folivo.matrix.restclient.api.rooms.GetJoinedMembersResponse.RoomMember
-import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions
 import org.springframework.http.HttpStatus.FORBIDDEN
 import org.springframework.test.util.ReflectionTestUtils
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Instant
-import java.time.temporal.ChronoUnit
+import java.time.temporal.ChronoUnit.SECONDS
 
-class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
-    init {
+class SmsMatrixAppserviceRoomServiceTest : DescribeSpec(testBody())
+
+private fun testBody(): DescribeSpec.() -> Unit {
+    return {
         val roomRepositoryMock: AppserviceRoomRepository = mockk()
         val userServiceMock: SmsMatrixAppserviceUserService = mockk()
         val messageRepositoryMock: RoomMessageRepository = mockk()
@@ -53,6 +58,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
 
         afterTest {
             clearMocks(
+                    cut,
                     roomRepositoryMock,
                     userServiceMock,
                     messageRepositoryMock,
@@ -67,7 +73,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
                 val result = runBlocking {
                     cut.roomExistingState("someRoomAlias")
                 }
-                assertThat(result).isEqualTo(DOES_NOT_EXISTS)
+                Assertions.assertThat(result).isEqualTo(DOES_NOT_EXISTS)
             }
         }
         describe(SmsMatrixAppserviceRoomService::saveRoom.name) {
@@ -191,6 +197,47 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
             }
         }
         describe(SmsMatrixAppserviceRoomService::getRoom.name) {
+            describe("user is not in any room") {
+                it("should try to fetch rooms for user from server") {
+                    val room = AppserviceRoom("someRoomId2")
+                    every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
+                    coEvery { userServiceMock.getUser("someUserId") }
+                            .returnsMany(
+                                    AppserviceUser(
+                                            "someUserId", true, mutableMapOf()
+                                    ),
+                                    AppserviceUser(
+                                            "someUserId", true, mutableMapOf(
+                                            AppserviceRoom("someRoomId1") to MemberOfProperties(12),
+                                            room to MemberOfProperties(24)
+                                    )
+                                    )
+                            )
+                    coEvery { cut.syncUserAndItsRooms(asUserId = "someUserId") } just Runs
+
+                    val result = runBlocking { cut.getRoom("someUserId", 24) }
+                    result shouldBe room
+                }
+                it("should fallback when fetch fails (e.g. user not existing)") {
+                    val room = AppserviceRoom("someRoomId2")
+                    every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
+                    coEvery { userServiceMock.getUser("someUserId") }
+                            .returns(
+                                    AppserviceUser(
+                                            "someUserId", true, mutableMapOf()
+                                    )
+                            )
+                    coEvery { cut.syncUserAndItsRooms(asUserId = "someUserId") }.throws(
+                            MatrixServerException(
+                                    FORBIDDEN,
+                                    ErrorResponse("FORBIDDEN", "not existing")
+                            )
+                    )
+
+                    val result = runBlocking { cut.getRoom("someUserId", 24) }
+                    result.shouldBeNull()
+                }
+            }
             describe("matching token given") {
                 it("should get room") {
                     val room = AppserviceRoom("someRoomId2")
@@ -206,7 +253,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
 
                             )
                     val result = runBlocking { cut.getRoom("someUserId", 24) }
-                    assertThat(result).isEqualTo(room)
+                    Assertions.assertThat(result).isEqualTo(room)
                 }
             }
             describe("no matching token given") {
@@ -223,7 +270,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
                                     )
                             )
                     val result = runBlocking { cut.getRoom("someUserId", 24) }
-                    assertThat(result).isEqualTo(room)
+                    Assertions.assertThat(result).isEqualTo(room)
                 }
                 it("should not get room") {
                     every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
@@ -237,7 +284,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
                                     )
                             )
                     val result = runBlocking { cut.getRoom("someUserId", 24) }
-                    assertThat(result).isNull()
+                    Assertions.assertThat(result).isNull()
                 }
                 it("should not get room when token is null") {
                     every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
@@ -251,7 +298,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
                                     )
                             )
                     val result = runBlocking { cut.getRoom("someUserId", null) }
-                    assertThat(result).isNull()
+                    Assertions.assertThat(result).isNull()
                 }
             }
         }
@@ -263,7 +310,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
                 )
                 every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
                 val result = runBlocking { cut.getOrCreateRoom("someRoomId") }
-                assertThat(result).isEqualTo(room)
+                Assertions.assertThat(result).isEqualTo(room)
             }
             it("should create room and fetch all members") {
                 val user1 = AppserviceUser("userId1", true)
@@ -295,7 +342,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
 
                 val result = runBlocking { cut.getOrCreateRoom("someRoomId") }
 
-                assertThat(result).isEqualTo(roomWithUsers)
+                Assertions.assertThat(result).isEqualTo(roomWithUsers)
                 verify {
                     roomRepositoryMock.save<AppserviceRoom>(roomWithUsers)
                 }
@@ -307,7 +354,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
                 every { roomRepositoryMock.findByMembersUserIdContaining(any()) }
                         .returns(Flux.just(*rooms))
                 val result = runBlocking { cut.getRoomsWithUsers(setOf("userId1", "userId2")).toList() }
-                assertThat(result).containsAll(rooms.asList())
+                Assertions.assertThat(result).containsAll(rooms.asList())
             }
         }
         describe(SmsMatrixAppserviceRoomService::sendRoomMessage.name) {
@@ -384,7 +431,7 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
 
                     coVerify {
                         messageRepositoryMock.save(match {
-                            it.sendAfter.until(Instant.now(), ChronoUnit.SECONDS) < 300
+                            it.sendAfter.until(Instant.now(), SECONDS) < 300
                             && it.copy(sendAfter = Instant.ofEpochMilli(123)) == message
                         })
                     }
@@ -482,6 +529,32 @@ class SmsMatrixAppserviceRoomServizceTest : DescribeSpec() {
                     verify(exactly = 0) {
                         messageRepositoryMock.delete(message)
                     }
+                }
+            }
+        }
+        describe(SmsMatrixAppserviceRoomService::syncUserAndItsRooms.name) {
+            it("should fetch rooms of user and users of room") {
+                coEvery { matrixClientMock.roomsApi.getJoinedRooms(asUserId = "someUserId") }
+                        .returns(flowOf("someRoomId1", "someRoomId2"))
+                coEvery { matrixClientMock.roomsApi.getJoinedMembers("someRoomId1", asUserId = "someUserId") }
+                        .returns(
+                                GetJoinedMembersResponse(
+                                        joined = mapOf(
+                                                "someUserId1" to RoomMember(),
+                                                "someUserId2" to RoomMember()
+                                        )
+                                )
+                        )
+                coEvery { matrixClientMock.roomsApi.getJoinedMembers("someRoomId2", asUserId = "someUserId") }
+                        .returns(GetJoinedMembersResponse(joined = mapOf("someUserId1" to RoomMember())))
+                coEvery { cut.saveRoomJoin(any(), any()) } just Runs
+
+                cut.syncUserAndItsRooms(asUserId = "someUserId")
+
+                coVerify {
+                    cut.saveRoomJoin("someRoomId1", "someUserId1")
+                    cut.saveRoomJoin("someRoomId1", "someUserId2")
+                    cut.saveRoomJoin("someRoomId2", "someUserId1")
                 }
             }
         }

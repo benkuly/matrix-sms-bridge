@@ -105,29 +105,29 @@ class SmsMatrixAppserviceRoomService(
 
     suspend fun getRoom(userId: String, mappingToken: Int?): AppserviceRoom? {
         val user = userService.getUser(userId)
-        val rooms = user.rooms.keys.let {
-            if (it.isEmpty()) { // FIXME test
+        val rooms = user.rooms.let {
+            if (it.isEmpty()) {
                 try {
                     syncUserAndItsRooms(userId)
-                    userService.getUser(userId).rooms.keys // FIXME do I need a new fetch or is it already inserted?
+                    userService.getUser(userId).rooms // FIXME do we really need a new fetch or is it already inserted?
                 } catch (error: Throwable) {
                     it
                 }
             } else it
         }
         return if (rooms.size == 1 && smsBridgeProperties.allowMappingWithoutToken) {
-            rooms.first()
+            rooms.keys.first()
         } else {
-            user.rooms.entries
+            rooms.entries
                     .find { it.value.mappingToken == mappingToken }
                     ?.key
         }
     }
 
-    suspend fun syncUserAndItsRooms(asUserId: String? = null) {//FIXME test
+    suspend fun syncUserAndItsRooms(asUserId: String? = null) {
         matrixClient.roomsApi.getJoinedRooms(asUserId = asUserId)
                 .collect { room ->
-                    matrixClient.roomsApi.getJoinedMembers(room).joined.keys.forEach { user ->
+                    matrixClient.roomsApi.getJoinedMembers(room, asUserId = asUserId).joined.keys.forEach { user ->
                         saveRoomJoin(room, user)
                     }
                 }
