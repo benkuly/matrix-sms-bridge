@@ -6,4 +6,12 @@ import io.kotest.spring.SpringAutowireConstructorExtension
 
 class KotestConfig : AbstractProjectConfig() {
     override fun extensions(): List<Extension> = listOf(SpringAutowireConstructorExtension)
+
+    override fun beforeAll() {
+        TestDbContainer.start()
+    }
+
+    override fun afterAll() {
+        TestDbContainer.stop()
+    }
 }

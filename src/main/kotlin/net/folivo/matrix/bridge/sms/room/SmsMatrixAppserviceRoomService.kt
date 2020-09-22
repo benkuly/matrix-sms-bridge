@@ -109,7 +109,7 @@ class SmsMatrixAppserviceRoomService(
             if (it.isEmpty()) {
                 try {
                     syncUserAndItsRooms(userId)
-                    userService.getUser(userId).rooms // FIXME do we really need a new fetch or is it already inserted?
+                    userService.getUser(userId).rooms // TOOO do we really need a new fetch or is it already inserted?
                 } catch (error: Throwable) {
                     it
                 }

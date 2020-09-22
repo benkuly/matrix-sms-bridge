@@ -13,11 +13,15 @@ matrix:
       users:
         - exclusive: true
           regex: "sms_[0-9]{6,15}"
-      aliases: []
-      rooms: []
+      aliases: [ ]
+      rooms: [ ]
   client:
     homeServer:
       hostname: matrix-synapse
       port: 8008
       secure: false
     token: 30c05ae90a248a4188e620216fa72e349803310ec83e2a77b34fe90be6081f46
+
+logging:
+  level:
+    net.folivo.matrix.bridge.sms: DEBUG

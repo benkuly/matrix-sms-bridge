@@ -11,8 +11,6 @@ data class AndroidSmsBatch(
         val id: Long,
         @Property("nextBatch")
         var nextBatch: String,
-) {
-    @Version
-    var version: Long? = null
-        private set
-}
+        @Version
+        var version: Long? = 0
+)

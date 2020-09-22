@@ -29,7 +29,7 @@ class InitialSyncService(
         runBlocking {
             LOG.info("delete all users and rooms")
             roomService.deleteAllRooms()
-            userService.deleteAllUsers() // FIXME force api call when room for sms-user not found
+            userService.deleteAllUsers()
 
             LOG.info("collect all joined rooms (of bot user)")
             roomService.syncUserAndItsRooms()

@@ -47,7 +47,7 @@ class SendSmsService(
                             LOG.error(
                                     "Could not send sms from room ${room.roomId} and $sender. " +
                                     "This should be fixed.", error
-                            )
+                            ) // TODO it should send sms later
                             context.answer(
                                     NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsError),
                                     asUserId = member.userId
@@ -82,10 +82,6 @@ class SendSmsService(
                 .replace("{body}", body)
                 .replace("{token}", "#$mappingToken")
 
-        try {
-            smsProvider.sendSms(receiver = "+$receiver", body = templateBody)
-        } catch (error: Throwable) {
-            LOG.warn("could not send sms: ${error.message}")//FIXME catch in higher abstraction level and try again later
-        }
+        smsProvider.sendSms(receiver = "+$receiver", body = templateBody)
     }
 }

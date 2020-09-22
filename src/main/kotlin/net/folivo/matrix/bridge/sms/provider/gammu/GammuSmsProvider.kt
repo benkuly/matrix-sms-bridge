@@ -10,10 +10,9 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.context.annotation.Primary
 import org.springframework.context.annotation.Profile
 import org.springframework.context.event.EventListener
-import org.springframework.core.Ordered
-import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.stereotype.Component
 import reactor.core.Disposable
@@ -31,7 +30,7 @@ import kotlin.text.Charsets.UTF_8
 // TODO Tests!
 @Profile("!initialsync")
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Primary
 @ConditionalOnProperty(prefix = "matrix.bridge.sms.provider.gammu", name = ["enabled"], havingValue = "true")
 @EnableConfigurationProperties(GammuSmsProviderProperties::class)
 class GammuSmsProvider(

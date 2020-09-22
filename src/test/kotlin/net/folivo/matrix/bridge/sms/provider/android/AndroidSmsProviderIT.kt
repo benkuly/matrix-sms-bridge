@@ -1,55 +1,130 @@
 package net.folivo.matrix.bridge.sms.provider.android
 
+import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.mockserver.MockServerListener
-import io.kotest.extensions.testcontainers.perSpec
+import io.mockk.coVerify
+import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
+import net.folivo.matrix.restclient.MatrixClient
 import org.mockserver.client.MockServerClient
 import org.mockserver.matchers.MatchType.STRICT
+import org.mockserver.matchers.Times
 import org.mockserver.model.HttpRequest
-import org.mockserver.model.JsonBody.json
+import org.mockserver.model.HttpResponse
+import org.mockserver.model.JsonBody
+import org.mockserver.model.MediaType
 import org.neo4j.driver.springframework.boot.test.autoconfigure.Neo4jTestHarnessAutoConfiguration
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.HttpMethod
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.Neo4jContainer
 
-@SpringBootTest
+@SpringBootTest(
+        properties = [
+            "matrix.bridge.sms.provider.android.enabled=true",
+            "matrix.bridge.sms.provider.android.basePath=http://localhost:5100",
+            "matrix.bridge.sms.provider.android.username=username",
+            "matrix.bridge.sms.provider.android.password=password"
+        ]
+)
 @EnableAutoConfiguration(exclude = [Neo4jTestHarnessAutoConfiguration::class])
-class AndroidSmsProviderIT(private val cut: AndroidSmsProvider) : DescribeSpec() {
+class AndroidSmsProviderIT(
+        @MockkBean(relaxed = true)
+        private val matrixClientMock: MatrixClient,
+        @MockkBean(relaxed = true)
+        private val androidSmsProviderLauncherMock: AndroidSmsProviderLauncher,
+        @MockkBean(relaxed = true)
+        private val receiveSmsServiceMock: ReceiveSmsService,
+        cut: AndroidSmsProvider
+) : DescribeSpec(testBody(cut, receiveSmsServiceMock))
 
-    companion object {
-        private val neo4jContainer: Neo4jContainer<*> = Neo4jContainer<Nothing>("neo4j:4.0")
-
-        @DynamicPropertySource
-        @JvmStatic
-        fun testProperties(registry: DynamicPropertyRegistry) {
-            registry.add("org.neo4j.driver.uri", neo4jContainer::getBoltUrl)
-            registry.add("org.neo4j.driver.authentication.username") { "neo4j" }
-            registry.add("org.neo4j.driver.authentication.password", neo4jContainer::getAdminPassword)
-
-            registry.add("matrix.bridge.sms.provider.android.enabled") { true }
-            registry.add("matrix.bridge.sms.provider.android.basePath") { "http://localhost:5100" }
-            registry.add("matrix.bridge.sms.provider.android.username") { "username" }
-            registry.add("matrix.bridge.sms.provider.android.password") { "password" }
-
-        }
-    }
-
-    init {
-
-        listener(neo4jContainer.perSpec())
+private fun testBody(cut: AndroidSmsProvider, receiveSmsServiceMock: ReceiveSmsService): DescribeSpec.() -> Unit {
+    return {
         listener(MockServerListener(5100))
 
+        describe(AndroidSmsProvider::getNewMessages.name) {
+            val mockServerClient = MockServerClient("localhost", 5100)
+            mockServerClient.reset()
+            mockServerClient
+                    .`when`(
+                            HttpRequest.request()
+                                    .withMethod(HttpMethod.GET.name)
+                                    .withPath("/messages"),
+                            Times.exactly(1)
+                    ).respond(
+                            HttpResponse.response()
+                                    .withBody(
+                                            """
+                                           {
+                                                "nextBatch":"2",
+                                                "messages":[
+                                                    {
+                                                        "sender":"+4917331111111",
+                                                        "body":"some body 1"
+                                                    },
+                                                    {
+                                                        "sender":"+4917332222222",
+                                                        "body":"some body 2"
+                                                    }
+                                                ]
+                                            }
+                                          """.trimIndent(), MediaType.APPLICATION_JSON
+                                    )
+                    )
+            mockServerClient
+                    .`when`(
+                            HttpRequest.request()
+                                    .withMethod(HttpMethod.GET.name)
+                                    .withPath("/messages")
+                                    .withQueryStringParameter("nextBatch", "2"),
+                            Times.exactly(1)
+                    ).respond(
+                            HttpResponse.response()
+                                    .withBody(
+                                            """
+                                           {
+                                                "nextBatch":"3",
+                                                "messages":[]
+                                            }
+                                          """.trimIndent(), MediaType.APPLICATION_JSON
+                                    )
+                    )
+            it("should get new messages") {
+                cut.getNewMessages()
+                coVerify {
+                    receiveSmsServiceMock.receiveSms("some body 1", "+4917331111111")
+                    receiveSmsServiceMock.receiveSms("some body 2", "+4917332222222")
+                }
+            }
+            it("should save and use next batch") {
+                cut.getNewMessages()
+                mockServerClient
+                        .verify(
+                                HttpRequest.request()
+                                        .withMethod(HttpMethod.GET.name)
+                                        .withPath("/messages"),
+                                HttpRequest.request()
+                                        .withMethod(HttpMethod.GET.name)
+                                        .withPath("/messages")
+                                        .withQueryStringParameter("nextBatch", "2")
+                        )
+            }
+        }
         describe(AndroidSmsProvider::sendSms.name) {
-            it("should call android device") {
-                MockServerClient("localhost", 5100).verify(
+            val mockServerClient = MockServerClient("localhost", 5100)
+            mockServerClient.reset()
+            it("should call android device to send message") {
+                mockServerClient.`when`(
+                        HttpRequest.request()
+                                .withMethod(HttpMethod.POST.name)
+                                .withPath("/messages")
+                ).respond(HttpResponse.response())
+                cut.sendSms("+491234567", "some body")
+                mockServerClient.verify(
                         HttpRequest.request()
                                 .withMethod(HttpMethod.POST.name)
                                 .withPath("/messages")
                                 .withBody(
-                                        json(
+                                        JsonBody.json(
                                                 """
                                     {
                                         "sender":"+491234567",
@@ -59,7 +134,6 @@ class AndroidSmsProviderIT(private val cut: AndroidSmsProvider) : DescribeSpec()
                                         )
                                 )
                 )
-                cut.sendSms("+491234567", "some body")
             }
         }
     }
