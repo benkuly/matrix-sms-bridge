@@ -35,7 +35,6 @@ class SendSmsCommandHelper(
         AUTO, ALWAYS, NO
     }
 
-    //FIXME test
     suspend fun createRoomAndSendMessage(
             body: String?,
             sender: String,

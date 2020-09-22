@@ -14,15 +14,15 @@ import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
-import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
-import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import net.folivo.matrix.restclient.api.rooms.Preset.TRUSTED_PRIVATE
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
 @ExtendWith(MockKExtension::class)
 class SendSmsCommandHelperTest {
@@ -182,7 +182,7 @@ class SendSmsCommandHelperTest {
         coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
             every { roomId }.returns("someRoomId")
         }))
-        coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }.returns(mockk {
+        val roomMock = mockk<AppserviceRoom> {
             every { roomId }.returns("someRoomId")
             every { members }.returns(
                     mutableMapOf(
@@ -196,7 +196,8 @@ class SendSmsCommandHelperTest {
                             ) to MemberOfProperties(2)
                     )
             )
-        })
+        }
+        coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }.returns(roomMock)
 
         val result = runBlocking {
             cut.createRoomAndSendMessage(
@@ -211,10 +212,14 @@ class SendSmsCommandHelperTest {
         assertThat(result).isEqualTo("send message +1111111111")
 
         coVerify {
-            matrixClientMock.roomsApi.sendRoomEvent(
-                    roomId = "someRoomId",
-                    eventContent = match<TextMessageEventContent> { it.body == "newRoomMessage someSender some text" },
-                    txnId = any()
+            roomServiceMock.sendRoomMessage(
+                    match {
+                        it.room == roomMock
+                        && it.body == "newRoomMessage someSender some text"
+                        && Instant.now().until(it.sendAfter, ChronoUnit.MINUTES) < 1
+                        && it.requiredReceiverIds.containsAll(setOf("@sms_1111111111:someServer"))
+                        && !it.isNotice
+                    }
             )
         }
     }
@@ -439,12 +444,16 @@ class SendSmsCommandHelperTest {
                         it.room == room
                         && it.body == "newRoomMessage someSender some text"
                         && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
+                        && !it.isNotice
                     }
             )
-            matrixClientMock.roomsApi.sendRoomEvent(
-                    roomId = "someRoomId",
-                    eventContent = match<NoticeMessageEventContent> { it.body == "notice at 2055-11-09T12:00" },
-                    txnId = any()
+            roomServiceMock.sendRoomMessage(
+                    match {
+                        it.room == room
+                        && it.body == "notice at 2055-11-09T12:00"
+                        && it.requiredReceiverIds == setOf("@sms_1111111111:someServer")
+                        && it.isNotice
+                    }
             )
         }
     }

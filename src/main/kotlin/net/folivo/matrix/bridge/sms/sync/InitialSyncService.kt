@@ -22,7 +22,6 @@ class InitialSyncService(
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    // FIXME test
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
         LOG.info("started initial sync")
 

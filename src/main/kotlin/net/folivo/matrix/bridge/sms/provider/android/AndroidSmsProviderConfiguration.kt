@@ -20,7 +20,6 @@ import java.util.*
 @EnableConfigurationProperties(AndroidSmsProviderProperties::class)
 class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProviderProperties) {
 
-    // FIXME test
     @Bean("androidSmsProviderWebClient")
     fun androidSmsProviderWebClient(webClientBuilder: WebClient.Builder): WebClient {
         return webClientBuilder
