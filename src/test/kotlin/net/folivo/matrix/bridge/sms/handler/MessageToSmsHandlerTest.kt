@@ -4,12 +4,14 @@ import io.mockk.*
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
@@ -18,7 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
-class SendSmsServiceTest {
+class MessageToSmsHandlerTest {
 
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
@@ -27,10 +29,13 @@ class SendSmsServiceTest {
     lateinit var matrixBotPropertiesMock: MatrixBotProperties
 
     @MockK
+    lateinit var roomServiceMock: SmsMatrixAppserviceRoomService
+
+    @MockK
     lateinit var smsProviderMock: SmsProvider
 
     @InjectMockKs
-    lateinit var cut: SendSmsService
+    lateinit var cut: MessageToSmsHandler
 
     @MockK
     lateinit var contextMock: MessageContext
@@ -46,6 +51,9 @@ class SendSmsServiceTest {
         every { smsBridgePropertiesMock.templates.sendSmsError }.returns("sendSmsError")
         every { smsBridgePropertiesMock.templates.sendSmsIncompatibleMessage }.returns("incompatibleMessage")
         coEvery { contextMock.answer(any(), any()) }.returns("someId")
+        coEvery { roomServiceMock.getRooms(any()) }.returns(
+                flowOf(AppserviceRoom("someRoomId1"), AppserviceRoom("someRoomId2"))
+        )
     }
 
     @Test
@@ -58,7 +66,7 @@ class SendSmsServiceTest {
                 )
         )
 
-        runBlocking { cut.sendSms(room, "someBody", "someSender", contextMock, true) }
+        runBlocking { cut.handleMessage(room, "someBody", "someSender", contextMock, true) }
 
 
         coVerifyAll {
@@ -78,7 +86,7 @@ class SendSmsServiceTest {
         )
 
         runBlocking {
-            cut.sendSms(
+            cut.handleMessage(
                     room,
                     "someBody",
                     "@sms_0123456789:someServerName",
@@ -104,7 +112,7 @@ class SendSmsServiceTest {
 
 
         runBlocking {
-            cut.sendSms(room, "someBody", "someSender", contextMock, true)
+            cut.handleMessage(room, "someBody", "someSender", contextMock, true)
         }
 
 
@@ -123,7 +131,7 @@ class SendSmsServiceTest {
         every { smsBridgePropertiesMock.templates.outgoingMessageToken }.returns("{token}")
 
         runBlocking {
-            cut.sendSms(room, "someBody", "@someUsername:someServerName", contextMock, true)
+            cut.handleMessage(room, "someBody", "@someUsername:someServerName", contextMock, true)
         }
 
         coVerify {
@@ -141,9 +149,12 @@ class SendSmsServiceTest {
         )
         every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
         every { smsBridgePropertiesMock.templates.outgoingMessageFromBot }.returns("someBotTemplate {sender} {body}")
+        coEvery { roomServiceMock.getRooms("@sms_0123456789:someServerName") }.returns(
+                flowOf(room)
+        )
 
         runBlocking {
-            cut.sendSms(room, "someBody", "@someUsername:someServerName", contextMock, true)
+            cut.handleMessage(room, "someBody", "@someUsername:someServerName", contextMock, true)
         }
 
         coVerify {
@@ -161,7 +172,7 @@ class SendSmsServiceTest {
                 )
         )
 
-        runBlocking { cut.sendSms(room, "someBody", "someSender", contextMock, true) }
+        runBlocking { cut.handleMessage(room, "someBody", "someSender", contextMock, true) }
 
         coVerify(exactly = 0) { smsProviderMock.sendSms("+0123456789", any()) }
         coVerify { smsProviderMock.sendSms("+9876543210", "someTemplate someToken") }
@@ -177,7 +188,7 @@ class SendSmsServiceTest {
         )
         coEvery { smsProviderMock.sendSms("+0123456789", any()) }.throws(RuntimeException())
 
-        runBlocking { cut.sendSms(room, "someBody", "someSender", contextMock, true) }
+        runBlocking { cut.handleMessage(room, "someBody", "someSender", contextMock, true) }
 
 
         coVerifyAll {
@@ -198,7 +209,7 @@ class SendSmsServiceTest {
                 )
         )
 
-        runBlocking { cut.sendSms(room, "someBody", "someSender", contextMock, false) }
+        runBlocking { cut.handleMessage(room, "someBody", "someSender", contextMock, false) }
 
 
         coVerify {

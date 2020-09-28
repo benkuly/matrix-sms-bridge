@@ -69,26 +69,21 @@ class InitialSyncServiceIT {
         //before initialsync
         // room1 -> user1, user2
         // room2 -> user1
-        room1 = template.save(AppserviceRoom("someRoomId1")).block() ?: throw RuntimeException()
-        room2 = template.save(AppserviceRoom("someRoomId2")).block() ?: throw RuntimeException()
+        user1 = template.save(AppserviceUser("someUserId1", true)).block() ?: throw RuntimeException()
+        user2 = template.save(AppserviceUser("someUserId2", true)).block() ?: throw RuntimeException()
 
-        user1 = template.save(
-                AppserviceUser(
-                        "someUserId1", true,
-                        mutableMapOf(
-                                room1 to MemberOfProperties(1),
-                                room2 to MemberOfProperties(24)
+        room1 = template.save(
+                AppserviceRoom(
+                        "someRoomId1",
+                        members = mutableMapOf(
+                                user1 to MemberOfProperties(1),
+                                user2 to MemberOfProperties(1)
                         )
                 )
-        ).block() ?: throw RuntimeException()
-        user2 = template.save(
-                AppserviceUser(
-                        "someUserId2", true,
-                        mutableMapOf(
-                                room1 to MemberOfProperties(1)
-                        )
-                )
-        ).block() ?: throw RuntimeException()
+        )
+                        .block() ?: throw RuntimeException()
+        room2 = template.save(AppserviceRoom("someRoomId2", members = mutableMapOf(user1 to MemberOfProperties(24))))
+                        .block() ?: throw RuntimeException()
 
         //after initialsync
         // room1 -> user1, user3
@@ -106,23 +101,18 @@ class InitialSyncServiceIT {
 
         assertThat(rooms).size().isEqualTo(1)
         assertThat(rooms?.get(0)?.roomId).isEqualTo("someRoomId1")
+        assertThat(rooms?.get(0)?.members?.size).isEqualTo(2)
 
         assertThat(users).size().isEqualTo(2)
 
         assertThat(users?.get(0)).isEqualTo(
                 AppserviceUser(
-                        "someUserId1", false,
-                        mutableMapOf(
-                                room1 to MemberOfProperties(1)
-                        )
+                        "someUserId1", false
                 )
         )
         assertThat(users?.get(1)).isEqualTo(
                 AppserviceUser(
-                        "someUserId3", false,
-                        mutableMapOf(
-                                room1 to MemberOfProperties(1)
-                        )
+                        "someUserId3", false
                 )
         )
 

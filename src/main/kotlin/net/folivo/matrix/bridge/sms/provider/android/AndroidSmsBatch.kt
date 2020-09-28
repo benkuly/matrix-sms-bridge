@@ -12,5 +12,5 @@ data class AndroidSmsBatch(
         @Property("nextBatch")
         var nextBatch: String,
         @Version
-        var version: Long? = 0
+        var version: Long? = null
 )

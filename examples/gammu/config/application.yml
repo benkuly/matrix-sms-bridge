@@ -8,7 +8,7 @@ org:
 
 logging:
   level:
-    net.folivo: DEBUG
+    net.folivo.matrix.bridge.sms: DEBUG
 
 matrix:
   bridge:

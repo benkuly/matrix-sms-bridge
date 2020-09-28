@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
-class SmsBotMessageHandler(
+class MessageToBotHandler(
         private val helper: SendSmsCommandHelper,
         private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties
@@ -22,7 +22,7 @@ class SmsBotMessageHandler(
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    suspend fun handleMessageToSmsBot(
+    suspend fun handleMessage(
             room: AppserviceRoom,
             body: String,
             sender: String,

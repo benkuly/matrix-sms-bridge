@@ -23,10 +23,10 @@ import org.junit.jupiter.api.extension.ExtendWith
 class SmsAppserviceMessageHandlerTest {
 
     @MockK
-    lateinit var sendSmsServiceMock: SendSmsService
+    lateinit var messageToSmsHandlerMock: MessageToSmsHandler
 
     @MockK
-    lateinit var smsBotMessageHandlerMock: SmsBotMessageHandler
+    lateinit var messageToBotHandlerMock: MessageToBotHandler
 
     @MockK
     lateinit var roomServiceMock: SmsMatrixAppserviceRoomService
@@ -55,8 +55,8 @@ class SmsAppserviceMessageHandlerTest {
         every { contextMock.originalEvent.sender } returns "someSender"
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }.returns(roomMock)
 
-        coEvery { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) } just Runs
-        coEvery { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any()) }.returns(false)
+        coEvery { messageToSmsHandlerMock.handleMessage(any(), any(), any(), any(), any()) } just Runs
+        coEvery { messageToBotHandlerMock.handleMessage(any(), any(), any(), any()) }.returns(false)
     }
 
     @Test
@@ -84,12 +84,12 @@ class SmsAppserviceMessageHandlerTest {
 
         runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        coVerify { sendSmsServiceMock.sendSms(roomMock1, "someBody", "someSender", contextMock, true) }
+        coVerify { messageToSmsHandlerMock.handleMessage(roomMock1, "someBody", "someSender", contextMock, true) }
 
         // also try when more then one member
         runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        coVerify { sendSmsServiceMock.sendSms(roomMock2, "someBody", "someSender", contextMock, true) }
+        coVerify { messageToSmsHandlerMock.handleMessage(roomMock2, "someBody", "someSender", contextMock, true) }
     }
 
     @Test
@@ -102,7 +102,7 @@ class SmsAppserviceMessageHandlerTest {
 
         runBlocking { cut.handleMessage(UnknownMessageEventContent("someBody", "image"), contextMock) }
 
-        coVerify { sendSmsServiceMock.sendSms(roomMock, "someBody", "someSender", contextMock, false) }
+        coVerify { messageToSmsHandlerMock.handleMessage(roomMock, "someBody", "someSender", contextMock, false) }
     }
 
     @Test
@@ -115,12 +115,12 @@ class SmsAppserviceMessageHandlerTest {
 
         runBlocking { cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock) }
 
-        coVerify { sendSmsServiceMock wasNot Called }
+        coVerify { messageToSmsHandlerMock wasNot Called }
     }
 
     @Test
     fun `should delegate to SmsBotHandler when room contains bot and not delegate to SendSmsService`() {
-        coEvery { smsBotMessageHandlerMock.handleMessageToSmsBot(any(), any(), any(), any()) } returns true
+        coEvery { messageToBotHandlerMock.handleMessage(any(), any(), any(), any()) } returns true
 
         every { roomMock.members } returns mutableMapOf(
                 mockk<AppserviceUser> {
@@ -130,8 +130,8 @@ class SmsAppserviceMessageHandlerTest {
 
         runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        coVerify { smsBotMessageHandlerMock.handleMessageToSmsBot(roomMock, "someBody", "someSender", contextMock) }
-        coVerify { sendSmsServiceMock wasNot Called }
+        coVerify { messageToBotHandlerMock.handleMessage(roomMock, "someBody", "someSender", contextMock) }
+        coVerify { messageToSmsHandlerMock wasNot Called }
     }
 
     @Test
@@ -144,8 +144,8 @@ class SmsAppserviceMessageHandlerTest {
 
         runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        coVerify { smsBotMessageHandlerMock wasNot Called }
-        coVerify { sendSmsServiceMock.sendSms(any(), any(), any(), any(), any()) }
+        coVerify { messageToBotHandlerMock wasNot Called }
+        coVerify { messageToSmsHandlerMock.handleMessage(any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -158,8 +158,8 @@ class SmsAppserviceMessageHandlerTest {
 
         runBlocking { cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock) }
 
-        coVerify { smsBotMessageHandlerMock wasNot Called }
-        coVerify { sendSmsServiceMock wasNot Called }
+        coVerify { messageToBotHandlerMock wasNot Called }
+        coVerify { messageToSmsHandlerMock wasNot Called }
     }
 
     @Test
@@ -168,6 +168,6 @@ class SmsAppserviceMessageHandlerTest {
 
         runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
 
-        coVerify { sendSmsServiceMock wasNot Called }
+        coVerify { messageToSmsHandlerMock wasNot Called }
     }
 }

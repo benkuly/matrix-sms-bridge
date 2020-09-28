@@ -10,7 +10,6 @@ import reactor.core.publisher.Mono
 interface AppserviceUserRepository : ReactiveCrudRepository<AppserviceUser, String> {
 
     @Transactional
-    @Query("MATCH (:AppserviceRoom) <- [m:MEMBER_OF] - (:AppserviceUser {userId:\$userId}) WITH max(m.mappingToken) as maxi WHERE NOT maxi IS NULL RETURN maxi")
+    @Query("MATCH (:AppserviceRoom) - [m:MEMBER_OF] -> (:AppserviceUser {userId:\$userId}) WITH max(m.mappingToken) as maxi WHERE NOT maxi IS NULL RETURN maxi")
     fun findLastMappingTokenByUserId(userId: String): Mono<Int>
-
 }

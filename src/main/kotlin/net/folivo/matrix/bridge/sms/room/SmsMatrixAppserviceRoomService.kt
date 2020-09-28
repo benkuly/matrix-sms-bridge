@@ -2,6 +2,7 @@ package net.folivo.matrix.bridge.sms.room
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
@@ -56,31 +57,35 @@ class SmsMatrixAppserviceRoomService(
             val mappingToken = userService.getLastMappingToken(userId)
 
             room.members[user] = MemberOfProperties(mappingToken + 1)
-            roomRepository.save(room).awaitFirst()
+            roomRepository.save(room).awaitFirstOrNull()
         }
     }
 
-    // FIXME why this is not working properly
     override suspend fun saveRoomLeave(roomId: String, userId: String) {
-        LOG.debug("saveRoomLeave in room $roomId of user $userId")
         val room = getOrCreateRoom(roomId)
         val user = room.members.keys.find { it.userId == userId }
         if (user != null) {
-            room.members.remove(user)
+            if (room.members.size > 1) {
+                LOG.debug("save room leave in room $roomId of user $userId")
+                room.members.remove(user)
+                roomRepository.save(room).awaitFirstOrNull()
 
-            val hasOnlyManagedUsersLeft = !room.members.keys
-                    .map { it.isManaged }
-                    .contains(false)
-            if (hasOnlyManagedUsersLeft) {
-                room.members.keys
-                        .map {
-                            if (it.userId == "@${botProperties.username}:${botProperties.serverName}")
-                                matrixClient.roomsApi.leaveRoom(roomId)
-                            else matrixClient.roomsApi.leaveRoom(roomId, it.userId)
-                        }
-                roomRepository.delete(room)
+                val hasOnlyManagedUsersLeft = !room.members.keys
+                        .map { it.isManaged }
+                        .contains(false)
+                if (hasOnlyManagedUsersLeft) {
+                    LOG.debug("leave room $roomId with all managed users because there are only managed users left")
+
+                    room.members.keys
+                            .map {
+                                if (it.userId == "@${botProperties.username}:${botProperties.serverName}")
+                                    matrixClient.roomsApi.leaveRoom(roomId)
+                                else matrixClient.roomsApi.leaveRoom(roomId, it.userId)
+                            }
+                }
             } else {
-                roomRepository.save(room)
+                LOG.debug("delete room $roomId because there are no members left")
+                roomRepository.delete(room).awaitFirstOrNull()
             }
         }
     }
@@ -96,41 +101,55 @@ class SmsMatrixAppserviceRoomService(
                         val mappingToken = userService.getLastMappingToken(joinedUserId)
                         Pair(user, mappingToken)
                     }.forEach { (user, mappingToken) ->
+                        LOG.debug("collect user ${user.userId} to room $roomId")
                         room.members[user] = MemberOfProperties(mappingToken + 1)
                     }
+            LOG.debug("save room $roomId")
             return roomRepository.save(room).awaitFirst()
         }
         return room
     }
 
     suspend fun getRoom(userId: String, mappingToken: Int?): AppserviceRoom? {
-        val user = userService.getUser(userId)
-        val rooms = user.rooms.let {
-            if (it.isEmpty()) {
-                try {
-                    syncUserAndItsRooms(userId)
-                    userService.getUser(userId).rooms // TOOO do we really need a new fetch or is it already inserted?
-                } catch (error: Throwable) {
-                    it
-                }
-            } else it
-        }
-        return if (rooms.size == 1 && smsBridgeProperties.allowMappingWithoutToken) {
-            rooms.keys.first()
+        return if (mappingToken == null) {
+            if (smsBridgeProperties.allowMappingWithoutToken) {
+                val rooms = roomRepository.findAllByUserId(userId).take(2).asFlow().toList()
+                if (rooms.size == 1) rooms.first() else null
+            } else {
+                null
+            }
         } else {
-            rooms.entries
-                    .find { it.value.mappingToken == mappingToken }
-                    ?.key
+            return roomRepository.findByUserIdAndMappingToken(userId, mappingToken).awaitFirstOrNull().let {
+                if (it == null && smsBridgeProperties.allowMappingWithoutToken) {
+                    val rooms = roomRepository.findAllByUserId(userId).take(2).asFlow().toList()
+                    if (rooms.size == 1) rooms.first() else null
+                } else it
+            }
         }
     }
 
-    suspend fun syncUserAndItsRooms(asUserId: String? = null) {
-        matrixClient.roomsApi.getJoinedRooms(asUserId = asUserId)
-                .collect { room ->
-                    matrixClient.roomsApi.getJoinedMembers(room, asUserId = asUserId).joined.keys.forEach { user ->
-                        saveRoomJoin(room, user)
-                    }
-                }
+    suspend fun getRooms(userId: String): Flow<AppserviceRoom> {
+        return roomRepository.findAllByUserId(userId).asFlow()
+    }
+
+    suspend fun syncUserAndItsRooms(userId: String? = null) {
+        val dbUserId = userId ?: "@${botProperties.username}:${botProperties.serverName}"
+        if (roomRepository.findAllByUserId(dbUserId).take(1).awaitFirstOrNull() == null) {
+            try {
+                matrixClient.roomsApi.getJoinedRooms(asUserId = userId)
+                        .collect { room ->
+                            matrixClient.roomsApi.getJoinedMembers(
+                                    room,
+                                    asUserId = userId
+                            ).joined.keys.forEach { user ->
+                                saveRoomJoin(room, user)
+                            }
+                        }
+                LOG.debug("synced user because we didn't know any rooms with him")
+            } catch (error: Throwable) {
+                LOG.debug("tried to sync user without rooms, but that was not possible: ${error.message}")
+            }
+        }
     }
 
     suspend fun getRoomsWithUsers(members: Set<String>): Flow<AppserviceRoom> {

@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class SmsAppserviceMessageHandler(
-        private val sendSmsService: SendSmsService,
-        private val smsBotMessageHandler: SmsBotMessageHandler,
+        private val messageToSmsHandler: MessageToSmsHandler,
+        private val messageToBotHandler: MessageToBotHandler,
         private val roomService: SmsMatrixAppserviceRoomService,
         private val botProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
@@ -35,7 +35,7 @@ class SmsAppserviceMessageHandler(
         } else {
             val room = roomService.getOrCreateRoom(roomId)
             val wasForBot = if (content is TextMessageEventContent && room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } != null) {
-                smsBotMessageHandler.handleMessageToSmsBot(
+                messageToBotHandler.handleMessage(
                         room = room,
                         body = content.body,
                         sender = sender,
@@ -49,7 +49,7 @@ class SmsAppserviceMessageHandler(
                 LOG.debug("ignored message because it was for bot or only a notice message")
                 return
             } else {
-                sendSmsService.sendSms(
+                messageToSmsHandler.handleMessage(
                         room = room,
                         body = content.body,
                         sender = sender,

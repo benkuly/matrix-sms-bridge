@@ -1,7 +1,6 @@
 package net.folivo.matrix.bridge.sms.room
 
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
@@ -36,7 +35,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val messageRepositoryMock: RoomMessageRepository = mockk()
         val botPropertiesMock: MatrixBotProperties = mockk()
         val smsBridgePropertiesMock: SmsBridgeProperties = mockk()
-        val matrixClientMock: MatrixClient = mockk()
+        val matrixClientMock: MatrixClient = mockk(relaxed = true)
 
         var cut: SmsMatrixAppserviceRoomService = spyk(
                 SmsMatrixAppserviceRoomService(
@@ -144,161 +143,155 @@ private fun testBody(): DescribeSpec.() -> Unit {
             val user1 = AppserviceUser("someUserId1", false)
             val user2 = AppserviceUser("someUserId2", false)
             val user3 = AppserviceUser("someUserId3", true)
-            it("should save user room leave in database") {
+            val user4 = AppserviceUser("@bot:someServer", true)
+            it("should do nothing, when user is not in room") {
                 val room = AppserviceRoom(
                         "someRoomId", mutableMapOf(
-                        user1 to MemberOfProperties(1),
-                        user2 to MemberOfProperties(1),
-                        user3 to MemberOfProperties(1)
+                        user1 to MemberOfProperties(1)
                 )
                 )
-                every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
+                coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
                 every { roomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
 
                 runBlocking {
-                    cut.saveRoomLeave("someRoomId", "someUserId1")
+                    cut.saveRoomLeave("someRoomId", "someUnknownUser")
                 }
 
                 verify {
-                    roomRepositoryMock.save<AppserviceRoom>(match {
-                        it.members.keys.containsAll(listOf(user2, user3))
-                    })
+                    roomRepositoryMock wasNot Called
+                    matrixClientMock wasNot Called
                 }
             }
-            describe("all users are managed users") {
-                it("should save user room leave in database and leave room") {
-                    val user4 = AppserviceUser("@bot:someServer", true)
+            describe("there are more then two members left") {
+                it("should remove user from room members") {
                     val room = AppserviceRoom(
                             "someRoomId", mutableMapOf(
                             user1 to MemberOfProperties(1),
+                            user2 to MemberOfProperties(1),
+                            user3 to MemberOfProperties(1)
+                    )
+                    )
+                    coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
+                    every { roomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
+
+                    runBlocking {
+                        cut.saveRoomLeave("someRoomId", "someUserId1")
+                    }
+                    verify {
+                        roomRepositoryMock.save<AppserviceRoom>(match {
+                            it.members.keys.containsAll(listOf(user2, user3))
+                        })
+                        matrixClientMock wasNot Called
+                    }
+                }
+                it("should leave room, when only managed users left") {
+                    val room = AppserviceRoom(
+                            "someRoomId", mutableMapOf(
+                            user2 to MemberOfProperties(1),
                             user3 to MemberOfProperties(1),
                             user4 to MemberOfProperties(1)
                     )
                     )
-                    every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
-                    coEvery { matrixClientMock.roomsApi.leaveRoom(allAny()) } just Runs
+                    coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
+                    every { roomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
+
+                    runBlocking {
+                        cut.saveRoomLeave("someRoomId", "someUserId2")
+                    }
+
+                    verify {
+                        roomRepositoryMock.save<AppserviceRoom>(match {
+                            it.members.keys.containsAll(listOf(user3))
+                        })
+                    }
+                    coVerify {
+                        matrixClientMock.roomsApi.leaveRoom("someRoomId", "someUserId3")
+                        matrixClientMock.roomsApi.leaveRoom("someRoomId")
+                    }
+                }
+            }
+            describe("there is only one member left") {
+                it("should delete room") {
+                    val room = AppserviceRoom(
+                            "someRoomId", mutableMapOf(
+                            user1 to MemberOfProperties(1)
+                    )
+                    )
+                    coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
                     every { roomRepositoryMock.delete(any()) }.returns(Mono.empty())
 
                     runBlocking {
                         cut.saveRoomLeave("someRoomId", "someUserId1")
                     }
-
-                    verifyAll {
-                        roomRepositoryMock.findById("someRoomId")
-                        roomRepositoryMock.delete(match {
-                            it.members.keys.containsAll(listOf(user3, user4))
-                        })
-                    }
-                    coVerifyAll {
-                        matrixClientMock.roomsApi.leaveRoom("someRoomId", "someUserId3")
-                        matrixClientMock.roomsApi.leaveRoom("someRoomId", null)
+                    verify {
+                        roomRepositoryMock.delete(room)
+                        matrixClientMock wasNot Called
                     }
                 }
             }
         }
         describe(SmsMatrixAppserviceRoomService::getRoom.name) {
-            describe("user is not in any room") {
-                it("should try to fetch rooms for user from server") {
-                    val room = AppserviceRoom("someRoomId2")
-                    every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
-                    coEvery { userServiceMock.getUser("someUserId") }
-                            .returnsMany(
-                                    AppserviceUser(
-                                            "someUserId", true, mutableMapOf()
-                                    ),
-                                    AppserviceUser(
-                                            "someUserId", true, mutableMapOf(
-                                            AppserviceRoom("someRoomId1") to MemberOfProperties(12),
-                                            room to MemberOfProperties(24)
-                                    )
-                                    )
-                            )
-                    coEvery { cut.syncUserAndItsRooms(asUserId = "someUserId") } just Runs
-
-                    val result = runBlocking { cut.getRoom("someUserId", 24) }
-                    result shouldBe room
-                }
-                it("should fallback when fetch fails (e.g. user not existing)") {
-                    val room = AppserviceRoom("someRoomId2")
-                    every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
-                    coEvery { userServiceMock.getUser("someUserId") }
-                            .returns(
-                                    AppserviceUser(
-                                            "someUserId", true, mutableMapOf()
-                                    )
-                            )
-                    coEvery { cut.syncUserAndItsRooms(asUserId = "someUserId") }.throws(
-                            MatrixServerException(
-                                    FORBIDDEN,
-                                    ErrorResponse("FORBIDDEN", "not existing")
-                            )
-                    )
-
-                    val result = runBlocking { cut.getRoom("someUserId", 24) }
-                    result.shouldBeNull()
-                }
-            }
+            val room = AppserviceRoom("someRoomId2")
             describe("matching token given") {
-                it("should get room") {
-                    val room = AppserviceRoom("someRoomId2")
-                    every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
-                    coEvery { userServiceMock.getUser("someUserId") }
-                            .returns(
-                                    AppserviceUser(
-                                            "someUserId", true, mutableMapOf(
-                                            AppserviceRoom("someRoomId1") to MemberOfProperties(12),
-                                            room to MemberOfProperties(24)
-                                    )
-                                    )
-
-                            )
-                    val result = runBlocking { cut.getRoom("someUserId", 24) }
-                    Assertions.assertThat(result).isEqualTo(room)
+                describe("matching room found") {
+                    it("should get room") {
+                        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
+                        coEvery { roomRepositoryMock.findByUserIdAndMappingToken("someUserId", 24) }
+                                .returns(Mono.just(room))
+                        val result = runBlocking { cut.getRoom("someUserId", 24) }
+                        result shouldBe room
+                    }
+                }
+                describe("matching room not found") {
+                    coEvery { roomRepositoryMock.findByUserIdAndMappingToken("someUserId", 24) }
+                            .returns(Mono.empty())
+                    it("should get room when allowMappingWithoutToken and one room found") {
+                        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
+                        coEvery { roomRepositoryMock.findByUserIdAndMappingToken("someUserId", 24) }
+                                .returns(Mono.empty())
+                        coEvery { roomRepositoryMock.findAllByUserId("someUserId") }
+                                .returns(Flux.just(room))
+                        val result = runBlocking { cut.getRoom("someUserId", 24) }
+                        result shouldBe room
+                    }
+                    it("should not get room when allowMappingWithoutToken and two room found") {
+                        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
+                        coEvery { roomRepositoryMock.findByUserIdAndMappingToken("someUserId", 24) }
+                                .returns(Mono.empty())
+                        coEvery { roomRepositoryMock.findAllByUserId("someUserId") }
+                                .returns(Flux.just(room, AppserviceRoom("someOtherRoom")))
+                        val result = runBlocking { cut.getRoom("someUserId", 24) }
+                        result shouldBe null
+                    }
+                    it("should not get room when not allowMappingWithoutToken") {
+                        every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
+                        coEvery { roomRepositoryMock.findByUserIdAndMappingToken("someUserId", 24) }
+                                .returns(Mono.empty())
+                        val result = runBlocking { cut.getRoom("someUserId", 24) }
+                        result shouldBe null
+                    }
                 }
             }
             describe("no matching token given") {
-                it("should get first and only room when allowed") {
-                    val room = AppserviceRoom("someRoomId1")
-
+                it("should get first and only room when allowMappingWithoutToken") {
                     every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
-                    coEvery { userServiceMock.getUser("someUserId") }
-                            .returns(
-                                    AppserviceUser(
-                                            "someUserId", true, mutableMapOf(
-                                            room to MemberOfProperties(12)
-                                    )
-                                    )
-                            )
-                    val result = runBlocking { cut.getRoom("someUserId", 24) }
-                    Assertions.assertThat(result).isEqualTo(room)
-                }
-                it("should not get room") {
-                    every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
-
-                    coEvery { userServiceMock.getUser("someUserId") }
-                            .returns(
-                                    AppserviceUser(
-                                            "someUserId", true, mutableMapOf(
-                                            AppserviceRoom("someRoomId1") to MemberOfProperties(12)
-                                    )
-                                    )
-                            )
-                    val result = runBlocking { cut.getRoom("someUserId", 24) }
-                    Assertions.assertThat(result).isNull()
-                }
-                it("should not get room when token is null") {
-                    every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
-
-                    coEvery { userServiceMock.getUser("someUserId") }
-                            .returns(
-                                    AppserviceUser(
-                                            "someUserId", true, mutableMapOf(
-                                            AppserviceRoom("someRoomId1") to MemberOfProperties(12)
-                                    )
-                                    )
-                            )
+                    coEvery { roomRepositoryMock.findAllByUserId("someUserId") }
+                            .returns(Flux.just(room))
                     val result = runBlocking { cut.getRoom("someUserId", null) }
-                    Assertions.assertThat(result).isNull()
+                    result shouldBe room
+                }
+                it("should not get room when not allowMappingWithoutToken") {
+                    every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
+                    val result = runBlocking { cut.getRoom("someUserId", null) }
+                    result shouldBe null
+                }
+                it("should not get room when two rooms") {
+                    every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
+
+                    coEvery { roomRepositoryMock.findAllByUserId("someUserId") }
+                            .returns(Flux.just(room, AppserviceRoom("someOtherRoomId")))
+                    val result = runBlocking { cut.getRoom("someUserId", null) }
+                    result shouldBe null
                 }
             }
         }
@@ -534,9 +527,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
         describe(SmsMatrixAppserviceRoomService::syncUserAndItsRooms.name) {
             it("should fetch rooms of user and users of room") {
-                coEvery { matrixClientMock.roomsApi.getJoinedRooms(asUserId = "someUserId") }
+                every { roomRepositoryMock.findAllByUserId("someUserId1") }
+                        .returns(Flux.empty())
+                coEvery { matrixClientMock.roomsApi.getJoinedRooms(asUserId = "someUserId1") }
                         .returns(flowOf("someRoomId1", "someRoomId2"))
-                coEvery { matrixClientMock.roomsApi.getJoinedMembers("someRoomId1", asUserId = "someUserId") }
+                coEvery { matrixClientMock.roomsApi.getJoinedMembers("someRoomId1", asUserId = "someUserId1") }
                         .returns(
                                 GetJoinedMembersResponse(
                                         joined = mapOf(
@@ -545,16 +540,54 @@ private fun testBody(): DescribeSpec.() -> Unit {
                                         )
                                 )
                         )
-                coEvery { matrixClientMock.roomsApi.getJoinedMembers("someRoomId2", asUserId = "someUserId") }
-                        .returns(GetJoinedMembersResponse(joined = mapOf("someUserId1" to RoomMember())))
+                coEvery { matrixClientMock.roomsApi.getJoinedMembers("someRoomId2", asUserId = "someUserId1") }
+                        .returns(
+                                GetJoinedMembersResponse(joined = mapOf("someUserId1" to RoomMember()))
+                        )
                 coEvery { cut.saveRoomJoin(any(), any()) } just Runs
 
-                cut.syncUserAndItsRooms(asUserId = "someUserId")
+                cut.syncUserAndItsRooms("someUserId1")
 
                 coVerify {
                     cut.saveRoomJoin("someRoomId1", "someUserId1")
                     cut.saveRoomJoin("someRoomId1", "someUserId2")
                     cut.saveRoomJoin("someRoomId2", "someUserId1")
+                }
+            }
+            it("should fetch rooms of user and users of room as bot user") {
+                every { roomRepositoryMock.findAllByUserId("@bot:someServer") }
+                        .returns(Flux.empty())
+                coEvery { matrixClientMock.roomsApi.getJoinedRooms(asUserId = null) }
+                        .returns(flowOf("someRoomId1", "someRoomId2"))
+                coEvery { matrixClientMock.roomsApi.getJoinedMembers("someRoomId1", asUserId = null) }
+                        .returnsMany(
+                                GetJoinedMembersResponse(
+                                        joined = mapOf(
+                                                "someUserId1" to RoomMember(),
+                                                "someUserId2" to RoomMember()
+                                        )
+                                )
+                        )
+                coEvery { cut.saveRoomJoin(any(), any()) } just Runs
+
+                cut.syncUserAndItsRooms()
+
+                coVerify {
+                    cut.saveRoomJoin("someRoomId1", "someUserId1")
+                    cut.saveRoomJoin("someRoomId1", "someUserId2")
+                }
+            }
+            it("should not fetch rooms when user and rooms does exists") {
+                every { roomRepositoryMock.findAllByUserId("someUserId1") }
+                        .returns(Flux.just(AppserviceRoom("someRoomId")))
+
+                cut.syncUserAndItsRooms("someUserId1")
+
+                coVerify {
+                    matrixClientMock wasNot Called
+                }
+                coVerify(exactly = 0) {
+                    cut.saveRoomJoin(any(), any())
                 }
             }
         }

@@ -40,6 +40,7 @@ class ReceiveSmsService(
         val mappingToken = Regex("#[0-9]{1,9}").find(body)
                 ?.value?.substringAfter('#')?.toInt()
 
+        roomService.syncUserAndItsRooms(userId)
         val roomId = roomService.getRoom(
                 userId = userId,
                 mappingToken = mappingToken

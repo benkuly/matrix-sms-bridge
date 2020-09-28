@@ -1,26 +1,30 @@
 package net.folivo.matrix.bridge.sms.handler
 
+import kotlinx.coroutines.flow.count
+import kotlinx.coroutines.flow.take
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 @Service
-class SendSmsService(
+class MessageToSmsHandler(
         private val smsBotProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties,
-        private val smsProvider: SmsProvider
+        private val smsProvider: SmsProvider,
+        private val roomService: SmsMatrixAppserviceRoomService
 ) {
 
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    suspend fun sendSms(
+    suspend fun handleMessage(
             room: AppserviceRoom,
             body: String,
             sender: String,
@@ -41,7 +45,7 @@ class SendSmsService(
                                     receiver = receiver,
                                     body = body,
                                     mappingToken = memberOfProps.mappingToken,
-                                    needsToken = member.rooms.size > 1
+                                    needsToken = roomService.getRooms(member.userId).take(2).count() > 1 // FIXME test
                             )
                         } catch (error: Throwable) {
                             LOG.error(

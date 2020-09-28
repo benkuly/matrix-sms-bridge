@@ -19,6 +19,7 @@ services:
     environment:
       - CONFIG_LOCATION=/config/application.yml
       - GAMMU_CONFIG=/config/gammu-smsdrc
+      #- SPRING_PROFILES_ACTIVE=initialsync
     networks:
       - local-kannel
     expose:

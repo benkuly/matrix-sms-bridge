@@ -1,5 +1,10 @@
 package net.folivo.matrix.bridge.sms.room
 
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -48,6 +53,7 @@ class AppserviceRoomRepositoryIT {
     lateinit var user2: AppserviceUser
     lateinit var user3: AppserviceUser
     lateinit var user4: AppserviceUser
+    lateinit var user5: AppserviceUser
 
 
     @BeforeEach
@@ -55,40 +61,31 @@ class AppserviceRoomRepositoryIT {
         template.deleteAll(AppserviceRoom::class.java).block()
         template.deleteAll(AppserviceUser::class.java).block()
 
-        room1 = template.save(AppserviceRoom("someRoomId1")).block() ?: throw RuntimeException()
-        room2 = template.save(AppserviceRoom("someRoomId2")).block() ?: throw RuntimeException()
+        user1 = template.save(AppserviceUser("someUserId1", true)).block() ?: throw RuntimeException()
+        user2 = template.save(AppserviceUser("someUserId2", true)).block() ?: throw RuntimeException()
+        user3 = template.save(AppserviceUser("someUserId3", true)).block() ?: throw RuntimeException()
+        user4 = template.save(AppserviceUser("someUserId4", true)).block() ?: throw RuntimeException()
+        user5 = template.save(AppserviceUser("someUserId4", true)).block() ?: throw RuntimeException()
 
-        user1 = template.save(
-                AppserviceUser(
-                        "someUserId1", true,
-                        mutableMapOf(
-                                room1 to MemberOfProperties(1),
-                                room2 to MemberOfProperties(24)
+
+        room1 = template.save(
+                AppserviceRoom(
+                        "someRoomId1",
+                        members = mutableMapOf(
+                                user1 to MemberOfProperties(1),
+                                user2 to MemberOfProperties(1),
+                                user3 to MemberOfProperties(1)
                         )
                 )
+
         ).block() ?: throw RuntimeException()
-        user2 = template.save(
-                AppserviceUser(
-                        "someUserId2", true,
-                        mutableMapOf(
-                                room1 to MemberOfProperties(1)
-                        )
-                )
-        ).block() ?: throw RuntimeException()
-        user3 = template.save(
-                AppserviceUser(
-                        "someUserId3", true,
-                        mutableMapOf(
-                                room1 to MemberOfProperties(1),
-                                room2 to MemberOfProperties(2)
-                        )
-                )
-        ).block() ?: throw RuntimeException()
-        user4 = template.save(
-                AppserviceUser(
-                        "someUserId4", true,
-                        mutableMapOf(
-                                room2 to MemberOfProperties(2)
+        room2 = template.save(
+                AppserviceRoom(
+                        "someRoomId2",
+                        members = mutableMapOf(
+                                user1 to MemberOfProperties(24),
+                                user2 to MemberOfProperties(2),
+                                user4 to MemberOfProperties(2)
                         )
                 )
         ).block() ?: throw RuntimeException()
@@ -107,14 +104,14 @@ class AppserviceRoomRepositoryIT {
     @Test
     fun `should findByMembersUserIdContaining one`() {
         StepVerifier
-                .create(cut.findByMembersUserIdContaining(setOf("someUserId1", "someUserId2")))
+                .create(cut.findByMembersUserIdContaining(setOf("someUserId1", "someUserId3")))
                 .assertNext { assertThat(it.roomId).isEqualTo("someRoomId1") }.verifyComplete()
     }
 
     @Test
     fun `should findByMembersUserIdContaining two`() {
         StepVerifier
-                .create(cut.findByMembersUserIdContaining(setOf("someUserId1", "someUserId3")))
+                .create(cut.findByMembersUserIdContaining(setOf("someUserId1", "someUserId2")))
                 .assertNext { assertThat(it.roomId).isEqualTo("someRoomId1") }
                 .assertNext { assertThat(it.roomId).isEqualTo("someRoomId2") }
                 .verifyComplete()
@@ -123,7 +120,7 @@ class AppserviceRoomRepositoryIT {
     @Test
     fun `should not findByMembersUserIdContaining`() {
         StepVerifier
-                .create(cut.findByMembersUserIdContaining(setOf("someUserId2", "someUserId4")))
+                .create(cut.findByMembersUserIdContaining(setOf("someUserId3", "someUserId4")))
                 .verifyComplete()
     }
 
@@ -131,6 +128,50 @@ class AppserviceRoomRepositoryIT {
     fun `should not findByMembersUserIdContaining with foreign userid`() {
         StepVerifier
                 .create(cut.findByMembersUserIdContaining(setOf("someUserId2", "someUserId24")))
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should findAllByUserId`() {
+        val result1 = runBlocking { cut.findAllByUserId("someUserId1").asFlow().toList() }
+        result1.map { it.roomId }.shouldContainExactlyInAnyOrder("someRoomId1", "someRoomId2")
+
+        val result2 = runBlocking { cut.findAllByUserId("someUserId4").asFlow().toList() }
+        result2.map { it.roomId }.shouldContainExactlyInAnyOrder("someRoomId2")
+    }
+
+    @Test
+    fun `should not findAllByUserId`() {
+        StepVerifier
+                .create(cut.findAllByUserId("someUnknownUserId"))
+                .verifyComplete()
+        StepVerifier
+                .create(cut.findAllByUserId("someUserId5"))
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should findByUserIdAndMappingToken`() {
+        StepVerifier
+                .create(cut.findByUserIdAndMappingToken("someUserId1", 24))
+                .assertNext { it.roomId.shouldBe("someRoomId2") }
+                .verifyComplete()
+        StepVerifier
+                .create(cut.findByUserIdAndMappingToken("someUserId4", 2))
+                .assertNext { it.roomId.shouldBe("someRoomId2") }
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should not findByUserIdAndMappingToken`() {
+        StepVerifier
+                .create(cut.findByUserIdAndMappingToken("someUserId4", 33))
+                .verifyComplete()
+        StepVerifier
+                .create(cut.findByUserIdAndMappingToken("someUserId5", 1))
+                .verifyComplete()
+        StepVerifier
+                .create(cut.findByUserIdAndMappingToken("someUnknownUserId", 1))
                 .verifyComplete()
     }
 }

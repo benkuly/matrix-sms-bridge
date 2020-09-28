@@ -53,29 +53,20 @@ class AppserviceUserRepositoryIT {
         template.deleteAll(AppserviceRoom::class.java).block()
         template.deleteAll(AppserviceUser::class.java).block()
 
-        room1 = template.save(AppserviceRoom("someRoomId1")).block() ?: throw RuntimeException()
-        room2 = template.save(AppserviceRoom("someRoomId2")).block() ?: throw RuntimeException()
+        user1 = template.save(AppserviceUser("someUserId1", true)).block() ?: throw RuntimeException()
+        user2 = template.save(AppserviceUser("someUserId2", true)).block() ?: throw RuntimeException()
+        user3 = template.save(AppserviceUser("someUserId3", true)).block() ?: throw RuntimeException()
 
-        user1 = template.save(
-                AppserviceUser(
-                        "someUserId1", true, mutableMapOf(
-                        room1 to MemberOfProperties(1), room2 to MemberOfProperties(24)
+        room1 = template.save(
+                AppserviceRoom(
+                        "someRoomId1",
+                        mutableMapOf(
+                                user1 to MemberOfProperties(1),
+                                user2 to MemberOfProperties(1)
+                        )
                 )
-                )
-        ).block()
-                ?: throw RuntimeException()
-        user2 = template.save(
-                AppserviceUser(
-                        "someUserId2", true,
-                        mutableMapOf(room1 to MemberOfProperties(1))
-                )
-        ).block()
-                ?: throw RuntimeException()
-        user3 = template.save(
-                AppserviceUser(
-                        "someUserId3", true
-                )
-        ).block()
+        ).block() ?: throw RuntimeException()
+        room2 = template.save(AppserviceRoom("someRoomId2", mutableMapOf(user1 to MemberOfProperties(24)))).block()
                 ?: throw RuntimeException()
     }
 

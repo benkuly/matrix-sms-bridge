@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
-class SmsBotMessageHandlerTest {
+class MessageToBotHandlerTest {
     @MockK
     lateinit var sendSmsCommandHelperMock: SendSmsCommandHelper
 
@@ -31,7 +31,7 @@ class SmsBotMessageHandlerTest {
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
 
     @InjectMockKs
-    lateinit var cut: SmsBotMessageHandler
+    lateinit var cut: MessageToBotHandler
 
     @MockK
     lateinit var roomMock: AppserviceRoom
@@ -62,7 +62,7 @@ class SmsBotMessageHandlerTest {
         every { phoneNumberServiceMock.parseToInternationalNumber(any()) }.returns("+4917392837462")
 
         val result = runBlocking {
-            cut.handleMessageToSmsBot(
+            cut.handleMessage(
                     roomMock,
                     "sms send -t 017392837462 'some Text'",
                     "someUserId2",
@@ -86,7 +86,7 @@ class SmsBotMessageHandlerTest {
                 )
         )
         val result = runBlocking {
-            cut.handleMessageToSmsBot(roomMock, "sms bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "sms bla", "someUserId2", contextMock)
         }
         assertThat(result).isTrue()
         coVerify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "tooMany" }) }
@@ -95,7 +95,7 @@ class SmsBotMessageHandlerTest {
     @Test
     fun `should answer with help when not sms command`() {
         val result = runBlocking {
-            cut.handleMessageToSmsBot(roomMock, "bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "bla", "someUserId2", contextMock)
         }
         assertThat(result).isTrue()
         coVerify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "help" }) }
@@ -104,12 +104,12 @@ class SmsBotMessageHandlerTest {
     @Test
     fun `should not allow managed user to run command`() {
         val result1 = runBlocking {
-            cut.handleMessageToSmsBot(roomMock, "sms send", "someUserId1", contextMock)
+            cut.handleMessage(roomMock, "sms send", "someUserId1", contextMock)
         }
         assertThat(result1).isFalse()
 
         val result2 = runBlocking {
-            cut.handleMessageToSmsBot(roomMock, "sms send", "notKnownUserId", contextMock)
+            cut.handleMessage(roomMock, "sms send", "notKnownUserId", contextMock)
         }
         assertThat(result2).isFalse()
 
@@ -125,7 +125,7 @@ class SmsBotMessageHandlerTest {
                 )
         )
         val result = runBlocking {
-            cut.handleMessageToSmsBot(roomMock, "bla", "someUserId1", contextMock)
+            cut.handleMessage(roomMock, "bla", "someUserId1", contextMock)
         }
         assertThat(result).isFalse()
         coVerify { contextMock wasNot Called }
@@ -142,7 +142,7 @@ class SmsBotMessageHandlerTest {
                 )
         )
         val result = runBlocking {
-            cut.handleMessageToSmsBot(roomMock, "bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "bla", "someUserId2", contextMock)
         }
         assertThat(result).isFalse()
         coVerify { contextMock wasNot Called }
@@ -151,7 +151,7 @@ class SmsBotMessageHandlerTest {
     @Test
     fun `should catch errors from SMSCommand`() {
         val result = runBlocking {
-            cut.handleMessageToSmsBot(roomMock, "sms send bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "sms send bla", "someUserId2", contextMock)
         }
         assertThat(result).isTrue()
         coVerify {
@@ -166,7 +166,7 @@ class SmsBotMessageHandlerTest {
     @Test
     fun `should catch errors from unparsable command`() {
         val result = runBlocking {
-            cut.handleMessageToSmsBot(roomMock, "sms send \" bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "sms send \" bla", "someUserId2", contextMock)
         }
         assertThat(result).isTrue()
         coVerify {

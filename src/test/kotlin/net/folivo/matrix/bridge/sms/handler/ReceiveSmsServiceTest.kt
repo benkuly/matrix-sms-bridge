@@ -1,9 +1,6 @@
 package net.folivo.matrix.bridge.sms.handler
 
-import io.mockk.Called
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
+import io.mockk.*
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -44,6 +41,7 @@ class ReceiveSmsServiceTest {
     @BeforeEach
     fun configureProperties() {
         every { matrixBotPropertiesMock.serverName } returns "someServerName"
+        coEvery { roomServiceMock.syncUserAndItsRooms(any()) } just Runs
     }
 
     @Test
