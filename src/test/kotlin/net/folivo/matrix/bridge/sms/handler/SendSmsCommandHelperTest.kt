@@ -185,15 +185,9 @@ class SendSmsCommandHelperTest {
         val roomMock = mockk<AppserviceRoom> {
             every { roomId }.returns("someRoomId")
             every { members }.returns(
-                    mutableMapOf(
-                            AppserviceUser(
-                                    "smsUser",
-                                    true
-                            ) to MemberOfProperties(2),
-                            AppserviceUser(
-                                    "@bot:someServer",
-                                    true
-                            ) to MemberOfProperties(2)
+                    listOf(
+                            MemberOfProperties(AppserviceUser("smsUser", true), 2),
+                            MemberOfProperties(AppserviceUser("@bot:someServer", true), 2),
                     )
             )
         }
@@ -233,10 +227,10 @@ class SendSmsCommandHelperTest {
                 .returns(mockk {
                     every { roomId }.returns("someRoomId")
                     every { members }.returns(
-                            mutableMapOf(
-                                    AppserviceUser("someUser", true) to MemberOfProperties(1),
-                                    AppserviceUser("someUserTooMany", true) to MemberOfProperties(1),
-                                    AppserviceUser("@bot:someServer", true) to MemberOfProperties(1)
+                            listOf(
+                                    MemberOfProperties(AppserviceUser("someUser", true), 1),
+                                    MemberOfProperties(AppserviceUser("someUserTooMany", true), 1),
+                                    MemberOfProperties(AppserviceUser("@bot:someServer", true), 1)
                             )
                     )
                 })
@@ -264,15 +258,9 @@ class SendSmsCommandHelperTest {
             every { roomId }.returns("someRoomId")
         }))
         every { room.members }.returns(
-                mutableMapOf(
-                        AppserviceUser(
-                                "someOtherUser",
-                                false
-                        ) to MemberOfProperties(1),
-                        AppserviceUser(
-                                "@sms_1111111111:someServer",
-                                true
-                        ) to MemberOfProperties(1)
+                listOf(
+                        MemberOfProperties(AppserviceUser("someOtherUser", false), 1),
+                        MemberOfProperties(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -315,9 +303,9 @@ class SendSmsCommandHelperTest {
                 .returns(mockk {
                     every { roomId }.returns("someRoomId")
                     every { members }.returns(
-                            mutableMapOf(
-                                    AppserviceUser("someUser", true) to MemberOfProperties(1),
-                                    AppserviceUser("botUser", true) to MemberOfProperties(1)
+                            listOf(
+                                    MemberOfProperties(AppserviceUser("someUser", true), 1),
+                                    MemberOfProperties(AppserviceUser("botUser", true), 1)
                             )
                     )
                 })
@@ -412,15 +400,9 @@ class SendSmsCommandHelperTest {
             every { roomId }.returns("someRoomId")
         }))
         every { room.members }.returns(
-                mutableMapOf(
-                        AppserviceUser(
-                                "@bot:someServer",
-                                true
-                        ) to MemberOfProperties(1),
-                        AppserviceUser(
-                                "@sms_1111111111:someServer",
-                                true
-                        ) to MemberOfProperties(1)
+                listOf(
+                        MemberOfProperties(AppserviceUser("@bot:someServer", true), 1),
+                        MemberOfProperties(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -465,15 +447,9 @@ class SendSmsCommandHelperTest {
             every { roomId }.returns("someRoomId")
         }))
         every { room.members }.returns(
-                mutableMapOf(
-                        AppserviceUser(
-                                "someOtherUser",
-                                false
-                        ) to MemberOfProperties(1),
-                        AppserviceUser(
-                                "@sms_1111111111:someServer",
-                                true
-                        ) to MemberOfProperties(1)
+                listOf(
+                        MemberOfProperties(AppserviceUser("someOtherUser", false), 1),
+                        MemberOfProperties(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -521,15 +497,9 @@ class SendSmsCommandHelperTest {
             every { roomId }.returns("someRoomId")
         }))
         every { room.members }.returns(
-                mutableMapOf(
-                        AppserviceUser(
-                                "someOtherUser",
-                                false
-                        ) to MemberOfProperties(1),
-                        AppserviceUser(
-                                "@sms_1111111111:someServer",
-                                true
-                        ) to MemberOfProperties(1)
+                listOf(
+                        MemberOfProperties(AppserviceUser("someOtherUser", false), 1),
+                        MemberOfProperties(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }

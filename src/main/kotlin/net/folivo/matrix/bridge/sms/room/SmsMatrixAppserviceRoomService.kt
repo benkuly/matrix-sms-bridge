@@ -53,34 +53,34 @@ class SmsMatrixAppserviceRoomService(
         LOG.debug("saveRoomJoin in room $roomId of user $userId")
         val user = userService.getUser(userId)
 
-        if (!room.members.containsKey(user)) {
+        if (!room.members.map { it.member }.contains(user)) {
             val mappingToken = userService.getLastMappingToken(userId)
 
-            room.members[user] = MemberOfProperties(mappingToken + 1)
-            roomRepository.save(room).awaitFirstOrNull()
+            val newRoom = room.copy(members = room.members.plus(MemberOfProperties(user, mappingToken + 1)))
+            roomRepository.save(newRoom).awaitFirstOrNull()
         }
     }
 
     override suspend fun saveRoomLeave(roomId: String, userId: String) {
         val room = getOrCreateRoom(roomId)
-        val user = room.members.keys.find { it.userId == userId }
-        if (user != null) {
+        val memberOf = room.members.find { it.member.userId == userId }
+        if (memberOf != null) {
             if (room.members.size > 1) {
                 LOG.debug("save room leave in room $roomId of user $userId")
-                room.members.remove(user)
-                roomRepository.save(room).awaitFirstOrNull()
+                val newRoom = room.copy(members = room.members.minus(memberOf))
+                roomRepository.save(newRoom).awaitFirstOrNull()
 
-                val hasOnlyManagedUsersLeft = !room.members.keys
-                        .map { it.isManaged }
+                val hasOnlyManagedUsersLeft = !room.members
+                        .map { it.member.isManaged }
                         .contains(false)
                 if (hasOnlyManagedUsersLeft) {
                     LOG.debug("leave room $roomId with all managed users because there are only managed users left")
 
-                    room.members.keys
+                    newRoom.members
                             .map {
-                                if (it.userId == "@${botProperties.username}:${botProperties.serverName}")
+                                if (it.member.userId == "@${botProperties.username}:${botProperties.serverName}")
                                     matrixClient.roomsApi.leaveRoom(roomId)
-                                else matrixClient.roomsApi.leaveRoom(roomId, it.userId)
+                                else matrixClient.roomsApi.leaveRoom(roomId, it.member.userId)
                             }
                 }
             } else {
@@ -95,17 +95,18 @@ class SmsMatrixAppserviceRoomService(
                    ?: roomRepository.save(AppserviceRoom(roomId)).awaitFirst()
         if (room.members.isEmpty()) {// this is needed to get all members, e.g. when managed user joins a new room
             LOG.debug("collect all members in room $roomId because we didn't save it yet")
-            matrixClient.roomsApi.getJoinedMembers(roomId).joined.keys
+            val members = matrixClient.roomsApi.getJoinedMembers(roomId).joined.keys
                     .map { joinedUserId ->
                         val user = userService.getUser(joinedUserId)
                         val mappingToken = userService.getLastMappingToken(joinedUserId)
                         Pair(user, mappingToken)
-                    }.forEach { (user, mappingToken) ->
+                    }.map { (user, mappingToken) ->
                         LOG.debug("collect user ${user.userId} to room $roomId")
-                        room.members[user] = MemberOfProperties(mappingToken + 1)
+                        MemberOfProperties(user, mappingToken + 1)
                     }
+            val newRoom = room.copy(members = members)
             LOG.debug("save room $roomId")
-            return roomRepository.save(room).awaitFirst()
+            return roomRepository.save(newRoom).awaitFirst()
         }
         return room
     }
@@ -158,7 +159,8 @@ class SmsMatrixAppserviceRoomService(
 
     suspend fun sendRoomMessage(message: RoomMessage) {
         if (Instant.now().isAfter(message.sendAfter)) {
-            val containsReceivers = message.room.members.keys.map { it.userId }.containsAll(message.requiredReceiverIds)
+            val containsReceivers = message.room.members.map { it.member.userId }
+                    .containsAll(message.requiredReceiverIds)
             val roomId = message.room.roomId
             val isNew = message.id == null
             if (containsReceivers) {

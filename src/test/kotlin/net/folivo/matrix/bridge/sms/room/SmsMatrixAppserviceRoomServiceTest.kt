@@ -85,8 +85,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
         describe(SmsMatrixAppserviceRoomService::saveRoomJoin.name) {
             it("should save user join in database") {
-                val room = AppserviceRoom("someRoomId", mutableMapOf(mockk<AppserviceUser>() to mockk()))
                 val user = AppserviceUser("someUserId", true)
+                val room = AppserviceRoom("someRoomId", listOf(MemberOfProperties(mockk(), 1)))
+
                 every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
                 coEvery { userServiceMock.getUser("someUserId") }.returns(user)
                 coEvery { userServiceMock.getLastMappingToken("someUserId") }.returns(23)
@@ -98,8 +99,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
 
                 verify {
                     roomRepositoryMock.save<AppserviceRoom>(match {
-                        it.members.contains(user)
-                        && it.members[user] == MemberOfProperties(24)
+                        it.members.contains(MemberOfProperties(user, 24))
                     })
                 }
             }
@@ -109,9 +109,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     val existingUser = AppserviceUser("someExistingUserId", false)
                     val roomWithoutMember = AppserviceRoom("someRoomId")
                     val roomWithMember = AppserviceRoom(
-                            "someRoomId", mutableMapOf(
-                            existingUser to MemberOfProperties(1),
-                            user to MemberOfProperties(1)
+                            "someRoomId", listOf(
+                            MemberOfProperties(existingUser, 1),
+                            MemberOfProperties(user, 1)
                     )
                     )
                     coEvery { userServiceMock.getUser("someExistingUserId") }.returns(existingUser)
@@ -140,16 +140,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
             }
         }
         describe(SmsMatrixAppserviceRoomService::saveRoomLeave.name) {
-            val user1 = AppserviceUser("someUserId1", false)
-            val user2 = AppserviceUser("someUserId2", false)
-            val user3 = AppserviceUser("someUserId3", true)
-            val user4 = AppserviceUser("@bot:someServer", true)
+            val user1 = MemberOfProperties(AppserviceUser("someUserId1", false), 1)
+            val user2 = MemberOfProperties(AppserviceUser("someUserId2", false), 1)
+            val user3 = MemberOfProperties(AppserviceUser("someUserId3", true), 1)
+            val user4 = MemberOfProperties(AppserviceUser("@bot:someServer", true), 1)
             it("should do nothing, when user is not in room") {
-                val room = AppserviceRoom(
-                        "someRoomId", mutableMapOf(
-                        user1 to MemberOfProperties(1)
-                )
-                )
+                val room = AppserviceRoom("someRoomId", listOf(user1))
                 coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
                 every { roomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
 
@@ -164,13 +160,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
             }
             describe("there are more then two members left") {
                 it("should remove user from room members") {
-                    val room = AppserviceRoom(
-                            "someRoomId", mutableMapOf(
-                            user1 to MemberOfProperties(1),
-                            user2 to MemberOfProperties(1),
-                            user3 to MemberOfProperties(1)
-                    )
-                    )
+                    val room = AppserviceRoom("someRoomId", listOf(user1, user2, user3))
                     coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
                     every { roomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
 
@@ -179,19 +169,13 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                     verify {
                         roomRepositoryMock.save<AppserviceRoom>(match {
-                            it.members.keys.containsAll(listOf(user2, user3))
+                            it.members.containsAll(listOf(user2, user3))
                         })
                         matrixClientMock wasNot Called
                     }
                 }
                 it("should leave room, when only managed users left") {
-                    val room = AppserviceRoom(
-                            "someRoomId", mutableMapOf(
-                            user2 to MemberOfProperties(1),
-                            user3 to MemberOfProperties(1),
-                            user4 to MemberOfProperties(1)
-                    )
-                    )
+                    val room = AppserviceRoom("someRoomId", listOf(user2, user3, user4))
                     coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
                     every { roomRepositoryMock.save<AppserviceRoom>(any()) }.returns(Mono.just(room))
 
@@ -201,7 +185,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
 
                     verify {
                         roomRepositoryMock.save<AppserviceRoom>(match {
-                            it.members.keys.containsAll(listOf(user3))
+                            it.members.containsAll(listOf(user3))
                         })
                     }
                     coVerify {
@@ -212,11 +196,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
             }
             describe("there is only one member left") {
                 it("should delete room") {
-                    val room = AppserviceRoom(
-                            "someRoomId", mutableMapOf(
-                            user1 to MemberOfProperties(1)
-                    )
-                    )
+                    val room = AppserviceRoom("someRoomId", listOf(user1))
                     coEvery { cut.getOrCreateRoom("someRoomId") }.returns(room)
                     every { roomRepositoryMock.delete(any()) }.returns(Mono.empty())
 
@@ -297,10 +277,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
         describe(SmsMatrixAppserviceRoomService::getOrCreateRoom.name) {
             it("should get room") {
-                val room = AppserviceRoom(
-                        "someRoomId",
-                        mutableMapOf(AppserviceUser("userId1", true) to MemberOfProperties(1))
-                )
+                val room = AppserviceRoom("someRoomId", listOf(MemberOfProperties(AppserviceUser("userId1", true), 1)))
                 every { roomRepositoryMock.findById("someRoomId") }.returns(Mono.just(room))
                 val result = runBlocking { cut.getOrCreateRoom("someRoomId") }
                 Assertions.assertThat(result).isEqualTo(room)
@@ -311,7 +288,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 val roomWithoutUsers = AppserviceRoom("someRoomId")
                 val roomWithUsers = AppserviceRoom(
                         "someRoomId",
-                        mutableMapOf(user1 to MemberOfProperties(1), user2 to MemberOfProperties(24))
+                        listOf(MemberOfProperties(user1, 1), MemberOfProperties(user2, 24))
                 )
 
                 every { roomRepositoryMock.save<AppserviceRoom>(any()) }.returnsMany(
@@ -367,8 +344,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
             }
             describe("sending time is in long past") {
                 val room = AppserviceRoom(
-                        "someRoomId", mutableMapOf(
-                        AppserviceUser("someUserId1", false) to MemberOfProperties(12)
+                        "someRoomId", listOf(
+                        MemberOfProperties(AppserviceUser("someUserId1", false), 12)
                 )
                 )
                 it("should try to send and delete messages when sending fails") {
@@ -433,9 +410,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
             describe("sending time is in short past") {
                 it("should send and delete message") {
                     val room = AppserviceRoom(
-                            "someRoomId", mutableMapOf(
-                            AppserviceUser("someUserId1", false) to MemberOfProperties(12),
-                            AppserviceUser("someUserId2", true) to MemberOfProperties(24)
+                            "someRoomId", listOf(
+                            MemberOfProperties(AppserviceUser("someUserId1", false), 12),
+                            MemberOfProperties(AppserviceUser("someUserId2", true), 24)
                     )
                     )
                     val message = RoomMessage(
@@ -469,9 +446,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should try to send but not delete message") {
                     val room = AppserviceRoom(
-                            "someRoomId", mutableMapOf(
-                            AppserviceUser("someUserId1", false) to MemberOfProperties(12)
-                    )
+                            "someRoomId", listOf(MemberOfProperties(AppserviceUser("someUserId1", false), 12))
                     )
                     val message = RoomMessage(room, "some body", Instant.now().minusSeconds(300))
                     ReflectionTestUtils.setField(message, "id", 1L)
@@ -495,8 +470,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should not send messages when members are missing in room") {
                     val room = AppserviceRoom(
-                            "someRoomId", mutableMapOf(
-                            AppserviceUser("someUserId1", false) to MemberOfProperties(12)
+                            "someRoomId", listOf(
+                            MemberOfProperties(AppserviceUser("someUserId1", false), 12)
                     )
                     )
                     val message = RoomMessage(

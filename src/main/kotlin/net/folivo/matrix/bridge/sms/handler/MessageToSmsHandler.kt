@@ -32,11 +32,12 @@ class MessageToSmsHandler(
             isTextMessage: Boolean
     ) {
 
-        room.members.entries
-                .filter { it.key.userId != sender }
-                .map { Triple(it.key, it.value, it.key.userId.removePrefix("@sms_").substringBefore(":")) }
-                .filter { it.third.matches(Regex("[0-9]{6,15}")) }
-                .map { (member, memberOfProps, receiver) ->
+        room.members
+                .filter { it.member.userId != sender }
+                .map { it.member.userId.removePrefix("@sms_").substringBefore(":") to it }
+                .filter { (receiver, _) -> receiver.matches(Regex("[0-9]{6,15}")) }
+                .map { (receiver, memberOfProps) ->
+                    val memberUserId = memberOfProps.member.userId
                     if (isTextMessage) {
                         LOG.debug("send SMS from ${room.roomId} to +$receiver")
                         try {
@@ -45,7 +46,7 @@ class MessageToSmsHandler(
                                     receiver = receiver,
                                     body = body,
                                     mappingToken = memberOfProps.mappingToken,
-                                    needsToken = roomService.getRooms(member.userId).take(2).count() > 1 // FIXME test
+                                    needsToken = roomService.getRooms(memberUserId).take(2).count() > 1 // FIXME test
                             )
                         } catch (error: Throwable) {
                             LOG.error(
@@ -54,14 +55,14 @@ class MessageToSmsHandler(
                             ) // TODO it should send sms later
                             context.answer(
                                     NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsError),
-                                    asUserId = member.userId
+                                    asUserId = memberUserId
                             )
                         }
                     } else {
                         LOG.debug("cannot send SMS from ${room.roomId} to +$receiver because of incompatible message type")
                         context.answer(
                                 NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsIncompatibleMessage),
-                                asUserId = member.userId
+                                asUserId = memberUserId
                         )
                     }
                 }

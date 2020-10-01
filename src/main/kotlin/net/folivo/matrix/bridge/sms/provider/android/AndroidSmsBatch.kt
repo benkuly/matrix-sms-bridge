@@ -1,9 +1,9 @@
 package net.folivo.matrix.bridge.sms.provider.android
 
-import org.neo4j.springframework.data.core.schema.Id
-import org.neo4j.springframework.data.core.schema.Node
-import org.neo4j.springframework.data.core.schema.Property
 import org.springframework.data.annotation.Version
+import org.springframework.data.neo4j.core.schema.Id
+import org.springframework.data.neo4j.core.schema.Node
+import org.springframework.data.neo4j.core.schema.Property
 
 @Node("AndroidSmsBatch")
 data class AndroidSmsBatch(

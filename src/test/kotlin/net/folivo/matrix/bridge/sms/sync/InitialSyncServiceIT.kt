@@ -13,11 +13,9 @@ import net.folivo.matrix.restclient.api.rooms.GetJoinedMembersResponse.RoomMembe
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.neo4j.driver.springframework.boot.test.autoconfigure.Neo4jTestHarnessAutoConfiguration
-import org.neo4j.springframework.data.core.ReactiveNeo4jTemplate
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -27,7 +25,6 @@ import org.testcontainers.junit.jupiter.Testcontainers
 
 
 @SpringBootTest
-@EnableAutoConfiguration(exclude = [Neo4jTestHarnessAutoConfiguration::class])
 @Testcontainers
 @ActiveProfiles(profiles = ["initialsync"])
 class InitialSyncServiceIT {
@@ -39,9 +36,9 @@ class InitialSyncServiceIT {
         @DynamicPropertySource
         @JvmStatic
         fun neo4jProperties(registry: DynamicPropertyRegistry) {
-            registry.add("org.neo4j.driver.uri", neo4jContainer::getBoltUrl)
-            registry.add("org.neo4j.driver.authentication.username") { "neo4j" }
-            registry.add("org.neo4j.driver.authentication.password", neo4jContainer::getAdminPassword)
+            registry.add("spring.neo4j.uri", neo4jContainer::getBoltUrl)
+            registry.add("spring.neo4j.authentication.username") { "neo4j" }
+            registry.add("spring.neo4j.authentication.password", neo4jContainer::getAdminPassword)
         }
     }
 
@@ -75,14 +72,14 @@ class InitialSyncServiceIT {
         room1 = template.save(
                 AppserviceRoom(
                         "someRoomId1",
-                        members = mutableMapOf(
-                                user1 to MemberOfProperties(1),
-                                user2 to MemberOfProperties(1)
+                        members = listOf(
+                                MemberOfProperties(user1, 1),
+                                MemberOfProperties(user2, 1)
                         )
                 )
         )
                         .block() ?: throw RuntimeException()
-        room2 = template.save(AppserviceRoom("someRoomId2", members = mutableMapOf(user1 to MemberOfProperties(24))))
+        room2 = template.save(AppserviceRoom("someRoomId2", members = listOf(MemberOfProperties(user1, 24))))
                         .block() ?: throw RuntimeException()
 
         //after initialsync

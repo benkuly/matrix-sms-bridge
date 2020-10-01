@@ -10,10 +10,9 @@ import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.neo4j.driver.springframework.boot.test.autoconfigure.Neo4jTestHarnessAutoConfiguration
-import org.neo4j.springframework.boot.test.autoconfigure.data.ReactiveDataNeo4jTest
-import org.neo4j.springframework.data.core.ReactiveNeo4jTemplate
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.data.neo4j.DataNeo4jTest
+import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.Neo4jContainer
@@ -22,7 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import reactor.test.StepVerifier
 
 
-@ReactiveDataNeo4jTest(excludeAutoConfiguration = [Neo4jTestHarnessAutoConfiguration::class])
+@DataNeo4jTest
 @Testcontainers
 class AppserviceRoomRepositoryIT {
 
@@ -33,9 +32,9 @@ class AppserviceRoomRepositoryIT {
         @DynamicPropertySource
         @JvmStatic
         fun neo4jProperties(registry: DynamicPropertyRegistry) {
-            registry.add("org.neo4j.driver.uri", neo4jContainer::getBoltUrl)
-            registry.add("org.neo4j.driver.authentication.username") { "neo4j" }
-            registry.add("org.neo4j.driver.authentication.password", neo4jContainer::getAdminPassword)
+            registry.add("spring.neo4j.uri", neo4jContainer::getBoltUrl)
+            registry.add("spring.neo4j.authentication.username") { "neo4j" }
+            registry.add("spring.neo4j.authentication.password", neo4jContainer::getAdminPassword)
         }
     }
 
@@ -71,10 +70,10 @@ class AppserviceRoomRepositoryIT {
         room1 = template.save(
                 AppserviceRoom(
                         "someRoomId1",
-                        members = mutableMapOf(
-                                user1 to MemberOfProperties(1),
-                                user2 to MemberOfProperties(1),
-                                user3 to MemberOfProperties(1)
+                        members = listOf(
+                                MemberOfProperties(user1, 1),
+                                MemberOfProperties(user2, 1),
+                                MemberOfProperties(user3, 1)
                         )
                 )
 
@@ -82,10 +81,10 @@ class AppserviceRoomRepositoryIT {
         room2 = template.save(
                 AppserviceRoom(
                         "someRoomId2",
-                        members = mutableMapOf(
-                                user1 to MemberOfProperties(24),
-                                user2 to MemberOfProperties(2),
-                                user4 to MemberOfProperties(2)
+                        members = listOf(
+                                MemberOfProperties(user1, 24),
+                                MemberOfProperties(user2, 2),
+                                MemberOfProperties(user4, 2)
                         )
                 )
         ).block() ?: throw RuntimeException()
@@ -97,7 +96,7 @@ class AppserviceRoomRepositoryIT {
                 .create(cut.findById("someRoomId1"))
                 .assertNext { room ->
                     assertThat(room.roomId).isEqualTo("someRoomId1")
-                    assertThat(room.members.keys.map { it.userId }).containsAll(listOf("someUserId1", "someUserId2"))
+                    assertThat(room.members.map { it.member.userId }).containsAll(listOf("someUserId1", "someUserId2"))
                 }.verifyComplete()
     }
 
@@ -172,6 +171,27 @@ class AppserviceRoomRepositoryIT {
                 .verifyComplete()
         StepVerifier
                 .create(cut.findByUserIdAndMappingToken("someUnknownUserId", 1))
+                .verifyComplete()
+    }
+
+    @Test
+    fun `should save room leave`() {
+        val removeIt = MemberOfProperties(user1, 1)
+        val room = template.save(
+                AppserviceRoom(
+                        "someRoomId",
+                        members = listOf(
+                                removeIt,
+                                MemberOfProperties(user2, 1)
+                        )
+                )
+        ).block() ?: throw RuntimeException()
+
+        cut.save(room.copy(members = room.members.minus(removeIt))).block()
+
+        StepVerifier
+                .create(cut.findById("someRoomId"))
+                .assertNext { it.members.size.shouldBe(1) }
                 .verifyComplete()
     }
 }

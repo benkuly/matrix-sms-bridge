@@ -71,9 +71,9 @@ class SendSmsCommandHelper(
                 if (body.isNullOrBlank()) {
                     smsBridgeProperties.templates.botSmsSendNoMessage
                 } else {
-                    val botIsMember = room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } != null
+                    val botIsMember = room.members.find { it.member.userId == "@${botProperties.username}:${botProperties.serverName}" } != null
                     val expectedManagedMemberSize = if (botIsMember) receiverIds.size + 1 else receiverIds.size
-                    val membersMatch = room.members.keys.count { it.isManaged } == expectedManagedMemberSize
+                    val membersMatch = room.members.count { it.member.isManaged } == expectedManagedMemberSize
                     if (membersMatch) {
                         if (!botIsMember) {
                             LOG.debug("try to invite sms bot user to room ${room.roomId} and send message later")

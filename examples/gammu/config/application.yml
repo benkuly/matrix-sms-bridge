@@ -1,10 +1,9 @@
-org:
+spring:
   neo4j:
-    driver:
-      uri: bolt://neo4j:7687
-      authentication:
-        username: neo4j
-        password: secret
+    uri: bolt://neo4j:7687
+    authentication:
+      username: neo4j
+      password: secret
 
 logging:
   level:

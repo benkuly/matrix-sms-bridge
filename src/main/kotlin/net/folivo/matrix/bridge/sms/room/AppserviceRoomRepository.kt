@@ -1,6 +1,6 @@
 package net.folivo.matrix.bridge.sms.room
 
-import org.neo4j.springframework.data.repository.query.Query
+import org.springframework.data.neo4j.repository.query.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional

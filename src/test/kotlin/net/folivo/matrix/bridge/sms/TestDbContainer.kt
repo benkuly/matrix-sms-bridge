@@ -13,9 +13,9 @@ class TestDbContainer : Neo4jContainer<TestDbContainer>() {
                 instance.start() // At this point we have a running instance as a Docker container
 
                 // We set the properties below, so Spring will use these when it starts
-                System.setProperty("org.neo4j.driver.uri", instance.boltUrl)
-                System.setProperty("org.neo4j.driver.authentication.username", "neo4j")
-                System.setProperty("org.neo4j.driver.authentication.password", instance.adminPassword)
+                System.setProperty("spring.neo4j.uri", instance.boltUrl)
+                System.setProperty("spring.neo4j.authentication.username", "neo4j")
+                System.setProperty("spring.neo4j.authentication.password", instance.adminPassword)
             }
         }
 

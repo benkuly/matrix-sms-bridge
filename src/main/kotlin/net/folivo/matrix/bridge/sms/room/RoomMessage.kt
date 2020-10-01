@@ -1,8 +1,8 @@
 package net.folivo.matrix.bridge.sms.room
 
-import org.neo4j.springframework.data.core.schema.*
-import org.neo4j.springframework.data.core.schema.Relationship.Direction.INCOMING
 import org.springframework.data.annotation.Version
+import org.springframework.data.neo4j.core.schema.*
+import org.springframework.data.neo4j.core.schema.Relationship.Direction.INCOMING
 import java.time.Instant
 
 @Node("RoomMessage")

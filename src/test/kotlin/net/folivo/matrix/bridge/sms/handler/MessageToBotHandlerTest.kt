@@ -13,6 +13,7 @@ import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
+import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -45,11 +46,10 @@ class MessageToBotHandlerTest {
         every { smsBridgePropertiesMock.templates.botHelp }.returns("help")
         every { smsBridgePropertiesMock.templates.botSmsSendError }.returns("error {error} {receiverNumbers}")
         coEvery { contextMock.answer(any(), any()) }.returns("someMessageId")
-        every { roomMock.members.size }.returns(2)
-        every { roomMock.members.keys }.returns(
-                mutableSetOf(
-                        AppserviceUser("someUserId1", true),
-                        AppserviceUser("someUserId2", false)
+        every { roomMock.members }.returns(
+                listOf(
+                        MemberOfProperties(AppserviceUser("someManagedUserId", true), 1),
+                        MemberOfProperties(AppserviceUser("someUnmanagedUserId", false), 1)
                 )
         )
     }
@@ -65,7 +65,7 @@ class MessageToBotHandlerTest {
             cut.handleMessage(
                     roomMock,
                     "sms send -t 017392837462 'some Text'",
-                    "someUserId2",
+                    "someUnmanagedUserId",
                     contextMock
             )
         }
@@ -77,16 +77,15 @@ class MessageToBotHandlerTest {
 
     @Test
     fun `should answer with error when too many members for sms command`() {
-        every { roomMock.members.size }.returns(3)
-        every { roomMock.members.keys }.returns(
-                mutableSetOf(
-                        AppserviceUser("someUserId1", true),
-                        AppserviceUser("someUserId2", false),
-                        AppserviceUser("someUserId3", false)
+        every { roomMock.members }.returns(
+                listOf(
+                        MemberOfProperties(AppserviceUser("someManagedUserId", true), 1),
+                        MemberOfProperties(AppserviceUser("someUnmanagedUserId", false), 1),
+                        MemberOfProperties(AppserviceUser("someUserId3", false), 1)
                 )
         )
         val result = runBlocking {
-            cut.handleMessage(roomMock, "sms bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "sms bla", "someUnmanagedUserId", contextMock)
         }
         assertThat(result).isTrue()
         coVerify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "tooMany" }) }
@@ -95,7 +94,7 @@ class MessageToBotHandlerTest {
     @Test
     fun `should answer with help when not sms command`() {
         val result = runBlocking {
-            cut.handleMessage(roomMock, "bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "bla", "someUnmanagedUserId", contextMock)
         }
         assertThat(result).isTrue()
         coVerify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "help" }) }
@@ -104,7 +103,7 @@ class MessageToBotHandlerTest {
     @Test
     fun `should not allow managed user to run command`() {
         val result1 = runBlocking {
-            cut.handleMessage(roomMock, "sms send", "someUserId1", contextMock)
+            cut.handleMessage(roomMock, "sms send", "someManagedUserId", contextMock)
         }
         assertThat(result1).isFalse()
 
@@ -118,14 +117,14 @@ class MessageToBotHandlerTest {
 
     @Test
     fun `should do nothing when all members are managed`() {
-        every { roomMock.members.keys }.returns(
-                mutableSetOf(
-                        AppserviceUser("someUserId1", true),
-                        AppserviceUser("someUserId2", true)
+        every { roomMock.members }.returns(
+                listOf(
+                        MemberOfProperties(AppserviceUser("someManagedUserId", true), 1),
+                        MemberOfProperties(AppserviceUser("someUnmanagedUserId", true), 1),
                 )
         )
         val result = runBlocking {
-            cut.handleMessage(roomMock, "bla", "someUserId1", contextMock)
+            cut.handleMessage(roomMock, "bla", "someManagedUserId", contextMock)
         }
         assertThat(result).isFalse()
         coVerify { contextMock wasNot Called }
@@ -133,16 +132,15 @@ class MessageToBotHandlerTest {
 
     @Test
     fun `should do nothing when too many members`() {
-        every { roomMock.members.size }.returns(3)
-        every { roomMock.members.keys }.returns(
-                mutableSetOf(
-                        AppserviceUser("someUserId1", true),
-                        AppserviceUser("someUserId2", false),
-                        AppserviceUser("someUserId3", false)
+        every { roomMock.members }.returns(
+                listOf(
+                        MemberOfProperties(AppserviceUser("someManagedUserId", true), 1),
+                        MemberOfProperties(AppserviceUser("someUnmanagedUserId", false), 1),
+                        MemberOfProperties(AppserviceUser("someUserId3", false), 1)
                 )
         )
         val result = runBlocking {
-            cut.handleMessage(roomMock, "bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "bla", "someUnmanagedUserId", contextMock)
         }
         assertThat(result).isFalse()
         coVerify { contextMock wasNot Called }
@@ -151,7 +149,7 @@ class MessageToBotHandlerTest {
     @Test
     fun `should catch errors from SMSCommand`() {
         val result = runBlocking {
-            cut.handleMessage(roomMock, "sms send bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "sms send bla", "someUnmanagedUserId", contextMock)
         }
         assertThat(result).isTrue()
         coVerify {
@@ -166,7 +164,7 @@ class MessageToBotHandlerTest {
     @Test
     fun `should catch errors from unparsable command`() {
         val result = runBlocking {
-            cut.handleMessage(roomMock, "sms send \" bla", "someUserId2", contextMock)
+            cut.handleMessage(roomMock, "sms send \" bla", "someUnmanagedUserId", contextMock)
         }
         assertThat(result).isTrue()
         coVerify {

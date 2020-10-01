@@ -28,7 +28,7 @@ class MessageToBotHandler(
             sender: String,
             context: MessageContext
     ): Boolean {
-        return if (room.members.keys.find { it.userId == sender }?.isManaged != false) {
+        return if (room.members.map { it.member }.find { it.userId == sender }?.isManaged != false) {
             LOG.debug("ignore message from managed (or unknown) user")
             false
         } else if (body.startsWith("sms")) {

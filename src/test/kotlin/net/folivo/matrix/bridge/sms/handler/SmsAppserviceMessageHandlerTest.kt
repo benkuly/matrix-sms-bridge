@@ -62,20 +62,14 @@ class SmsAppserviceMessageHandlerTest {
     @Test
     fun `should delegate to SendSmsService when not message for sms bot`() {
         val roomMock1 = mockk<AppserviceRoom> {
-            every { members } returns mutableMapOf(
-                    mockk<AppserviceUser> {
-                        every { userId } returns "someUserId"
-                    } to MemberOfProperties(1)
+            every { members } returns listOf(
+                    MemberOfProperties(AppserviceUser("someUserId", false), 1)
             )
         }
         val roomMock2 = mockk<AppserviceRoom> {
-            every { members } returns mutableMapOf(
-                    mockk<AppserviceUser> {
-                        every { userId } returns "@smsbot:someServerName"
-                    } to MemberOfProperties(1),
-                    mockk<AppserviceUser> {
-                        every { userId } returns "@sms_1234567890:someServerName"
-                    } to MemberOfProperties(1)
+            every { members } returns listOf(
+                    MemberOfProperties(AppserviceUser("@smsbot:someServerName", true), 1),
+                    MemberOfProperties(AppserviceUser("@sms_1234567890:someServerName", true), 1)
             )
         }
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }.returnsMany(
@@ -94,10 +88,8 @@ class SmsAppserviceMessageHandlerTest {
 
     @Test
     fun `should delegate to SendSmsService when message is not TextMessage`() {
-        every { roomMock.members } returns mutableMapOf(
-                mockk<AppserviceUser> {
-                    every { userId } returns "someUserId"
-                } to MemberOfProperties(1)
+        every { roomMock.members } returns listOf(
+                MemberOfProperties(AppserviceUser("someUserId", false), 1)
         )
 
         runBlocking { cut.handleMessage(UnknownMessageEventContent("someBody", "image"), contextMock) }
@@ -107,10 +99,8 @@ class SmsAppserviceMessageHandlerTest {
 
     @Test
     fun `should not delegate to SendSmsService when message is NoticeMessage`() {
-        every { roomMock.members } returns mutableMapOf(
-                mockk<AppserviceUser> {
-                    every { userId } returns "someUserId"
-                } to MemberOfProperties(1)
+        every { roomMock.members } returns listOf(
+                MemberOfProperties(AppserviceUser("someUserId", false), 1)
         )
 
         runBlocking { cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock) }
@@ -122,10 +112,8 @@ class SmsAppserviceMessageHandlerTest {
     fun `should delegate to SmsBotHandler when room contains bot and not delegate to SendSmsService`() {
         coEvery { messageToBotHandlerMock.handleMessage(any(), any(), any(), any()) } returns true
 
-        every { roomMock.members } returns mutableMapOf(
-                mockk<AppserviceUser> {
-                    every { userId } returns "@smsbot:someServerName"
-                } to MemberOfProperties(1)
+        every { roomMock.members } returns listOf(
+                MemberOfProperties(AppserviceUser("@smsbot:someServerName", true), 1)
         )
 
         runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
@@ -136,10 +124,8 @@ class SmsAppserviceMessageHandlerTest {
 
     @Test
     fun `should not delegate to SmsBotHandler when room contains no bot`() {
-        every { roomMock.members } returns mutableMapOf(
-                mockk<AppserviceUser> {
-                    every { userId } returns "@someUser:someServerName"
-                } to MemberOfProperties(1)
+        every { roomMock.members } returns listOf(
+                MemberOfProperties(AppserviceUser("@someUser:someServerName", true), 1)
         )
 
         runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
@@ -150,10 +136,8 @@ class SmsAppserviceMessageHandlerTest {
 
     @Test
     fun `should not delegate to SmsBotHandler when message is no text message`() {
-        every { roomMock.members } returns mutableMapOf(
-                mockk<AppserviceUser> {
-                    every { userId } returns "@someUser:someServerName"
-                } to MemberOfProperties(1)
+        every { roomMock.members } returns listOf(
+                MemberOfProperties(AppserviceUser("@someUser:someServerName", true), 1)
         )
 
         runBlocking { cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock) }

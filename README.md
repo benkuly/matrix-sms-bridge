@@ -42,13 +42,12 @@ The bridge can be configured to route all SMS without a valid token to a default
 The Application Service gets configured with a yaml-file:
 ```yaml
 # Database connection
-org:
+spring:
   neo4j:
-    driver:
-      uri: bolt://neo4j:7687
-      authentication:
-        username: neo4j
-        password: secret
+    uri: bolt://neo4j:7687
+    authentication:
+      username: neo4j
+      password: secret
 
 matrix:
   bridge:

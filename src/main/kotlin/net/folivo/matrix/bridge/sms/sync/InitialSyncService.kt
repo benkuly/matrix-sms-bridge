@@ -30,7 +30,7 @@ class InitialSyncService(
             roomService.deleteAllRooms()
             userService.deleteAllUsers()
 
-            LOG.info("collect all joined rooms (of bot user)")
+            LOG.info("collect all joined rooms (of bot user) - this can take some time!")
             roomService.syncUserAndItsRooms()
 
             LOG.info("finished initial sync")

@@ -1,4 +1,3 @@
-import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -8,6 +7,10 @@ plugins {
     kotlin("jvm") version Versions.kotlin
     kotlin("kapt") version Versions.kotlin
     kotlin("plugin.spring") version Versions.kotlin
+}
+
+repositories {
+    maven("https://repo.spring.io/milestone")
 }
 
 allprojects {
@@ -20,8 +23,11 @@ allprojects {
     repositories {
         mavenCentral()
         mavenLocal()
+        maven("https://repo.spring.io/milestone")
     }
 }
+
+extra["testcontainersVersion"] = Versions.testcontainers
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -32,7 +38,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${Versions.kotlinxCoroutines}")
     implementation("com.michael-bull.kotlin-retry:kotlin-retry:${Versions.kotlinRetry}")
 
-    api("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-starter:${Versions.neo4jrx}")
+    api("org.springframework.boot:spring-boot-starter-data-neo4j")
 
     implementation("net.folivo:matrix-spring-boot-bot:${Versions.matrixSDK}")
 
@@ -53,11 +59,9 @@ dependencies {
     testImplementation("io.kotest:kotest-extensions-testcontainers:${Versions.kotest}")
     testImplementation("com.ninja-squad:springmockk:${Versions.springMockk}")
     testImplementation("io.projectreactor:reactor-test")
-    testImplementation("org.neo4j.springframework.data:spring-data-neo4j-rx-spring-boot-test-autoconfigure:${Versions.neo4jrx}") {
-        exclude(group = "org.neo4j.test", module = "harness")
-    }
-    testImplementation("org.testcontainers:junit-jupiter:${Versions.testcontainers}")
-    testImplementation("org.testcontainers:neo4j:${Versions.testcontainers}")
+
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:neo4j")
 
     testImplementation("com.squareup.okhttp3:mockwebserver")
 
@@ -77,9 +81,10 @@ configurations {
     }
 }
 
-the<DependencyManagementExtension>().apply {
+dependencyManagement {
     imports {
         mavenBom(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
+        mavenBom("org.testcontainers:testcontainers-bom:${property("testcontainersVersion")}")
     }
 }
 

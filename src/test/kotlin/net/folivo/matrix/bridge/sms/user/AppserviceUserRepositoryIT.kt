@@ -4,10 +4,9 @@ import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.neo4j.driver.springframework.boot.test.autoconfigure.Neo4jTestHarnessAutoConfiguration
-import org.neo4j.springframework.boot.test.autoconfigure.data.ReactiveDataNeo4jTest
-import org.neo4j.springframework.data.core.ReactiveNeo4jTemplate
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.data.neo4j.DataNeo4jTest
+import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.Neo4jContainer
@@ -16,7 +15,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 import reactor.test.StepVerifier
 
 
-@ReactiveDataNeo4jTest(excludeAutoConfiguration = [Neo4jTestHarnessAutoConfiguration::class])
+@DataNeo4jTest
 @Testcontainers
 class AppserviceUserRepositoryIT {
 
@@ -27,9 +26,9 @@ class AppserviceUserRepositoryIT {
         @DynamicPropertySource
         @JvmStatic
         fun neo4jProperties(registry: DynamicPropertyRegistry) {
-            registry.add("org.neo4j.driver.uri", neo4jContainer::getBoltUrl)
-            registry.add("org.neo4j.driver.authentication.username") { "neo4j" }
-            registry.add("org.neo4j.driver.authentication.password", neo4jContainer::getAdminPassword)
+            registry.add("spring.neo4j.uri", neo4jContainer::getBoltUrl)
+            registry.add("spring.neo4j.authentication.username") { "neo4j" }
+            registry.add("spring.neo4j.authentication.password", neo4jContainer::getAdminPassword)
         }
     }
 
@@ -60,13 +59,13 @@ class AppserviceUserRepositoryIT {
         room1 = template.save(
                 AppserviceRoom(
                         "someRoomId1",
-                        mutableMapOf(
-                                user1 to MemberOfProperties(1),
-                                user2 to MemberOfProperties(1)
+                        listOf(
+                                MemberOfProperties(user1, 1),
+                                MemberOfProperties(user2, 1)
                         )
                 )
         ).block() ?: throw RuntimeException()
-        room2 = template.save(AppserviceRoom("someRoomId2", mutableMapOf(user1 to MemberOfProperties(24)))).block()
+        room2 = template.save(AppserviceRoom("someRoomId2", listOf(MemberOfProperties(user1, 24)))).block()
                 ?: throw RuntimeException()
     }
 

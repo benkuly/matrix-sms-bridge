@@ -13,8 +13,6 @@ import org.mockserver.model.HttpRequest
 import org.mockserver.model.HttpResponse
 import org.mockserver.model.JsonBody
 import org.mockserver.model.MediaType
-import org.neo4j.driver.springframework.boot.test.autoconfigure.Neo4jTestHarnessAutoConfiguration
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.HttpMethod
 
@@ -26,7 +24,6 @@ import org.springframework.http.HttpMethod
             "matrix.bridge.sms.provider.android.password=password"
         ]
 )
-@EnableAutoConfiguration(exclude = [Neo4jTestHarnessAutoConfiguration::class])
 class AndroidSmsProviderIT(
         @MockkBean(relaxed = true)
         private val matrixClientMock: MatrixClient,

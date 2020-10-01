@@ -34,7 +34,8 @@ class SmsAppserviceMessageHandler(
             return
         } else {
             val room = roomService.getOrCreateRoom(roomId)
-            val wasForBot = if (content is TextMessageEventContent && room.members.keys.find { it.userId == "@${botProperties.username}:${botProperties.serverName}" } != null) {
+            val wasForBot = if (content is TextMessageEventContent && room.members.map { it.member.userId }
+                            .contains("@${botProperties.username}:${botProperties.serverName}")) {
                 messageToBotHandler.handleMessage(
                         room = room,
                         body = content.body,
