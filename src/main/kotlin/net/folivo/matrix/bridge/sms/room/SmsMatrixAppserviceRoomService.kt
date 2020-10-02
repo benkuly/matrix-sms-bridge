@@ -70,7 +70,7 @@ class SmsMatrixAppserviceRoomService(
                 val newRoom = room.copy(members = room.members.minus(memberOf))
                 roomRepository.save(newRoom).awaitFirstOrNull()
 
-                val hasOnlyManagedUsersLeft = !room.members
+                val hasOnlyManagedUsersLeft = !newRoom.members
                         .map { it.member.isManaged }
                         .contains(false)
                 if (hasOnlyManagedUsersLeft) {

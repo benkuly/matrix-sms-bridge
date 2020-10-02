@@ -45,7 +45,7 @@ class MessageToSmsHandler(
                                     sender = sender,
                                     receiver = receiver,
                                     body = body,
-                                    mappingToken = memberOfProps.mappingToken,
+                                    mappingToken = memberOfProps.mappingToken.toInt(),
                                     needsToken = roomService.getRooms(memberUserId).take(2).count() > 1 // FIXME test
                             )
                         } catch (error: Throwable) {

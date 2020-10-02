@@ -21,7 +21,6 @@ interface AppserviceRoomRepository : ReactiveCrudRepository<AppserviceRoom, Stri
     // TODO or maybe write a query, which does that
     fun findByMembersUserIdContaining(members: Set<String>): Flux<AppserviceRoom>
 
-
     @Transactional
     @Query("MATCH (ar:AppserviceRoom) - [:MEMBER_OF {mappingToken:\$mappingToken}] -> (:AppserviceUser {userId:\$userId}) RETURN ar")
     fun findByUserIdAndMappingToken(userId: String, mappingToken: Int): Mono<AppserviceRoom>
