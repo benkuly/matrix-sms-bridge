@@ -41,7 +41,7 @@ class SendSmsCommand(
                 echo(runBlocking {
                     helper.createRoomAndSendMessage(
                             body = body,
-                            sender = sender,
+                            senderId = sender,
                             receiverNumbers = receiverNumbers,
                             roomName = roomName,
                             roomCreationMode = roomCreationMode,
@@ -55,7 +55,7 @@ class SendSmsCommand(
                             runBlocking {
                                 helper.createRoomAndSendMessage(
                                         body = body,
-                                        sender = sender,
+                                        senderId = sender,
                                         receiverNumbers = listOf(number),
                                         roomName = roomName,
                                         roomCreationMode = roomCreationMode,

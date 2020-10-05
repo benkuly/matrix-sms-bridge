@@ -1,7 +1,8 @@
 package net.folivo.matrix.bridge.sms.user
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.reactive.awaitFirstOrDefault
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.folivo.matrix.appservice.api.user.CreateUserParameter
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService
@@ -38,20 +39,23 @@ class SmsMatrixAppserviceUserService(
     }
 
     override suspend fun saveUser(userId: String) {
-
     }
 
-    suspend fun getUser(userId: String): AppserviceUser {
+    suspend fun getOrCreateUser(userId: String): AppserviceUser {
         return userRepository.findById(userId).awaitFirstOrNull()
                ?: helper.isManagedUser(userId)
                        .let { userRepository.save(AppserviceUser(userId, it)).awaitFirst() }
     }
 
-    suspend fun getLastMappingToken(userId: String): Int {
-        return userRepository.findLastMappingTokenByUserId(userId).awaitFirstOrDefault(0)
+    suspend fun deleteByUserId(userId: String) {
+        userRepository.deleteById(userId).awaitFirst()
     }
 
     suspend fun deleteAllUsers() {
         userRepository.deleteAll().awaitFirstOrNull()
+    }
+
+    suspend fun getUsersByRoomId(roomId: String): Flow<AppserviceUser> {
+        return userRepository.findByRoomId(roomId).asFlow()
     }
 }

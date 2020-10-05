@@ -1,16 +1,16 @@
 package net.folivo.matrix.bridge.sms.provider.android
 
+import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.Version
-import org.springframework.data.neo4j.core.schema.Id
-import org.springframework.data.neo4j.core.schema.Node
-import org.springframework.data.neo4j.core.schema.Property
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
 
-@Node("AndroidSmsBatch")
+@Table("AndroidSmsBatch")
 data class AndroidSmsBatch(
+        @Column("nextBatch")
+        var nextBatch: Long,
         @Id
         val id: Long,
-        @Property("nextBatch")
-        var nextBatch: String,
         @Version
-        var version: Long? = null
+        var version: Long = 0
 )

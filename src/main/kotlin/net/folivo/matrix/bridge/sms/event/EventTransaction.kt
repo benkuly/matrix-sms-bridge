@@ -1,24 +1,19 @@
 package net.folivo.matrix.bridge.sms.event
 
+import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.Version
-import org.springframework.data.neo4j.core.schema.GeneratedValue
-import org.springframework.data.neo4j.core.schema.Id
-import org.springframework.data.neo4j.core.schema.Node
-import org.springframework.data.neo4j.core.schema.Property
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
+import java.util.*
 
-@Node("EventTransaction")
+@Table("EventTransaction")
 data class EventTransaction(
-        @Property("tnxId")
+        @Column("tnxId")
         var tnxId: String,
-        @Property("eventIdElseType")
-        var eventIdElseType: String
-) {
-    @Id
-    @GeneratedValue
-    var id: Long? = null
-        private set
-
-    @Version
-    var version: Long? = null
-        private set
-}
+        @Column("eventIdElseType")
+        var eventIdElseType: String,
+        @Id
+        val id: UUID = UUID.randomUUID(),
+        @Version
+        val version: Int = 1
+)

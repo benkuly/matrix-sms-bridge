@@ -10,10 +10,10 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.NO
+import net.folivo.matrix.bridge.sms.membership.Membership
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
-import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.restclient.MatrixClient
 import net.folivo.matrix.restclient.api.rooms.Preset.TRUSTED_PRIVATE
 import org.assertj.core.api.Assertions.assertThat
@@ -67,12 +67,12 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should create room, and send message later when room creation mode is AUTO and no room found`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf())
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }.returns(flowOf())
 
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = ALWAYS,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -82,7 +82,7 @@ class SendSmsCommandHelperTest {
         assertThat(result).isEqualTo("create room and send message +1111111111")
 
         coVerify {
-            roomServiceMock.getRoomsWithUsers(match {
+            roomServiceMock.getRoomsWithMembers(match {
                 it.containsAll(listOf("someSender", "@sms_1111111111:someServer"))
             })
             matrixClientMock.roomsApi.createRoom(
@@ -105,13 +105,13 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should create room, and send message later when room creation mode is ALWAYS`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }
                 .returns(flowOf(mockk(), mockk()))
 
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = ALWAYS,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111", "+22222222"),
@@ -121,7 +121,7 @@ class SendSmsCommandHelperTest {
         assertThat(result).isEqualTo("create room and send message +1111111111, +22222222")
 
         coVerify {
-            roomServiceMock.getRoomsWithUsers(match {
+            roomServiceMock.getRoomsWithMembers(match {
                 it.containsAll(setOf("someSender", "@sms_1111111111:someServer", "@sms_22222222:someServer"))
             })
             matrixClientMock.roomsApi.createRoom(
@@ -145,13 +145,13 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should create room, and send no message when message is empty`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }
                 .returns(flowOf(mockk(), mockk()))
 
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "  ",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = ALWAYS,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111", "+22222222"),
@@ -161,7 +161,7 @@ class SendSmsCommandHelperTest {
         assertThat(result).isEqualTo("create room and send message +1111111111, +22222222")
 
         coVerifyAll {
-            roomServiceMock.getRoomsWithUsers(match {
+            roomServiceMock.getRoomsWithMembers(match {
                 it.containsAll(setOf("someSender", "@sms_1111111111:someServer", "@sms_22222222:someServer"))
             })
             matrixClientMock.roomsApi.createRoom(
@@ -179,15 +179,15 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should send message immediately when one room exists`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }.returns(flowOf(mockk {
             every { roomId }.returns("someRoomId")
         }))
         val roomMock = mockk<AppserviceRoom> {
             every { roomId }.returns("someRoomId")
-            every { members }.returns(
+            every { memberships }.returns(
                     listOf(
-                            MemberOfProperties(AppserviceUser("smsUser", true), 2),
-                            MemberOfProperties(AppserviceUser("@bot:someServer", true), 2),
+                            Membership(AppserviceUser("smsUser", true), 2),
+                            Membership(AppserviceUser("@bot:someServer", true), 2),
                     )
             )
         }
@@ -196,7 +196,7 @@ class SendSmsCommandHelperTest {
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -220,17 +220,17 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should not send message later when one room exists, but managed members does not match size`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }.returns(flowOf(mockk {
             every { roomId }.returns("someRoomId")
         }))
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
                 .returns(mockk {
                     every { roomId }.returns("someRoomId")
-                    every { members }.returns(
+                    every { memberships }.returns(
                             listOf(
-                                    MemberOfProperties(AppserviceUser("someUser", true), 1),
-                                    MemberOfProperties(AppserviceUser("someUserTooMany", true), 1),
-                                    MemberOfProperties(AppserviceUser("@bot:someServer", true), 1)
+                                    Membership(AppserviceUser("someUser", true), 1),
+                                    Membership(AppserviceUser("someUserTooMany", true), 1),
+                                    Membership(AppserviceUser("@bot:someServer", true), 1)
                             )
                     )
                 })
@@ -238,7 +238,7 @@ class SendSmsCommandHelperTest {
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -254,13 +254,13 @@ class SendSmsCommandHelperTest {
     @Test
     fun `should invite bot and send message when one room exists, but bot is not member`() {
         coEvery { matrixClientMock.roomsApi.inviteUser(any(), any(), any()) } just Runs
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }.returns(flowOf(mockk {
             every { roomId }.returns("someRoomId")
         }))
-        every { room.members }.returns(
+        every { room.memberships }.returns(
                 listOf(
-                        MemberOfProperties(AppserviceUser("someOtherUser", false), 1),
-                        MemberOfProperties(AppserviceUser("@sms_1111111111:someServer", true), 1)
+                        Membership(AppserviceUser("someOtherUser", false), 1),
+                        Membership(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -269,7 +269,7 @@ class SendSmsCommandHelperTest {
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -296,16 +296,16 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should not send message when empty message content`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }.returns(flowOf(mockk {
             every { roomId }.returns("someRoomId")
         }))
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
                 .returns(mockk {
                     every { roomId }.returns("someRoomId")
-                    every { members }.returns(
+                    every { memberships }.returns(
                             listOf(
-                                    MemberOfProperties(AppserviceUser("someUser", true), 1),
-                                    MemberOfProperties(AppserviceUser("botUser", true), 1)
+                                    Membership(AppserviceUser("someUser", true), 1),
+                                    Membership(AppserviceUser("botUser", true), 1)
                             )
                     )
                 })
@@ -313,7 +313,7 @@ class SendSmsCommandHelperTest {
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = null,
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -328,13 +328,13 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should not send message when to many rooms exists and room creation disabled`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }
                 .returns(flowOf(mockk(), mockk()))
 
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -349,13 +349,13 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should not send message when room creation disabled`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }
                 .returns(flowOf())
 
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -370,14 +370,14 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should not send message but catch errors`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }
                 .returns(flowOf())
         coEvery { matrixClientMock.roomsApi.createRoom(allAny()) }.throws(RuntimeException("unicorn"))
 
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = ALWAYS,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -396,13 +396,13 @@ class SendSmsCommandHelperTest {
 
     @Test
     fun `should send message in future and notify user about that when bot is member`() {
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }.returns(flowOf(mockk {
             every { roomId }.returns("someRoomId")
         }))
-        every { room.members }.returns(
+        every { room.memberships }.returns(
                 listOf(
-                        MemberOfProperties(AppserviceUser("@bot:someServer", true), 1),
-                        MemberOfProperties(AppserviceUser("@sms_1111111111:someServer", true), 1)
+                        Membership(AppserviceUser("@bot:someServer", true), 1),
+                        Membership(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -411,7 +411,7 @@ class SendSmsCommandHelperTest {
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -443,13 +443,13 @@ class SendSmsCommandHelperTest {
     @Test
     fun `should send message in future and notify user about that when bot is not member`() {
         coEvery { matrixClientMock.roomsApi.inviteUser(any(), any(), any()) } just Runs
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }.returns(flowOf(mockk {
             every { roomId }.returns("someRoomId")
         }))
-        every { room.members }.returns(
+        every { room.memberships }.returns(
                 listOf(
-                        MemberOfProperties(AppserviceUser("someOtherUser", false), 1),
-                        MemberOfProperties(AppserviceUser("@sms_1111111111:someServer", true), 1)
+                        Membership(AppserviceUser("someOtherUser", false), 1),
+                        Membership(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -458,7 +458,7 @@ class SendSmsCommandHelperTest {
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),
@@ -493,13 +493,13 @@ class SendSmsCommandHelperTest {
     @Test
     fun `should send message but not notify user about that, when in sendAfter is in past and bot is not member`() {
         coEvery { matrixClientMock.roomsApi.inviteUser(any(), any(), any()) } just Runs
-        coEvery { roomServiceMock.getRoomsWithUsers(allAny()) }.returns(flowOf(mockk {
+        coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }.returns(flowOf(mockk {
             every { roomId }.returns("someRoomId")
         }))
-        every { room.members }.returns(
+        every { room.memberships }.returns(
                 listOf(
-                        MemberOfProperties(AppserviceUser("someOtherUser", false), 1),
-                        MemberOfProperties(AppserviceUser("@sms_1111111111:someServer", true), 1)
+                        Membership(AppserviceUser("someOtherUser", false), 1),
+                        Membership(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -508,7 +508,7 @@ class SendSmsCommandHelperTest {
         val result = runBlocking {
             cut.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     roomCreationMode = NO,
                     roomName = "room name",
                     receiverNumbers = listOf("+1111111111"),

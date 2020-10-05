@@ -27,7 +27,6 @@ allprojects {
     }
 }
 
-extra["testcontainersVersion"] = Versions.testcontainers
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -38,7 +37,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${Versions.kotlinxCoroutines}")
     implementation("com.michael-bull.kotlin-retry:kotlin-retry:${Versions.kotlinRetry}")
 
-    api("org.springframework.boot:spring-boot-starter-data-neo4j")
+    api("org.springframework.boot:spring-boot-starter-data-r2dbc")
 
     implementation("net.folivo:matrix-spring-boot-bot:${Versions.matrixSDK}")
 
@@ -56,12 +55,10 @@ dependencies {
     testImplementation("io.kotest:kotest-property:${Versions.kotest}")
     testImplementation("io.kotest:kotest-extensions-spring:${Versions.kotest}")
     testImplementation("io.kotest:kotest-extensions-mockserver:${Versions.kotest}")
-    testImplementation("io.kotest:kotest-extensions-testcontainers:${Versions.kotest}")
     testImplementation("com.ninja-squad:springmockk:${Versions.springMockk}")
     testImplementation("io.projectreactor:reactor-test")
 
-    testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:neo4j")
+    testImplementation("io.r2dbc:r2dbc-h2")
 
     testImplementation("com.squareup.okhttp3:mockwebserver")
 
@@ -84,7 +81,6 @@ configurations {
 dependencyManagement {
     imports {
         mavenBom(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
-        mavenBom("org.testcontainers:testcontainers-bom:${property("testcontainersVersion")}")
     }
 }
 

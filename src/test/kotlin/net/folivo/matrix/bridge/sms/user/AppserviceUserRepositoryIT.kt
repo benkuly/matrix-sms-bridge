@@ -60,12 +60,12 @@ class AppserviceUserRepositoryIT {
                 AppserviceRoom(
                         "someRoomId1",
                         listOf(
-                                MemberOfProperties(user1, 1),
-                                MemberOfProperties(user2, 1)
+                                Membership(user1, 1),
+                                Membership(user2, 1)
                         )
                 )
         ).block() ?: throw RuntimeException()
-        room2 = template.save(AppserviceRoom("someRoomId2", listOf(MemberOfProperties(user1, 24)))).block()
+        room2 = template.save(AppserviceRoom("someRoomId2", listOf(Membership(user1, 24)))).block()
                 ?: throw RuntimeException()
     }
 

@@ -44,7 +44,7 @@ class ReceiveSmsService(
         val roomId = roomService.getRoom(
                 userId = userId,
                 mappingToken = mappingToken
-        )?.roomId
+        )?.id
 
         if (roomId != null) {
             LOG.debug("receive SMS from $sender to $roomId")

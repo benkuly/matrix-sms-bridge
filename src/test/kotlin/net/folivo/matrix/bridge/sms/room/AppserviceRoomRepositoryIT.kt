@@ -1,12 +1,9 @@
 package net.folivo.matrix.bridge.sms.room
 
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.runBlocking
+import net.folivo.matrix.bridge.sms.membership.Membership
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
-import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -70,10 +67,10 @@ class AppserviceRoomRepositoryIT {
         room1 = template.save(
                 AppserviceRoom(
                         "someRoomId1",
-                        members = listOf(
-                                MemberOfProperties(user1, 1),
-                                MemberOfProperties(user2, 1),
-                                MemberOfProperties(user3, 1)
+                        memberships = listOf(
+                                Membership(user1, 1),
+                                Membership(user2, 1),
+                                Membership(user3, 1)
                         )
                 )
 
@@ -81,10 +78,10 @@ class AppserviceRoomRepositoryIT {
         room2 = template.save(
                 AppserviceRoom(
                         "someRoomId2",
-                        members = listOf(
-                                MemberOfProperties(user1, 24),
-                                MemberOfProperties(user2, 2),
-                                MemberOfProperties(user4, 2)
+                        memberships = listOf(
+                                Membership(user1, 24),
+                                Membership(user2, 2),
+                                Membership(user4, 2)
                         )
                 )
         ).block() ?: throw RuntimeException()
@@ -96,7 +93,12 @@ class AppserviceRoomRepositoryIT {
                 .create(cut.findById("someRoomId1"))
                 .assertNext { room ->
                     assertThat(room.roomId).isEqualTo("someRoomId1")
-                    assertThat(room.members.map { it.member.userId }).containsAll(listOf("someUserId1", "someUserId2"))
+                    assertThat(room.memberships.map { it.member.userId }).containsAll(
+                            listOf(
+                                    "someUserId1",
+                                    "someUserId2"
+                            )
+                    )
                 }.verifyComplete()
     }
 
@@ -176,13 +178,13 @@ class AppserviceRoomRepositoryIT {
 
     @Test
     fun `should save room leave`() {
-        val removeIt = MemberOfProperties(user1, 1)
+        val removeIt = Membership(user1, 1)
         val room = template.save(
                 AppserviceRoom(
                         "someRoomId",
-                        members = listOf(
+                        memberships = listOf(
                                 removeIt,
-                                MemberOfProperties(user2, 1)
+                                Membership(user2, 1)
                         )
                 )
         ).block() ?: throw RuntimeException()
@@ -191,7 +193,7 @@ class AppserviceRoomRepositoryIT {
 
         StepVerifier
                 .create(cut.findById("someRoomId"))
-                .assertNext { it.members.size.shouldBe(1) }
+                .assertNext { it.memberships.size.shouldBe(1) }
                 .verifyComplete()
     }
 }

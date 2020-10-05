@@ -1,8 +1,6 @@
 package net.folivo.matrix.bridge.sms.room
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
@@ -12,13 +10,16 @@ import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExi
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.user.MemberOfProperties
+import net.folivo.matrix.bridge.sms.membership.MembershipService
+import net.folivo.matrix.bridge.sms.message.RoomMessage
+import net.folivo.matrix.bridge.sms.message.RoomMessageRepository
 import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -27,6 +28,7 @@ class SmsMatrixAppserviceRoomService(
         private val roomRepository: AppserviceRoomRepository,
         private val messageRepository: RoomMessageRepository,
         private val userService: SmsMatrixAppserviceUserService,
+        private val membershipService: MembershipService,
         private val matrixClient: MatrixClient,
         private val botProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
@@ -48,94 +50,83 @@ class SmsMatrixAppserviceRoomService(
 
     }
 
+    @Transactional
     override suspend fun saveRoomJoin(roomId: String, userId: String) {
-        val room = getOrCreateRoom(roomId)
         LOG.debug("saveRoomJoin in room $roomId of user $userId")
-        val user = userService.getUser(userId)
-
-        if (!room.members.map { it.member }.contains(user)) {
-            val mappingToken = userService.getLastMappingToken(userId)
-
-            val newRoom = room.copy(members = room.members.plus(MemberOfProperties(user, mappingToken + 1)))
-            roomRepository.save(newRoom).awaitFirstOrNull()
-        }
+        getOrCreateRoom(roomId)
+        userService.getOrCreateUser(userId)
+        membershipService.getOrCreateMembership(userId, roomId)
     }
 
-    override suspend fun saveRoomLeave(roomId: String, userId: String) {
+    override suspend fun saveRoomLeave(roomId: String, userId: String) { //FIXME test
         val room = getOrCreateRoom(roomId)
-        val memberOf = room.members.find { it.member.userId == userId }
-        if (memberOf != null) {
-            if (room.members.size > 1) {
-                LOG.debug("save room leave in room $roomId of user $userId")
-                val newRoom = room.copy(members = room.members.minus(memberOf))
-                roomRepository.save(newRoom).awaitFirstOrNull()
+        val membershipsSize = membershipService.getMembershipsSizeByRoomId(roomId)
+        if (membershipsSize > 1) {
+            LOG.debug("save room leave in room $roomId of user $userId")
+            membershipService.deleteMembership(userId, roomId)
 
-                val hasOnlyManagedUsersLeft = !newRoom.members
-                        .map { it.member.isManaged }
-                        .contains(false)
-                if (hasOnlyManagedUsersLeft) {
-                    LOG.debug("leave room $roomId with all managed users because there are only managed users left")
-
-                    newRoom.members
-                            .map {
-                                if (it.member.userId == "@${botProperties.username}:${botProperties.serverName}")
-                                    matrixClient.roomsApi.leaveRoom(roomId)
-                                else matrixClient.roomsApi.leaveRoom(roomId, it.member.userId)
-                            }
-                }
-            } else {
-                LOG.debug("delete room $roomId because there are no members left")
-                roomRepository.delete(room).awaitFirstOrNull()
+            if (membershipService.hasRoomOnlyManagedUsersLeft(roomId)) {
+                LOG.debug("leave room $roomId with all managed users because there are only managed users left")
+                val memberships = membershipService.getMembershipsByRoomId(roomId)
+                memberships
+                        .map { it.userId }
+                        .collect { joinedUserId ->
+                            if (joinedUserId == "@${botProperties.username}:${botProperties.serverName}")
+                                matrixClient.roomsApi.leaveRoom(roomId)
+                            else matrixClient.roomsApi.leaveRoom(roomId, joinedUserId)
+                        }
+            }
+        } else {
+            LOG.debug("delete room $roomId and membership because there are no members left")
+            membershipService.deleteMembership(userId, roomId)
+            roomRepository.delete(room).awaitFirstOrNull()
+            if (membershipService.getMembershipsSizeByUserId(userId) == 0L) {
+                LOG.debug("delete user $userId because there are no memberships left")
+                userService.deleteByUserId(userId)
             }
         }
     }
 
-    suspend fun getOrCreateRoom(roomId: String): AppserviceRoom {
+    suspend fun getOrCreateRoom(roomId: String): AppserviceRoom { //FIXME test
         val room = roomRepository.findById(roomId).awaitFirstOrNull()
                    ?: roomRepository.save(AppserviceRoom(roomId)).awaitFirst()
-        if (room.members.isEmpty()) {// this is needed to get all members, e.g. when managed user joins a new room
-            LOG.debug("collect all members in room $roomId because we didn't save it yet")
-            val members = matrixClient.roomsApi.getJoinedMembers(roomId).joined.keys
-                    .map { joinedUserId ->
-                        val user = userService.getUser(joinedUserId)
-                        val mappingToken = userService.getLastMappingToken(joinedUserId)
-                        Pair(user, mappingToken)
-                    }.map { (user, mappingToken) ->
-                        LOG.debug("collect user ${user.userId} to room $roomId")
-                        MemberOfProperties(user, mappingToken + 1)
+        val membershipsSize = membershipService.getMembershipsSizeByRoomId(roomId)
+        if (membershipsSize == 0L) {// this is needed to get all members, e.g. when managed user joins a new room
+            LOG.debug("collect all members in room $roomId because we didn't saved it yet")
+            matrixClient.roomsApi.getJoinedMembers(roomId).joined.keys
+                    .forEach { joinedUserId ->
+                        membershipService.getOrCreateMembership(joinedUserId, roomId)
                     }
-            val newRoom = room.copy(members = members)
-            LOG.debug("save room $roomId")
-            return roomRepository.save(newRoom).awaitFirst()
         }
         return room
     }
 
-    suspend fun getRoom(userId: String, mappingToken: Int?): AppserviceRoom? {
+    suspend fun getRoom(userId: String, mappingToken: Int?): AppserviceRoom? { //FIXME test
         return if (mappingToken == null) {
             if (smsBridgeProperties.allowMappingWithoutToken) {
-                val rooms = roomRepository.findAllByUserId(userId).take(2).asFlow().toList()
-                if (rooms.size == 1) rooms.first() else null
+                val memberships = membershipService.getMembershipsByUserId(userId).take(2).toList()
+                if (memberships.size == 1) getOrCreateRoom(memberships.first().roomId) else null
             } else {
                 null
             }
         } else {
-            return roomRepository.findByUserIdAndMappingToken(userId, mappingToken).awaitFirstOrNull().let {
+            return roomRepository.findByMemberAndMappingToken(userId, mappingToken).awaitFirstOrNull().let {
                 if (it == null && smsBridgeProperties.allowMappingWithoutToken) {
-                    val rooms = roomRepository.findAllByUserId(userId).take(2).asFlow().toList()
-                    if (rooms.size == 1) rooms.first() else null
+                    val memberships = membershipService.getMembershipsByUserId(userId).take(2).toList()
+                    if (memberships.size == 1) getOrCreateRoom(memberships.first().roomId) else null
                 } else it
             }
         }
     }
 
     suspend fun getRooms(userId: String): Flow<AppserviceRoom> {
-        return roomRepository.findAllByUserId(userId).asFlow()
+        return roomRepository.findByMember(userId).asFlow()
     }
 
-    suspend fun syncUserAndItsRooms(userId: String? = null) {
+    suspend fun syncUserAndItsRooms(userId: String? = null) { //FIXME test
         val dbUserId = userId ?: "@${botProperties.username}:${botProperties.serverName}"
-        if (roomRepository.findAllByUserId(dbUserId).take(1).awaitFirstOrNull() == null) {
+        // FIXME maybe delete all joined rooms?
+        if (roomRepository.findByMember(dbUserId).take(1).awaitFirstOrNull() == null) {
             try {
                 matrixClient.roomsApi.getJoinedRooms(asUserId = userId)
                         .collect { room ->
@@ -153,16 +144,14 @@ class SmsMatrixAppserviceRoomService(
         }
     }
 
-    suspend fun getRoomsWithUsers(members: Set<String>): Flow<AppserviceRoom> {
-        return roomRepository.findByMembersUserIdContaining(members).asFlow()
+    suspend fun getRoomsWithMembers(members: Set<String>): Flow<AppserviceRoom> {
+        return roomRepository.findByContainingMembers(members).asFlow()
     }
 
-    suspend fun sendRoomMessage(message: RoomMessage) {
+    suspend fun sendRoomMessage(message: RoomMessage, isNew: Boolean = true) {//FIXME caller should use isNew
         if (Instant.now().isAfter(message.sendAfter)) {
-            val containsReceivers = message.room.members.map { it.member.userId }
-                    .containsAll(message.requiredReceiverIds)
-            val roomId = message.room.roomId
-            val isNew = message.id == null
+            val roomId = message.roomId
+            val containsReceivers = membershipService.containsMembersByRoomId(roomId, message.requiredReceiverIds)
             if (containsReceivers) {
                 try {
                     matrixClient.roomsApi.sendRoomEvent(
@@ -200,7 +189,7 @@ class SmsMatrixAppserviceRoomService(
             } else {
                 LOG.debug("wait for required receivers to join")
             }
-        } else {
+        } else if (isNew) { //FIXME test
             messageRepository.save(message).awaitFirst()
         }
     }

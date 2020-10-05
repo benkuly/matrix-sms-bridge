@@ -53,7 +53,7 @@ class SendSmsCommandTest {
         coVerifyAll {
             helper.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     receiverNumbers = listOf("+4917331111111"),
                     roomName = null,
                     roomCreationMode = AUTO,
@@ -61,7 +61,7 @@ class SendSmsCommandTest {
             )
             helper.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     receiverNumbers = listOf("+4917332222222"),
                     roomName = null,
                     roomCreationMode = AUTO,
@@ -77,7 +77,7 @@ class SendSmsCommandTest {
         coVerifyAll {
             helper.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     receiverNumbers = listOf("+4917331111111"),
                     roomName = null,
                     roomCreationMode = AUTO,
@@ -93,7 +93,7 @@ class SendSmsCommandTest {
         coVerify {
             helper.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     receiverNumbers = listOf("+4917331111111", "+4917332222222"),
                     roomName = "some name",
                     roomCreationMode = AUTO,
@@ -109,7 +109,7 @@ class SendSmsCommandTest {
         coVerify {
             helper.createRoomAndSendMessage(
                     body = "some text",
-                    sender = "someSender",
+                    senderId = "someSender",
                     receiverNumbers = listOf("+4917331111111"),
                     roomName = null,
                     roomCreationMode = ALWAYS,

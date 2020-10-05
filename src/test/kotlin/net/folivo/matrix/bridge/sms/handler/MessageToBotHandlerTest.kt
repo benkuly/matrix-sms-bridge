@@ -10,10 +10,10 @@ import io.mockk.junit5.MockKExtension
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.membership.Membership
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
-import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -46,10 +46,10 @@ class MessageToBotHandlerTest {
         every { smsBridgePropertiesMock.templates.botHelp }.returns("help")
         every { smsBridgePropertiesMock.templates.botSmsSendError }.returns("error {error} {receiverNumbers}")
         coEvery { contextMock.answer(any(), any()) }.returns("someMessageId")
-        every { roomMock.members }.returns(
+        every { roomMock.memberships }.returns(
                 listOf(
-                        MemberOfProperties(AppserviceUser("someManagedUserId", true), 1),
-                        MemberOfProperties(AppserviceUser("someUnmanagedUserId", false), 1)
+                        Membership(AppserviceUser("someManagedUserId", true), 1),
+                        Membership(AppserviceUser("someUnmanagedUserId", false), 1)
                 )
         )
     }
@@ -77,11 +77,11 @@ class MessageToBotHandlerTest {
 
     @Test
     fun `should answer with error when too many members for sms command`() {
-        every { roomMock.members }.returns(
+        every { roomMock.memberships }.returns(
                 listOf(
-                        MemberOfProperties(AppserviceUser("someManagedUserId", true), 1),
-                        MemberOfProperties(AppserviceUser("someUnmanagedUserId", false), 1),
-                        MemberOfProperties(AppserviceUser("someUserId3", false), 1)
+                        Membership(AppserviceUser("someManagedUserId", true), 1),
+                        Membership(AppserviceUser("someUnmanagedUserId", false), 1),
+                        Membership(AppserviceUser("someUserId3", false), 1)
                 )
         )
         val result = runBlocking {
@@ -117,10 +117,10 @@ class MessageToBotHandlerTest {
 
     @Test
     fun `should do nothing when all members are managed`() {
-        every { roomMock.members }.returns(
+        every { roomMock.memberships }.returns(
                 listOf(
-                        MemberOfProperties(AppserviceUser("someManagedUserId", true), 1),
-                        MemberOfProperties(AppserviceUser("someUnmanagedUserId", true), 1),
+                        Membership(AppserviceUser("someManagedUserId", true), 1),
+                        Membership(AppserviceUser("someUnmanagedUserId", true), 1),
                 )
         )
         val result = runBlocking {
@@ -132,11 +132,11 @@ class MessageToBotHandlerTest {
 
     @Test
     fun `should do nothing when too many members`() {
-        every { roomMock.members }.returns(
+        every { roomMock.memberships }.returns(
                 listOf(
-                        MemberOfProperties(AppserviceUser("someManagedUserId", true), 1),
-                        MemberOfProperties(AppserviceUser("someUnmanagedUserId", false), 1),
-                        MemberOfProperties(AppserviceUser("someUserId3", false), 1)
+                        Membership(AppserviceUser("someManagedUserId", true), 1),
+                        Membership(AppserviceUser("someUnmanagedUserId", false), 1),
+                        Membership(AppserviceUser("someUserId3", false), 1)
                 )
         )
         val result = runBlocking {

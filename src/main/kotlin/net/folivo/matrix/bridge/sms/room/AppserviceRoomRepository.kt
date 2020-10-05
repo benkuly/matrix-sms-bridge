@@ -1,31 +1,41 @@
 package net.folivo.matrix.bridge.sms.room
 
-import org.springframework.data.neo4j.repository.query.Query
+import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
-import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Repository
-interface AppserviceRoomRepository : ReactiveCrudRepository<AppserviceRoom, String> {
+interface AppserviceRoomRepository : ReactiveCrudRepository<AppserviceRoom, String> { //FIXME test queries
 
-    @Transactional
     @Query(
-            "MATCH (user:AppserviceUser)<-[:MEMBER_OF]-(room:AppserviceRoom) " +
-            "WHERE user.userId in \$members " +
-            "WITH room, size(\$members) as inputCnt, count(DISTINCT user) as cnt " +
-            "WHERE cnt = inputCnt " +
-            "RETURN room"
-    )// TODO fix query to load also users and therefore allow check to find real matching room (without other managed users) in SendSmsCommandHelper
-    // TODO or maybe write a query, which does that
-    fun findByMembersUserIdContaining(members: Set<String>): Flux<AppserviceRoom>
+            """
+            WITH countedRooms AS (SELECT COUNT(*) AS memberSize,m.fk_Membership_AppserviceRoom FROM Membership m 
+            WHERE m.fk_Membership_AppserviceUser IN :members 
+            GROUP_BY m.fk_Membership_AppserviceRoom) 
+            SELECT * FROM AppserviceRoom room 
+            JOIN countedRooms ON countedRooms.fk_Membership_AppserviceRoom = room.id 
+            WHERE countedRooms.memberSize = :#{#members.size}
+            """
+    )
+    fun findByContainingMembers(members: Set<String>): Flux<AppserviceRoom>
 
-    @Transactional
-    @Query("MATCH (ar:AppserviceRoom) - [:MEMBER_OF {mappingToken:\$mappingToken}] -> (:AppserviceUser {userId:\$userId}) RETURN ar")
-    fun findByUserIdAndMappingToken(userId: String, mappingToken: Int): Mono<AppserviceRoom>
+    @Query(
+            """
+            SELECT * FROM AppserviceRoom r 
+            JOIN Membership m ON m.k_Membership_AppserviceRoom = r.id 
+            WHERE m.fk_Membership_AppserviceUser = :userId AND m.mappingToken = :mappingToken
+            """
+    )
+    fun findByMemberAndMappingToken(userId: String, mappingToken: Int): Mono<AppserviceRoom>
 
-    @Transactional
-    @Query("MATCH (ar:AppserviceRoom) - [:MEMBER_OF] -> (:AppserviceUser {userId:\$userId}) RETURN ar")
-    fun findAllByUserId(userId: String): Flux<AppserviceRoom>
+    @Query(
+            """
+            SELECT * FROM AppserviceRoom r 
+            JOIN Membership m ON m.k_Membership_AppserviceRoom = r.id 
+            WHERE m.fk_Membership_AppserviceUser = :userId
+            """
+    )
+    fun findByMember(userId: String): Flux<AppserviceRoom>
 }

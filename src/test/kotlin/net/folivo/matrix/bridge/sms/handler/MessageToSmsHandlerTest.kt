@@ -9,11 +9,11 @@ import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.membership.Membership
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
-import net.folivo.matrix.bridge.sms.user.MemberOfProperties
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -60,9 +60,9 @@ class MessageToSmsHandlerTest {
     fun `should send sms`() {
         val room = AppserviceRoom(
                 "someRoomId",
-                members = listOf(
-                        MemberOfProperties(AppserviceUser("@sms_0123456789:someServerName", true), 1),
-                        MemberOfProperties(AppserviceUser("@sms_9876543210:someServerName", true), 2)
+                memberships = listOf(
+                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 1),
+                        Membership(AppserviceUser("@sms_9876543210:someServerName", true), 2)
                 )
         )
 
@@ -79,9 +79,9 @@ class MessageToSmsHandlerTest {
     fun `should not send sms back to sender (no loop)`() {
         val room = AppserviceRoom(
                 "someRoomId",
-                members = listOf(
-                        MemberOfProperties(AppserviceUser("@sms_0123456789:someServerName", true), 1),
-                        MemberOfProperties(AppserviceUser("@sms_9876543210:someServerName", true), 2)
+                memberships = listOf(
+                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 1),
+                        Membership(AppserviceUser("@sms_9876543210:someServerName", true), 2)
                 )
         )
 
@@ -103,8 +103,8 @@ class MessageToSmsHandlerTest {
     fun `should inject variables to template string`() {
         val room = AppserviceRoom(
                 "someRoomId",
-                members = listOf(
-                        MemberOfProperties(AppserviceUser("@sms_0123456789:someServerName", true), 24)
+                memberships = listOf(
+                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 24)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate {sender} {body} ")
@@ -123,8 +123,8 @@ class MessageToSmsHandlerTest {
     fun `should use other template string when bot user`() {
         val room = AppserviceRoom(
                 "someRoomId",
-                members = listOf(
-                        MemberOfProperties(AppserviceUser("@sms_0123456789:someServerName", true), 24)
+                memberships = listOf(
+                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 24)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessageFromBot }.returns("someBotTemplate {sender} {body} ")
@@ -143,8 +143,8 @@ class MessageToSmsHandlerTest {
     fun `should use other template string when token not needed`() {
         val room = AppserviceRoom(
                 "someRoomId",
-                members = listOf(
-                        MemberOfProperties(AppserviceUser("@sms_0123456789:someServerName", true), 24)
+                memberships = listOf(
+                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 24)
                 )
         )
         every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
@@ -166,9 +166,9 @@ class MessageToSmsHandlerTest {
     fun `should ignore message to invalid telephone number (should never happen)`() {
         val room = AppserviceRoom(
                 "someRoomId",
-                members = listOf(
-                        MemberOfProperties(AppserviceUser("@sms_0123456789-24:someServerName", true), 1),
-                        MemberOfProperties(AppserviceUser("@sms_9876543210:someServerName", true), 2)
+                memberships = listOf(
+                        Membership(AppserviceUser("@sms_0123456789-24:someServerName", true), 1),
+                        Membership(AppserviceUser("@sms_9876543210:someServerName", true), 2)
                 )
         )
 
@@ -182,8 +182,8 @@ class MessageToSmsHandlerTest {
     fun `should answer with error message in room when something went wrong`() {
         val room = AppserviceRoom(
                 "someRoomId",
-                members = listOf(
-                        MemberOfProperties(AppserviceUser("@sms_0123456789:someServerName", true), 1)
+                memberships = listOf(
+                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 1)
                 )
         )
         coEvery { smsProviderMock.sendSms("+0123456789", any()) }.throws(RuntimeException())
@@ -204,8 +204,8 @@ class MessageToSmsHandlerTest {
     fun `should answer with error message in room when unsupported message type`() {
         val room = AppserviceRoom(
                 "someRoomId",
-                members = listOf(
-                        MemberOfProperties(AppserviceUser("@sms_0123456789:someServerName", true), 1)
+                memberships = listOf(
+                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 1)
                 )
         )
 

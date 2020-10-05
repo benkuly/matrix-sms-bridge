@@ -1,15 +1,19 @@
 package net.folivo.matrix.bridge.sms.user
 
-import org.springframework.data.neo4j.core.schema.Id
-import org.springframework.data.neo4j.core.schema.Node
-import org.springframework.data.neo4j.core.schema.Property
+import org.springframework.data.annotation.Id
+import org.springframework.data.annotation.Version
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
 
 
-@Node("AppserviceUser")
+@Table("AppserviceUser")
 data class AppserviceUser(
         @Id
-        val userId: String,
+        val id: String,
 
-        @Property("isManaged")
-        val isManaged: Boolean
+        @Column("isManaged")
+        val isManaged: Boolean = false,
+
+        @Version
+        val version: Int = 1
 )

@@ -4,6 +4,7 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.handler.MatrixMessageContentHandler
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.membership.MembershipService
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.core.model.events.m.room.message.MessageEvent.MessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
@@ -16,6 +17,7 @@ class SmsAppserviceMessageHandler(
         private val messageToSmsHandler: MessageToSmsHandler,
         private val messageToBotHandler: MessageToBotHandler,
         private val roomService: SmsMatrixAppserviceRoomService,
+        private val membershipService: MembershipService,
         private val botProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
 ) : MatrixMessageContentHandler {
@@ -26,20 +28,25 @@ class SmsAppserviceMessageHandler(
 
     override suspend fun handleMessage(content: MessageEventContent, context: MessageContext) {
         val roomId = context.roomId
-        val sender = context.originalEvent.sender
-        LOG.debug("handle message in room $roomId from sender $sender")
+        val senderId = context.originalEvent.sender
+        LOG.debug("handle message in room $roomId from sender $senderId")
+
+        roomService.getOrCreateRoom(roomId)
 
         if (context.roomId == smsBridgeProperties.defaultRoomId) {
             LOG.debug("ignored message to default room")
             return
         } else {
-            val room = roomService.getOrCreateRoom(roomId)
-            val wasForBot = if (content is TextMessageEventContent && room.members.map { it.member.userId }
-                            .contains("@${botProperties.username}:${botProperties.serverName}")) {
+            val wasForBot = if (content is TextMessageEventContent
+                                && membershipService.containsMembersByRoomId(
+                            roomId,
+                            setOf("@${botProperties.username}:${botProperties.serverName}")
+                    )
+            ) {
                 messageToBotHandler.handleMessage(
-                        room = room,
+                        roomId = roomId,
                         body = content.body,
-                        sender = sender,
+                        senderId = senderId,
                         context = context
                 )
             } else {
@@ -51,9 +58,9 @@ class SmsAppserviceMessageHandler(
                 return
             } else {
                 messageToSmsHandler.handleMessage(
-                        room = room,
+                        roomId = roomId,
                         body = content.body,
-                        sender = sender,
+                        senderId = senderId,
                         context = context,
                         isTextMessage = content is TextMessageEventContent
                 )

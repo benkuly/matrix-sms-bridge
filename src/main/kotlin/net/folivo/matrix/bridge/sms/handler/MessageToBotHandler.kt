@@ -5,8 +5,9 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.membership.MembershipService
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
-import net.folivo.matrix.bridge.sms.room.AppserviceRoom
+import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.apache.tools.ant.types.Commandline
 import org.slf4j.LoggerFactory
@@ -16,23 +17,27 @@ import org.springframework.stereotype.Component
 class MessageToBotHandler(
         private val helper: SendSmsCommandHelper,
         private val phoneNumberService: PhoneNumberService,
-        private val smsBridgeProperties: SmsBridgeProperties
+        private val smsBridgeProperties: SmsBridgeProperties,
+        private val userService: SmsMatrixAppserviceUserService,
+        private val membershipService: MembershipService
 ) {
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
     suspend fun handleMessage(
-            room: AppserviceRoom,
+            roomId: String,
             body: String,
-            sender: String,
+            senderId: String,
             context: MessageContext
     ): Boolean {
-        return if (room.members.map { it.member }.find { it.userId == sender }?.isManaged != false) {
+        val sender = userService.getOrCreateUser(senderId)
+        val membershipSize = membershipService.getMembershipsSizeByRoomId(roomId)
+        return if (sender.isManaged) {
             LOG.debug("ignore message from managed (or unknown) user")
             false
         } else if (body.startsWith("sms")) {
-            if (room.members.size > 2) {
+            if (membershipSize > 2) {
                 LOG.debug("to many members in room form sms command")
                 context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botTooManyMembers))
                 true
@@ -48,7 +53,7 @@ class MessageToBotHandler(
                         SmsCommand().context { console = answerConsole }
                                 .subcommands(
                                         SendSmsCommand(
-                                                sender,
+                                                senderId,
                                                 helper,
                                                 phoneNumberService,
                                                 smsBridgeProperties
@@ -79,7 +84,7 @@ class MessageToBotHandler(
                 }.join()
                 true
             }
-        } else if (room.members.size == 2) {
+        } else if (membershipSize == 2L) {
             LOG.debug("it seems to be a bot room, but message didn't start with 'sms'")
             context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botHelp))
             true
