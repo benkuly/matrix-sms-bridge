@@ -1,8 +1,7 @@
 package net.folivo.matrix.bridge.sms.room
 
-import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
-import net.folivo.matrix.bridge.sms.membership.Membership
+import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMapping
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -68,9 +67,9 @@ class AppserviceRoomRepositoryIT {
                 AppserviceRoom(
                         "someRoomId1",
                         memberships = listOf(
-                                Membership(user1, 1),
-                                Membership(user2, 1),
-                                Membership(user3, 1)
+                                MatrixSmsMapping(user1, 1),
+                                MatrixSmsMapping(user2, 1),
+                                MatrixSmsMapping(user3, 1)
                         )
                 )
 
@@ -79,9 +78,9 @@ class AppserviceRoomRepositoryIT {
                 AppserviceRoom(
                         "someRoomId2",
                         memberships = listOf(
-                                Membership(user1, 24),
-                                Membership(user2, 2),
-                                Membership(user4, 2)
+                                MatrixSmsMapping(user1, 24),
+                                MatrixSmsMapping(user2, 2),
+                                MatrixSmsMapping(user4, 2)
                         )
                 )
         ).block() ?: throw RuntimeException()
@@ -178,13 +177,13 @@ class AppserviceRoomRepositoryIT {
 
     @Test
     fun `should save room leave`() {
-        val removeIt = Membership(user1, 1)
+        val removeIt = MatrixSmsMapping(user1, 1)
         val room = template.save(
                 AppserviceRoom(
                         "someRoomId",
                         memberships = listOf(
                                 removeIt,
-                                Membership(user2, 1)
+                                MatrixSmsMapping(user2, 1)
                         )
                 )
         ).block() ?: throw RuntimeException()

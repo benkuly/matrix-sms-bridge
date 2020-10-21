@@ -10,7 +10,7 @@ import io.mockk.junit5.MockKExtension
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.membership.Membership
+import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMapping
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
@@ -48,8 +48,8 @@ class MessageToBotHandlerTest {
         coEvery { contextMock.answer(any(), any()) }.returns("someMessageId")
         every { roomMock.memberships }.returns(
                 listOf(
-                        Membership(AppserviceUser("someManagedUserId", true), 1),
-                        Membership(AppserviceUser("someUnmanagedUserId", false), 1)
+                        MatrixSmsMapping(AppserviceUser("someManagedUserId", true), 1),
+                        MatrixSmsMapping(AppserviceUser("someUnmanagedUserId", false), 1)
                 )
         )
     }
@@ -79,9 +79,9 @@ class MessageToBotHandlerTest {
     fun `should answer with error when too many members for sms command`() {
         every { roomMock.memberships }.returns(
                 listOf(
-                        Membership(AppserviceUser("someManagedUserId", true), 1),
-                        Membership(AppserviceUser("someUnmanagedUserId", false), 1),
-                        Membership(AppserviceUser("someUserId3", false), 1)
+                        MatrixSmsMapping(AppserviceUser("someManagedUserId", true), 1),
+                        MatrixSmsMapping(AppserviceUser("someUnmanagedUserId", false), 1),
+                        MatrixSmsMapping(AppserviceUser("someUserId3", false), 1)
                 )
         )
         val result = runBlocking {
@@ -119,8 +119,8 @@ class MessageToBotHandlerTest {
     fun `should do nothing when all members are managed`() {
         every { roomMock.memberships }.returns(
                 listOf(
-                        Membership(AppserviceUser("someManagedUserId", true), 1),
-                        Membership(AppserviceUser("someUnmanagedUserId", true), 1),
+                        MatrixSmsMapping(AppserviceUser("someManagedUserId", true), 1),
+                        MatrixSmsMapping(AppserviceUser("someUnmanagedUserId", true), 1),
                 )
         )
         val result = runBlocking {
@@ -134,9 +134,9 @@ class MessageToBotHandlerTest {
     fun `should do nothing when too many members`() {
         every { roomMock.memberships }.returns(
                 listOf(
-                        Membership(AppserviceUser("someManagedUserId", true), 1),
-                        Membership(AppserviceUser("someUnmanagedUserId", false), 1),
-                        Membership(AppserviceUser("someUserId3", false), 1)
+                        MatrixSmsMapping(AppserviceUser("someManagedUserId", true), 1),
+                        MatrixSmsMapping(AppserviceUser("someUnmanagedUserId", false), 1),
+                        MatrixSmsMapping(AppserviceUser("someUserId3", false), 1)
                 )
         )
         val result = runBlocking {

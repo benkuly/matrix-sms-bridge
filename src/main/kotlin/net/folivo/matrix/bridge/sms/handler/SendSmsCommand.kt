@@ -11,11 +11,12 @@ import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
+import net.folivo.matrix.core.model.MatrixId.UserId
 import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 
 class SendSmsCommand(
-        private val sender: String,
+        private val sender: UserId,
         private val helper: SendSmsCommandHelper,
         private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties

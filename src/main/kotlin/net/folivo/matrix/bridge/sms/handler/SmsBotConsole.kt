@@ -2,7 +2,7 @@ package net.folivo.matrix.bridge.sms.handler
 
 import com.github.ajalt.clikt.output.CliktConsole
 import kotlinx.coroutines.runBlocking
-import net.folivo.matrix.bot.handler.MessageContext
+import net.folivo.matrix.bot.event.MessageContext
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.slf4j.LoggerFactory
 

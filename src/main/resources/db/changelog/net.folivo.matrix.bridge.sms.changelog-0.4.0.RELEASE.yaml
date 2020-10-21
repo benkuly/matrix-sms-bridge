@@ -1,0 +1,180 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0.3.3.RELEASE
+      author: benkuly
+      changes:
+        - createTable:
+            tableName: matrix_room_message
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    autoIncrement: true
+              - column:
+                  name: room_id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_matrix_room_message_matrix_room
+                    references: matrix_room(id)
+                    onDelete: CASCADE
+              - column:
+                  name: body
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: send_after
+                  type: DATETIME
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_notice
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: matrix_room_message_matrix_user
+        - createTable:
+            tableName: matrix_sms_mapping
+            columns:
+              - column:
+                  name: membership_id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    foreignKeyName: fk_matrix_sms_mapping_matrix_membership
+                    references: matrix_membership(id)
+                    onDelete: CASCADE
+              - column:
+                  name: maping_token
+                  type: INTEGER
+                  constraints:
+                    nullable: true
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                    # FIXME delete down here
+        - createTable:
+            tableName: matrix_room_message_matrix_user
+            columns:
+              - column:
+                  name: id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+              - column:
+                  name: is_managed
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: matrix_room_alias
+            columns:
+              - column:
+                  name: alias
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+              - column:
+                  name: room_id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_matrix_room_alias_matrix_room
+                    references: matrix_room(id)
+                    onDelete: CASCADE
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: matrix_user
+            columns:
+              - column:
+                  name: id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+              - column:
+                  name: is_managed
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: matrix_membership
+            columns:
+              - column:
+                  name: id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+              - column:
+                  name: user_id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_matrix_membership_matrix_user
+                    references: matrix_user(id)
+                    onDelete: CASCADE
+              - column:
+                  name: room_id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_matrix_membership_matrix_room
+                    references: matrix_room(id)
+                    onDelete: CASCADE
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: matrix_sync_batch_token
+            columns:
+              - column:
+                  name: user_id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    foreignKeyName: fk_matrix_sync_batch_token_matrix_user
+                    references: matrix_user(id)
+                    onDelete: CASCADE
+              - column:
+                  name: token
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false

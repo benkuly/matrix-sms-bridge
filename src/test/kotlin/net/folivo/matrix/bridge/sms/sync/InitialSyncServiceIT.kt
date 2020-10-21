@@ -4,7 +4,7 @@ import com.ninjasquad.springmockk.MockkBean
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
-import net.folivo.matrix.bridge.sms.membership.Membership
+import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMapping
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
 import net.folivo.matrix.restclient.MatrixClient
@@ -73,13 +73,13 @@ class InitialSyncServiceIT {
                 AppserviceRoom(
                         "someRoomId1",
                         memberships = listOf(
-                                Membership(user1, 1),
-                                Membership(user2, 1)
+                                MatrixSmsMapping(user1, 1),
+                                MatrixSmsMapping(user2, 1)
                         )
                 )
         )
                         .block() ?: throw RuntimeException()
-        room2 = template.save(AppserviceRoom("someRoomId2", memberships = listOf(Membership(user1, 24))))
+        room2 = template.save(AppserviceRoom("someRoomId2", memberships = listOf(MatrixSmsMapping(user1, 24))))
                         .block() ?: throw RuntimeException()
 
         //after initialsync

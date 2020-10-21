@@ -17,7 +17,7 @@ allprojects {
     apply(plugin = "kotlin")
 
     group = "net.folivo"
-    version = "0.3.3.RELEASE"
+    version = "0.4.0.RELEASE"
     java.sourceCompatibility = JavaVersion.VERSION_11
 
     repositories {
@@ -37,11 +37,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${Versions.kotlinxCoroutines}")
     implementation("com.michael-bull.kotlin-retry:kotlin-retry:${Versions.kotlinRetry}")
 
-    api("org.springframework.boot:spring-boot-starter-data-r2dbc")
-
     implementation("net.folivo:matrix-spring-boot-bot:${Versions.matrixSDK}")
 
-    implementation("com.github.ajalt:clikt-multiplatform:${Versions.clikt}")
+    implementation("com.github.ajalt.clikt:clikt:${Versions.clikt}")
     implementation("org.apache.ant:ant:${Versions.ant}") {
         exclude(group = "org.apache.ant", module = "ant-launcher")
     }
@@ -57,8 +55,6 @@ dependencies {
     testImplementation("io.kotest:kotest-extensions-mockserver:${Versions.kotest}")
     testImplementation("com.ninja-squad:springmockk:${Versions.springMockk}")
     testImplementation("io.projectreactor:reactor-test")
-
-    testImplementation("io.r2dbc:r2dbc-h2")
 
     testImplementation("com.squareup.okhttp3:mockwebserver")
 

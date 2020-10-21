@@ -3,11 +3,13 @@ package net.folivo.matrix.bridge.sms.handler
 import com.github.ajalt.clikt.core.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import net.folivo.matrix.bot.handler.MessageContext
+import net.folivo.matrix.bot.event.MessageContext
+import net.folivo.matrix.bot.membership.MatrixMembershipService
+import net.folivo.matrix.bot.user.MatrixUserService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.membership.MembershipService
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
-import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
+import net.folivo.matrix.core.model.MatrixId.RoomId
+import net.folivo.matrix.core.model.MatrixId.UserId
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.apache.tools.ant.types.Commandline
 import org.slf4j.LoggerFactory
@@ -18,17 +20,17 @@ class MessageToBotHandler(
         private val helper: SendSmsCommandHelper,
         private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties,
-        private val userService: SmsMatrixAppserviceUserService,
-        private val membershipService: MembershipService
+        private val userService: MatrixUserService,
+        private val membershipService: MatrixMembershipService
 ) {
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
     suspend fun handleMessage(
-            roomId: String,
+            roomId: RoomId,
             body: String,
-            senderId: String,
+            senderId: UserId,
             context: MessageContext
     ): Boolean {
         val sender = userService.getOrCreateUser(senderId)

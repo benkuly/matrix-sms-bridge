@@ -8,7 +8,7 @@ import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.membership.Membership
+import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMapping
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(MockKExtension::class)
-class SmsAppserviceMessageHandlerTest {
+class SmsMessageHandlerTest {
 
     @MockK
     lateinit var messageToSmsHandlerMock: MessageToSmsHandler
@@ -38,7 +38,7 @@ class SmsAppserviceMessageHandlerTest {
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
 
     @InjectMockKs
-    lateinit var cut: SmsAppserviceMessageHandler
+    lateinit var cut: SmsMessageHandler
 
     @MockK
     lateinit var contextMock: MessageContext
@@ -89,7 +89,7 @@ class SmsAppserviceMessageHandlerTest {
     @Test
     fun `should delegate to SendSmsService when message is not TextMessage`() {
         every { roomMock.memberships } returns listOf(
-                Membership(AppserviceUser("someUserId", false), 1)
+                MatrixSmsMapping(AppserviceUser("someUserId", false), 1)
         )
 
         runBlocking { cut.handleMessage(UnknownMessageEventContent("someBody", "image"), contextMock) }
@@ -100,7 +100,7 @@ class SmsAppserviceMessageHandlerTest {
     @Test
     fun `should not delegate to SendSmsService when message is NoticeMessage`() {
         every { roomMock.memberships } returns listOf(
-                Membership(AppserviceUser("someUserId", false), 1)
+                MatrixSmsMapping(AppserviceUser("someUserId", false), 1)
         )
 
         runBlocking { cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock) }
@@ -113,7 +113,7 @@ class SmsAppserviceMessageHandlerTest {
         coEvery { messageToBotHandlerMock.handleMessage(any(), any(), any(), any()) } returns true
 
         every { roomMock.memberships } returns listOf(
-                Membership(AppserviceUser("@smsbot:someServerName", true), 1)
+                MatrixSmsMapping(AppserviceUser("@smsbot:someServerName", true), 1)
         )
 
         runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
@@ -125,7 +125,7 @@ class SmsAppserviceMessageHandlerTest {
     @Test
     fun `should not delegate to SmsBotHandler when room contains no bot`() {
         every { roomMock.memberships } returns listOf(
-                Membership(AppserviceUser("@someUser:someServerName", true), 1)
+                MatrixSmsMapping(AppserviceUser("@someUser:someServerName", true), 1)
         )
 
         runBlocking { cut.handleMessage(TextMessageEventContent("someBody"), contextMock) }
@@ -137,7 +137,7 @@ class SmsAppserviceMessageHandlerTest {
     @Test
     fun `should not delegate to SmsBotHandler when message is no text message`() {
         every { roomMock.memberships } returns listOf(
-                Membership(AppserviceUser("@someUser:someServerName", true), 1)
+                MatrixSmsMapping(AppserviceUser("@someUser:someServerName", true), 1)
         )
 
         runBlocking { cut.handleMessage(NoticeMessageEventContent("someBody"), contextMock) }

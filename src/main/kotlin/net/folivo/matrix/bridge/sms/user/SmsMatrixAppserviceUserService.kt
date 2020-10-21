@@ -1,61 +1,27 @@
 package net.folivo.matrix.bridge.sms.user
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.reactive.asFlow
-import kotlinx.coroutines.reactive.awaitFirst
-import kotlinx.coroutines.reactive.awaitFirstOrNull
-import net.folivo.matrix.appservice.api.user.CreateUserParameter
-import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService
-import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState
-import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState.*
-import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
+import net.folivo.matrix.appservice.api.user.RegisterUserParameter
+import net.folivo.matrix.bot.appservice.DefaultAppserviceUserService
 import net.folivo.matrix.bot.config.MatrixBotProperties
+import net.folivo.matrix.bot.user.MatrixUserService
+import net.folivo.matrix.bot.util.BotServiceHelper
+import net.folivo.matrix.core.model.MatrixId.UserId
 import org.springframework.stereotype.Service
 
 @Service
 class SmsMatrixAppserviceUserService(
-        private val helper: MatrixAppserviceServiceHelper,
-        private val userRepository: AppserviceUserRepository,
+        userService: MatrixUserService,
+        helper: BotServiceHelper,
         private val botProperties: MatrixBotProperties
-) : MatrixAppserviceUserService {
+) : DefaultAppserviceUserService(userService, helper, botProperties) { //FIXME test
 
-    override suspend fun userExistingState(userId: String): UserExistingState {
-        val userExists = userRepository.existsById(userId).awaitFirst()
-        return if (userExists) {
-            EXISTS
+    override suspend fun getRegisterUserParameter(userId: UserId): RegisterUserParameter {
+        return if (userId == botProperties.botUserId) {
+            RegisterUserParameter("SMS Bot")
         } else {
-            if (helper.isManagedUser(userId)) CAN_BE_CREATED else DOES_NOT_EXISTS
-        }
-    }
-
-    override suspend fun getCreateUserParameter(userId: String): CreateUserParameter {
-        return if (userId == "@${botProperties.username}:${botProperties.serverName}") {
-            CreateUserParameter("SMS Bot")
-        } else {
-            val telephoneNumber = userId.removePrefix("@sms_").substringBefore(":")
+            val telephoneNumber = userId.localpart.removePrefix("sms_")
             val displayName = "+$telephoneNumber (SMS)"
-            CreateUserParameter(displayName)
+            RegisterUserParameter(displayName)
         }
-    }
-
-    override suspend fun saveUser(userId: String) {
-    }
-
-    suspend fun getOrCreateUser(userId: String): AppserviceUser {
-        return userRepository.findById(userId).awaitFirstOrNull()
-               ?: helper.isManagedUser(userId)
-                       .let { userRepository.save(AppserviceUser(userId, it)).awaitFirst() }
-    }
-
-    suspend fun deleteByUserId(userId: String) {
-        userRepository.deleteById(userId).awaitFirst()
-    }
-
-    suspend fun deleteAllUsers() {
-        userRepository.deleteAll().awaitFirstOrNull()
-    }
-
-    suspend fun getUsersByRoomId(roomId: String): Flow<AppserviceUser> {
-        return userRepository.findByRoomId(roomId).asFlow()
     }
 }

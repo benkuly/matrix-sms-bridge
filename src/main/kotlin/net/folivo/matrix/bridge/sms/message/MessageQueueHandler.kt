@@ -1,4 +1,4 @@
-package net.folivo.matrix.bridge.sms.room
+package net.folivo.matrix.bridge.sms.message
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 
 @Component
 @Profile("!initialsync")
-class MessageQueueHandler(private val roomService: SmsMatrixAppserviceRoomService) : ApplicationListener<ApplicationReadyEvent> {
+class MessageQueueHandler(private val roomMessageService: MatrixRoomMessageService) : ApplicationListener<ApplicationReadyEvent> {
 
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
@@ -22,7 +22,7 @@ class MessageQueueHandler(private val roomService: SmsMatrixAppserviceRoomServic
             while (true) {
                 delay(10000)
                 try {
-                    roomService.processMessageQueue()
+                    roomMessageService.processMessageQueue()
                 } catch (error: Throwable) {
                     LOG.warn("error while processing messages for deferred sending: ${error.message}")
                 }

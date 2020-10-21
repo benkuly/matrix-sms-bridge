@@ -1,5 +1,6 @@
 package net.folivo.matrix.bridge.sms
 
+import net.folivo.matrix.core.model.MatrixId.RoomId
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.ConstructorBinding
 
@@ -7,7 +8,7 @@ import org.springframework.boot.context.properties.ConstructorBinding
 @ConstructorBinding
 data class SmsBridgeProperties(
         val templates: SmsBridgeTemplateProperties = SmsBridgeTemplateProperties(),
-        val defaultRoomId: String?,
+        val defaultRoomId: RoomId?,
         val allowMappingWithoutToken: Boolean = true,
         val defaultRegion: String,
         val defaultTimeZone: String = "UTC"

@@ -10,7 +10,7 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.NO
-import net.folivo.matrix.bridge.sms.membership.Membership
+import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMapping
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
@@ -228,9 +228,9 @@ class SendSmsCommandHelperTest {
                     every { roomId }.returns("someRoomId")
                     every { memberships }.returns(
                             listOf(
-                                    Membership(AppserviceUser("someUser", true), 1),
-                                    Membership(AppserviceUser("someUserTooMany", true), 1),
-                                    Membership(AppserviceUser("@bot:someServer", true), 1)
+                                    Mapping(AppserviceUser("someUser", true), 1),
+                                    Mapping(AppserviceUser("someUserTooMany", true), 1),
+                                    Mapping(AppserviceUser("@bot:someServer", true), 1)
                             )
                     )
                 })
@@ -259,8 +259,8 @@ class SendSmsCommandHelperTest {
         }))
         every { room.memberships }.returns(
                 listOf(
-                        Membership(AppserviceUser("someOtherUser", false), 1),
-                        Membership(AppserviceUser("@sms_1111111111:someServer", true), 1)
+                        MatrixSmsMapping(AppserviceUser("someOtherUser", false), 1),
+                        MatrixSmsMapping(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -304,8 +304,8 @@ class SendSmsCommandHelperTest {
                     every { roomId }.returns("someRoomId")
                     every { memberships }.returns(
                             listOf(
-                                    Membership(AppserviceUser("someUser", true), 1),
-                                    Membership(AppserviceUser("botUser", true), 1)
+                                    Mapping(AppserviceUser("someUser", true), 1),
+                                    Mapping(AppserviceUser("botUser", true), 1)
                             )
                     )
                 })
@@ -401,8 +401,8 @@ class SendSmsCommandHelperTest {
         }))
         every { room.memberships }.returns(
                 listOf(
-                        Membership(AppserviceUser("@bot:someServer", true), 1),
-                        Membership(AppserviceUser("@sms_1111111111:someServer", true), 1)
+                        MatrixSmsMapping(AppserviceUser("@bot:someServer", true), 1),
+                        MatrixSmsMapping(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -448,8 +448,8 @@ class SendSmsCommandHelperTest {
         }))
         every { room.memberships }.returns(
                 listOf(
-                        Membership(AppserviceUser("someOtherUser", false), 1),
-                        Membership(AppserviceUser("@sms_1111111111:someServer", true), 1)
+                        MatrixSmsMapping(AppserviceUser("someOtherUser", false), 1),
+                        MatrixSmsMapping(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }
@@ -498,8 +498,8 @@ class SendSmsCommandHelperTest {
         }))
         every { room.memberships }.returns(
                 listOf(
-                        Membership(AppserviceUser("someOtherUser", false), 1),
-                        Membership(AppserviceUser("@sms_1111111111:someServer", true), 1)
+                        MatrixSmsMapping(AppserviceUser("someOtherUser", false), 1),
+                        MatrixSmsMapping(AppserviceUser("@sms_1111111111:someServer", true), 1)
                 )
         )
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }

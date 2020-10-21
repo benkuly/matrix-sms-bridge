@@ -2,9 +2,10 @@ package net.folivo.matrix.bridge.sms.handler
 
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
+import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMappingService
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
+import net.folivo.matrix.core.model.MatrixId.UserId
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import org.slf4j.LoggerFactory
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service
 @Service
 class ReceiveSmsService(
         private val matrixClient: MatrixClient,
-        private val roomService: SmsMatrixAppserviceRoomService,
+        private val mappingService: MatrixSmsMappingService,
         private val matrixBotProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
 ) {
@@ -26,7 +27,7 @@ class ReceiveSmsService(
     suspend fun receiveSms(body: String, sender: String): String? {
         val userId =
                 if (sender.matches(Regex("\\+[0-9]{6,15}"))) {
-                    "@sms_${sender.substringAfter('+')}:${matrixBotProperties.serverName}"
+                    UserId("sms_${sender.substringAfter('+')}", matrixBotProperties.serverName)
                 } else {
                     throw MatrixServerException(
                             BAD_REQUEST,
@@ -40,11 +41,10 @@ class ReceiveSmsService(
         val mappingToken = Regex("#[0-9]{1,9}").find(body)
                 ?.value?.substringAfter('#')?.toInt()
 
-        roomService.syncUserAndItsRooms(userId)
-        val roomId = roomService.getRoom(
+        val roomId = mappingService.getRoomId(
                 userId = userId,
                 mappingToken = mappingToken
-        )?.id
+        )
 
         if (roomId != null) {
             LOG.debug("receive SMS from $sender to $roomId")

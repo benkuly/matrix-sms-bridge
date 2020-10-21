@@ -1,11 +1,11 @@
 package net.folivo.matrix.bridge.sms.handler
 
 import net.folivo.matrix.bot.config.MatrixBotProperties
-import net.folivo.matrix.bot.handler.MatrixMessageContentHandler
-import net.folivo.matrix.bot.handler.MessageContext
+import net.folivo.matrix.bot.event.MatrixMessageHandler
+import net.folivo.matrix.bot.event.MessageContext
+import net.folivo.matrix.bot.membership.MatrixMembershipService
+import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.membership.MembershipService
-import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
 import net.folivo.matrix.core.model.events.m.room.message.MessageEvent.MessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -13,14 +13,14 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
-class SmsAppserviceMessageHandler(
+class SmsMessageHandler(
         private val messageToSmsHandler: MessageToSmsHandler,
         private val messageToBotHandler: MessageToBotHandler,
-        private val roomService: SmsMatrixAppserviceRoomService,
-        private val membershipService: MembershipService,
+        private val roomService: MatrixRoomService,
+        private val membershipService: MatrixMembershipService,
         private val botProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
-) : MatrixMessageContentHandler {
+) : MatrixMessageHandler {
 
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
@@ -36,11 +36,11 @@ class SmsAppserviceMessageHandler(
         if (context.roomId == smsBridgeProperties.defaultRoomId) {
             LOG.debug("ignored message to default room")
             return
-        } else {
-            val wasForBot = if (content is TextMessageEventContent
-                                && membershipService.containsMembersByRoomId(
+        } else { // FIXME can be better
+            val didHandleMessage = if (content is TextMessageEventContent
+                                       && membershipService.doesRoomContainsMembers(
                             roomId,
-                            setOf("@${botProperties.username}:${botProperties.serverName}")
+                            setOf(botProperties.botUserId)
                     )
             ) {
                 messageToBotHandler.handleMessage(
@@ -53,7 +53,7 @@ class SmsAppserviceMessageHandler(
                 LOG.debug("room didn't contain bot user or event was no text message")
                 false
             }
-            if (wasForBot || content is NoticeMessageEventContent) {
+            if (didHandleMessage || content is NoticeMessageEventContent) {
                 LOG.debug("ignored message because it was for bot or only a notice message")
                 return
             } else {

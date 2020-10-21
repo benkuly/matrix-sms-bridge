@@ -9,7 +9,7 @@ import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.handler.MessageContext
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.membership.Membership
+import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMapping
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
@@ -61,8 +61,8 @@ class MessageToSmsHandlerTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 memberships = listOf(
-                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 1),
-                        Membership(AppserviceUser("@sms_9876543210:someServerName", true), 2)
+                        MatrixSmsMapping(AppserviceUser("@sms_0123456789:someServerName", true), 1),
+                        MatrixSmsMapping(AppserviceUser("@sms_9876543210:someServerName", true), 2)
                 )
         )
 
@@ -80,8 +80,8 @@ class MessageToSmsHandlerTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 memberships = listOf(
-                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 1),
-                        Membership(AppserviceUser("@sms_9876543210:someServerName", true), 2)
+                        MatrixSmsMapping(AppserviceUser("@sms_0123456789:someServerName", true), 1),
+                        MatrixSmsMapping(AppserviceUser("@sms_9876543210:someServerName", true), 2)
                 )
         )
 
@@ -104,7 +104,7 @@ class MessageToSmsHandlerTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 memberships = listOf(
-                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 24)
+                        MatrixSmsMapping(AppserviceUser("@sms_0123456789:someServerName", true), 24)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessage }.returns("someTemplate {sender} {body} ")
@@ -124,7 +124,7 @@ class MessageToSmsHandlerTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 memberships = listOf(
-                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 24)
+                        MatrixSmsMapping(AppserviceUser("@sms_0123456789:someServerName", true), 24)
                 )
         )
         every { smsBridgePropertiesMock.templates.outgoingMessageFromBot }.returns("someBotTemplate {sender} {body} ")
@@ -144,7 +144,7 @@ class MessageToSmsHandlerTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 memberships = listOf(
-                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 24)
+                        MatrixSmsMapping(AppserviceUser("@sms_0123456789:someServerName", true), 24)
                 )
         )
         every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
@@ -167,8 +167,8 @@ class MessageToSmsHandlerTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 memberships = listOf(
-                        Membership(AppserviceUser("@sms_0123456789-24:someServerName", true), 1),
-                        Membership(AppserviceUser("@sms_9876543210:someServerName", true), 2)
+                        MatrixSmsMapping(AppserviceUser("@sms_0123456789-24:someServerName", true), 1),
+                        MatrixSmsMapping(AppserviceUser("@sms_9876543210:someServerName", true), 2)
                 )
         )
 
@@ -183,7 +183,7 @@ class MessageToSmsHandlerTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 memberships = listOf(
-                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 1)
+                        MatrixSmsMapping(AppserviceUser("@sms_0123456789:someServerName", true), 1)
                 )
         )
         coEvery { smsProviderMock.sendSms("+0123456789", any()) }.throws(RuntimeException())
@@ -205,7 +205,7 @@ class MessageToSmsHandlerTest {
         val room = AppserviceRoom(
                 "someRoomId",
                 memberships = listOf(
-                        Membership(AppserviceUser("@sms_0123456789:someServerName", true), 1)
+                        MatrixSmsMapping(AppserviceUser("@sms_0123456789:someServerName", true), 1)
                 )
         )
 
