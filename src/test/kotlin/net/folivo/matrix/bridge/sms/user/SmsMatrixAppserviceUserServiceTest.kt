@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.appservice.api.user.MatrixAppserviceUserService.UserExistingState.*
 import net.folivo.matrix.bot.appservice.MatrixAppserviceServiceHelper
 import net.folivo.matrix.bot.config.MatrixBotProperties
+import net.folivo.matrix.bridge.sms.appservice.SmsMatrixAppserviceUserService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith

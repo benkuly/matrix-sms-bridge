@@ -6,10 +6,9 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.membership.MatrixMembershipService
 import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
-import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
-import net.folivo.matrix.bridge.sms.message.MatrixRoomMessage
-import net.folivo.matrix.bridge.sms.message.MatrixRoomMessageService
+import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.*
+import net.folivo.matrix.bridge.sms.message.MatrixMessage
+import net.folivo.matrix.bridge.sms.message.MatrixMessageService
 import net.folivo.matrix.core.model.MatrixId.RoomId
 import net.folivo.matrix.core.model.MatrixId.UserId
 import net.folivo.matrix.restclient.MatrixClient
@@ -26,7 +25,7 @@ import java.time.temporal.ChronoUnit
 class SendSmsCommandHelper(
         private val roomService: MatrixRoomService,
         private val membershipService: MatrixMembershipService,
-        private val roomMessageService: MatrixRoomMessageService,
+        private val messageService: MatrixMessageService,
         private val matrixClient: MatrixClient,
         private val botProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
@@ -37,7 +36,7 @@ class SendSmsCommandHelper(
     }
 
     enum class RoomCreationMode {
-        AUTO, ALWAYS, NO
+        AUTO, ALWAYS, NO, SINGLE
     }
 
     suspend fun createRoomAndSendMessage(
@@ -57,7 +56,12 @@ class SendSmsCommandHelper(
 
         val sendAfter = sendAfterLocal?.atZone(ZoneId.of(smsBridgeProperties.defaultTimeZone))?.toInstant()
         try {
-            val answer = if (rooms.isEmpty() && roomCreationMode == AUTO || roomCreationMode == ALWAYS) {
+            val answer: String
+            if (roomCreationMode == SINGLE && smsBridgeProperties.singleModeEnabled) {
+                LOG.debug("invite to single room")
+                //FIXME
+                answer = smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage
+            } else if (rooms.isEmpty() && roomCreationMode == AUTO || roomCreationMode == ALWAYS) {
                 LOG.debug("create room")
                 val createdRoomId = matrixClient.roomsApi.createRoom(
                         name = roomName,
@@ -68,14 +72,13 @@ class SendSmsCommandHelper(
                 if (!body.isNullOrBlank()) {
                     sendMessageToRoom(createdRoomId, senderId, body, receiverIds, sendAfter, sendAfterLocal)
                 }
-                smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage
+                answer = smsBridgeProperties.templates.botSmsSendCreatedRoomAndSendMessage
             } else if (rooms.size == 1) {
                 LOG.debug("only send message")
                 val roomId = rooms.first().id
                 if (body.isNullOrBlank()) {
-                    smsBridgeProperties.templates.botSmsSendNoMessage
+                    answer = smsBridgeProperties.templates.botSmsSendNoMessage
                 } else {
-
                     val botIsMember = membershipService.doesRoomContainsMembers( //FIXME test
                             roomId,
                             setOf(botProperties.botUserId)
@@ -90,12 +93,12 @@ class SendSmsCommandHelper(
                     }
                     sendMessageToRoom(roomId, senderId, body, receiverIds, sendAfter, sendAfterLocal)
 
-                    smsBridgeProperties.templates.botSmsSendSendMessage
+                    answer = smsBridgeProperties.templates.botSmsSendSendMessage
                 }
             } else if (rooms.size > 1) {
-                smsBridgeProperties.templates.botSmsSendTooManyRooms
+                answer = smsBridgeProperties.templates.botSmsSendTooManyRooms
             } else {
-                smsBridgeProperties.templates.botSmsSendDisabledRoomCreation
+                answer = smsBridgeProperties.templates.botSmsSendDisabledRoomCreation
             }
 
             return answer.replace("{receiverNumbers}", receiverNumbers.joinToString())
@@ -117,26 +120,24 @@ class SendSmsCommandHelper(
     ) {
         if (sendAfter != null && Instant.now().until(sendAfter, ChronoUnit.SECONDS) > 15) {
             LOG.debug("notify room $roomId that message will be send later")
-            roomMessageService.sendRoomMessage(
-                    MatrixRoomMessage(
+            messageService.sendRoomMessage(
+                    MatrixMessage(
                             roomId = roomId,
                             body = smsBridgeProperties.templates.botSmsSendNoticeDelayedMessage
                                     .replace("{sendAfter}", sendAfterLocal.toString()),
-                            requiredReceiverIds = receiverIds.toSet(),
                             isNotice = true
-                    )
+                    ), receiverIds.toSet()
             )
         }
         LOG.debug("send message to room $roomId")
-        roomMessageService.sendRoomMessage(
-                MatrixRoomMessage(
+        messageService.sendRoomMessage(
+                MatrixMessage(
                         roomId = roomId,
                         body = smsBridgeProperties.templates.botSmsSendNewRoomMessage
                                 .replace("{sender}", senderId.full)
                                 .replace("{body}", body),
-                        requiredReceiverIds = receiverIds.toSet(),
                         sendAfter = sendAfter ?: Instant.now()
-                )
+                ), receiverIds.toSet()
         )
     }
 

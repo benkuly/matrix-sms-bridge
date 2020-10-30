@@ -9,5 +9,7 @@ matrix:
       users:
         - exclusive: true
           regex: "sms_[0-9]{6,15}"
-      aliases: []
-      rooms: []
+      aliases:
+        - exclusive: true
+          regex: "sms_[0-9]{6,15}"
+      rooms: [ ]

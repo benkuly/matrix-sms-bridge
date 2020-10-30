@@ -7,11 +7,11 @@ import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.appservice.api.room.MatrixAppserviceRoomService.RoomExistingState.DOES_NOT_EXISTS
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.bridge.sms.appservice.SmsMatrixAppserviceUserService
 import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMapping
-import net.folivo.matrix.bridge.sms.message.MatrixRoomMessage
-import net.folivo.matrix.bridge.sms.message.MatrixRoomMessageRepository
+import net.folivo.matrix.bridge.sms.message.MatrixMessage
+import net.folivo.matrix.bridge.sms.message.MatrixMessageRepository
 import net.folivo.matrix.bridge.sms.user.AppserviceUser
-import net.folivo.matrix.bridge.sms.user.SmsMatrixAppserviceUserService
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -32,7 +32,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
     return {
         val roomRepositoryMock: AppserviceRoomRepository = mockk()
         val userServiceMock: SmsMatrixAppserviceUserService = mockk()
-        val messageRepositoryMock: MatrixRoomMessageRepository = mockk()
+        val messageRepositoryMock: MatrixMessageRepository = mockk()
         val botPropertiesMock: MatrixBotProperties = mockk()
         val smsBridgePropertiesMock: SmsBridgeProperties = mockk()
         val matrixClientMock: MatrixClient = mockk(relaxed = true)
@@ -260,10 +260,10 @@ private fun testBody(): DescribeSpec.() -> Unit {
         describe(SmsMatrixAppserviceRoomService::sendRoomMessage.name) {
             describe("sending time is in future") {
                 it("should save message to send it later") {
-                    val message = MatrixRoomMessage(mockk(), "some body", Instant.now().plusSeconds(2000))
-                    every { messageRepositoryMock.save<MatrixRoomMessage>(any()) }.returns(Mono.just(message))
+                    val message = MatrixMessage(mockk(), "some body", Instant.now().plusSeconds(2000))
+                    every { messageRepositoryMock.save<MatrixMessage>(any()) }.returns(Mono.just(message))
                     runBlocking { cut.sendRoomMessage(message) }
-                    verify { messageRepositoryMock.save<MatrixRoomMessage>(message) }
+                    verify { messageRepositoryMock.save<MatrixMessage>(message) }
                     coVerify(exactly = 0) {
                         matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any())
                     }
@@ -279,7 +279,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 )
                 )
                 it("should try to send and delete messages when sending fails") {
-                    val message = MatrixRoomMessage(room, "some body", Instant.ofEpochMilli(123))
+                    val message = MatrixMessage(room, "some body", Instant.ofEpochMilli(123))
 
                     coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), txnId = any()) }.throws(
                             MatrixServerException(
@@ -302,7 +302,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                 }
                 it("should delete messages when members are missing in room") {
-                    val message = MatrixRoomMessage(
+                    val message = MatrixMessage(
                             room,
                             "some body",
                             Instant.ofEpochMilli(123),
@@ -317,14 +317,14 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                 }
                 it("should prevent, that messages are deleted, although it was send a few minutes ago") {
-                    val message = MatrixRoomMessage(
+                    val message = MatrixMessage(
                             room,
                             "some body",
                             Instant.ofEpochMilli(123),
                             setOf("someUserId1", "someUserId2")
                     )
 
-                    every { messageRepositoryMock.save<MatrixRoomMessage>(any()) }.returns(Mono.just(message))
+                    every { messageRepositoryMock.save<MatrixMessage>(any()) }.returns(Mono.just(message))
 
 
                     runBlocking { cut.sendRoomMessage(message) }
@@ -345,7 +345,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             MatrixSmsMapping(AppserviceUser("someUserId2", true), 24)
                     )
                     )
-                    val message = MatrixRoomMessage(
+                    val message = MatrixMessage(
                             room,
                             "some body 1",
                             Instant.now().minusSeconds(300),
@@ -378,7 +378,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     val room = AppserviceRoom(
                             "someRoomId", listOf(MatrixSmsMapping(AppserviceUser("someUserId1", false), 12))
                     )
-                    val message = MatrixRoomMessage(room, "some body", Instant.now().minusSeconds(300))
+                    val message = MatrixMessage(room, "some body", Instant.now().minusSeconds(300))
                     ReflectionTestUtils.setField(message, "id", 1L)
 
 
@@ -404,7 +404,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             MatrixSmsMapping(AppserviceUser("someUserId1", false), 12)
                     )
                     )
-                    val message = MatrixRoomMessage(
+                    val message = MatrixMessage(
                             room,
                             "some body",
                             Instant.now().minusSeconds(300),

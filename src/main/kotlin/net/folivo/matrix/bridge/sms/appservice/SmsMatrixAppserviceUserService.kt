@@ -1,4 +1,4 @@
-package net.folivo.matrix.bridge.sms.user
+package net.folivo.matrix.bridge.sms.appservice
 
 import net.folivo.matrix.appservice.api.user.RegisterUserParameter
 import net.folivo.matrix.bot.appservice.DefaultAppserviceUserService

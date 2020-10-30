@@ -1,14 +1,14 @@
 databaseChangeLog:
   - changeSet:
-      id: 0.3.3.RELEASE
+      id: net.folivo.matrix.bridge.sms.changelog-0.4.0.RELEASE
       author: benkuly
       changes:
         - createTable:
-            tableName: matrix_room_message
+            tableName: matrix_message
             columns:
               - column:
                   name: id
-                  type: UUID
+                  type: BIGINT
                   constraints:
                     nullable: false
                     primaryKey: true
@@ -18,7 +18,7 @@ databaseChangeLog:
                   type: VARCHAR(250)
                   constraints:
                     nullable: false
-                    foreignKeyName: fk_matrix_room_message_matrix_room
+                    foreignKeyName: fk_matrix_message_matrix_room
                     references: matrix_room(id)
                     onDelete: CASCADE
               - column:
@@ -42,7 +42,38 @@ databaseChangeLog:
                   constraints:
                     nullable: false
         - createTable:
-            tableName: matrix_room_message_matrix_user
+            tableName: matrix_message_receiver
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    autoIncrement: true
+              - column:
+                  name: room_message_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    primaryKey: false
+                    foreignKeyName: fk_matrix_message_receiver_matrix_message
+                    references: matrix_message(id)
+                    onDelete: CASCADE
+              - column:
+                  name: room_user_id
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+                    primaryKey: false
+                    foreignKeyName: fk_matrix_message_receiver_matrix_message
+                    references: matrix_message(id)
+                    onDelete: CASCADE
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false
         - createTable:
             tableName: matrix_sms_mapping
             columns:
@@ -58,119 +89,6 @@ databaseChangeLog:
               - column:
                   name: maping_token
                   type: INTEGER
-                  constraints:
-                    nullable: true
-              - column:
-                  name: version
-                  type: INTEGER
-                  constraints:
-                    nullable: false
-                    # FIXME delete down here
-        - createTable:
-            tableName: matrix_room_message_matrix_user
-            columns:
-              - column:
-                  name: id
-                  type: VARCHAR(250)
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-              - column:
-                  name: is_managed
-                  type: BOOLEAN
-                  constraints:
-                    nullable: false
-              - column:
-                  name: version
-                  type: INTEGER
-                  constraints:
-                    nullable: false
-        - createTable:
-            tableName: matrix_room_alias
-            columns:
-              - column:
-                  name: alias
-                  type: VARCHAR(250)
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-              - column:
-                  name: room_id
-                  type: VARCHAR(250)
-                  constraints:
-                    nullable: false
-                    foreignKeyName: fk_matrix_room_alias_matrix_room
-                    references: matrix_room(id)
-                    onDelete: CASCADE
-              - column:
-                  name: version
-                  type: INTEGER
-                  constraints:
-                    nullable: false
-        - createTable:
-            tableName: matrix_user
-            columns:
-              - column:
-                  name: id
-                  type: VARCHAR(250)
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-              - column:
-                  name: is_managed
-                  type: BOOLEAN
-                  constraints:
-                    nullable: false
-              - column:
-                  name: version
-                  type: INTEGER
-                  constraints:
-                    nullable: false
-        - createTable:
-            tableName: matrix_membership
-            columns:
-              - column:
-                  name: id
-                  type: VARCHAR(250)
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-              - column:
-                  name: user_id
-                  type: VARCHAR(250)
-                  constraints:
-                    nullable: false
-                    foreignKeyName: fk_matrix_membership_matrix_user
-                    references: matrix_user(id)
-                    onDelete: CASCADE
-              - column:
-                  name: room_id
-                  type: VARCHAR(250)
-                  constraints:
-                    nullable: false
-                    foreignKeyName: fk_matrix_membership_matrix_room
-                    references: matrix_room(id)
-                    onDelete: CASCADE
-              - column:
-                  name: version
-                  type: INTEGER
-                  constraints:
-                    nullable: false
-        - createTable:
-            tableName: matrix_sync_batch_token
-            columns:
-              - column:
-                  name: user_id
-                  type: VARCHAR(250)
-                  constraints:
-                    nullable: false
-                    primaryKey: true
-                    foreignKeyName: fk_matrix_sync_batch_token_matrix_user
-                    references: matrix_user(id)
-                    onDelete: CASCADE
-              - column:
-                  name: token
-                  type: VARCHAR(250)
                   constraints:
                     nullable: true
               - column:

@@ -10,6 +10,7 @@ data class SmsBridgeProperties(
         val templates: SmsBridgeTemplateProperties = SmsBridgeTemplateProperties(),
         val defaultRoomId: RoomId?,
         val allowMappingWithoutToken: Boolean = true,
+        val singleModeEnabled: Boolean = false,
         val defaultRegion: String,
         val defaultTimeZone: String = "UTC"
 ) {

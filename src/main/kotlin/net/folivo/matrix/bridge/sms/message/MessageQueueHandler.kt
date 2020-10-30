@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 
 @Component
 @Profile("!initialsync")
-class MessageQueueHandler(private val roomMessageService: MatrixRoomMessageService) : ApplicationListener<ApplicationReadyEvent> {
+class MessageQueueHandler(private val messageService: MatrixMessageService) : ApplicationListener<ApplicationReadyEvent> {
 
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
@@ -22,7 +22,7 @@ class MessageQueueHandler(private val roomMessageService: MatrixRoomMessageServi
             while (true) {
                 delay(10000)
                 try {
-                    roomMessageService.processMessageQueue()
+                    messageService.processMessageQueue()
                 } catch (error: Throwable) {
                     LOG.warn("error while processing messages for deferred sending: ${error.message}")
                 }
