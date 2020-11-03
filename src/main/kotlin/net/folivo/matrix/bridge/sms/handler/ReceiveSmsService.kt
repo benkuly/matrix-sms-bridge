@@ -74,7 +74,7 @@ class ReceiveSmsService(
             )
             if (membershipService.hasRoomOnlyManagedUsersLeft(roomIdFromAlias)) {
                 if (defaultRoomId != null) {
-                    val message = templates.defaultRoomIncomingMessage
+                    val message = templates.defaultRoomIncomingMessageWithSingleMode
                             .replace("{sender}", sender)
                             .replace("{roomAlias}", roomAliasId.toString())
                     matrixClient.roomsApi.sendRoomEvent(

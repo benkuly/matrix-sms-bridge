@@ -8,16 +8,16 @@ import com.github.ajalt.clikt.parameters.types.enum
 import com.google.i18n.phonenumbers.NumberParseException
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode
-import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.AUTO
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.core.model.MatrixId.UserId
 import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 
-class SendSmsCommand(
+class SmsSendCommand(
         private val sender: UserId,
-        private val helper: SendSmsCommandHelper,
+        private val helper: SmsSendCommandHelper,
         private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties
 ) : CliktCommand(name = "send") {
@@ -26,7 +26,7 @@ class SendSmsCommand(
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    private val body by argument().optional()
+    private val body by argument("body").optional()
 
     private val telephoneNumbers by option("-t", "--telephoneNumber").multiple(required = true).unique()
     private val roomName by option("-n", "--roomName")

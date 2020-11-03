@@ -11,8 +11,8 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
-import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.AUTO
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.ALWAYS
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.AUTO
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -20,9 +20,9 @@ import org.junit.jupiter.api.extension.ExtendWith
 import java.time.LocalDateTime
 
 @ExtendWith(MockKExtension::class)
-class SendSmsCommandTest {
+class SmsSendCommandTest {
     @MockK
-    lateinit var helper: SendSmsCommandHelper
+    lateinit var helper: SmsSendCommandHelper
 
     @MockK
     lateinit var phoneNumberServiceMock: PhoneNumberService
@@ -30,7 +30,7 @@ class SendSmsCommandTest {
     @MockK
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
 
-    private lateinit var cut: SendSmsCommand
+    private lateinit var cut: SmsSendCommand
 
     @MockK(relaxed = true)
     lateinit var consoleMock: CliktConsole
@@ -42,7 +42,7 @@ class SendSmsCommandTest {
         every { smsBridgePropertiesMock.templates.botSmsSendInvalidTelephoneNumber }.returns("invalid")
         every { phoneNumberServiceMock.parseToInternationalNumber("017331111111") }.returns("+4917331111111")
         every { phoneNumberServiceMock.parseToInternationalNumber("017332222222") }.returns("+4917332222222")
-        cut = SendSmsCommand("someSender", helper, phoneNumberServiceMock, smsBridgePropertiesMock)
+        cut = SmsSendCommand("someSender", helper, phoneNumberServiceMock, smsBridgePropertiesMock)
         cut.context { console = consoleMock }
     }
 

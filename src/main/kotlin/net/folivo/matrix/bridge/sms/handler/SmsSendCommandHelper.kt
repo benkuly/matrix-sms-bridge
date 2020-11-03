@@ -8,7 +8,7 @@ import net.folivo.matrix.bot.room.MatrixRoom
 import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties.SmsBridgeTemplateProperties
-import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.*
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.*
 import net.folivo.matrix.bridge.sms.message.MatrixMessage
 import net.folivo.matrix.bridge.sms.message.MatrixMessageService
 import net.folivo.matrix.core.model.MatrixId.*
@@ -23,7 +23,7 @@ import java.time.temporal.ChronoUnit
 
 
 @Component
-class SendSmsCommandHelper(
+class SmsSendCommandHelper(
         private val roomService: MatrixRoomService,
         private val membershipService: MatrixMembershipService,
         private val messageService: MatrixMessageService,
@@ -96,8 +96,12 @@ class SendSmsCommandHelper(
                     } else if (receiverNumbers.size == 1) {
                         val aliasLocalpart = "sms_${receiverNumbers.first().removePrefix("+")}"
                         val roomAliasId = RoomAliasId(aliasLocalpart, botProperties.serverName)
-                        val roomId = roomService.getRoomAlias(roomAliasId)?.roomId
+                        val existingRoomId = roomService.getRoomAlias(roomAliasId)?.roomId
+                        val roomId = existingRoomId
                                      ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId//FIXME does this work?
+                        if (existingRoomId == null) {
+                            matrixClient.roomsApi.inviteUser(roomId, senderId)
+                        }
                         sendMessageToRoom(
                                 roomId,
                                 senderId,

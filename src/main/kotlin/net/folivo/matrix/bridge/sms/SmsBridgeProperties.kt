@@ -23,9 +23,10 @@ data class SmsBridgeProperties(
             val sendSmsError: String = "Could not send SMS to this user. Please try it again later.",
             val sendSmsIncompatibleMessage: String = "Only text messages can be send to this SMS user.",
             val defaultRoomIncomingMessage: String = "{sender} wrote:\n\n{body}",
-            val defaultRoomIncomingMessageWithSingleMode: String = "A message from {sender} was send to room {roomAlias}. Someone should join the room. Otherwise nobody will read the message.",
+            val defaultRoomIncomingMessageWithSingleMode: String = "A message from {sender} was send to room {roomAlias}. Someone should join the room. Otherwise nobody will read the message.\n\nType `sms invite {roomAlias}` to get invited to the room.",
             val botHelp: String = "To use this bot, write 'sms'",
             val botTooManyMembers: String = "Only rooms with two members are allowed to write with this bot.",
+            val botSmsError: String = "There was an error while using sms command. Reason: {error}",
             val botSmsSendInvalidTelephoneNumber: String = "The telephone number is invalid.",
             val botSmsSendNewRoomMessage: String = "{sender} wrote:\n\n{body}",
             val botSmsSendNoticeDelayedMessage: String = "A message will be sent for you at {sendAfter}.",
@@ -37,6 +38,8 @@ data class SmsBridgeProperties(
             val botSmsSendDisabledRoomCreation: String = "No message was sent to telephone number(s) {receiverNumbers}, because either the bot wasn't invited to the room with the telephone number or creation was disabled by your command.",
             val botSmsSendSingleModeOnlyOneTelephoneNumberAllowed: String = "Single mode is allowed with one telephone number only.",
             val botSmsSendSingleModeDisabled: String = "Single mode was disabled by your admin.",
-            val botSmsSendError: String = "There was an error while sending message to the telephone number(s) {receiverNumbers}. Reason: {error}"
+            val botSmsSendError: String = "There was an error while sending message to the telephone number(s) {receiverNumbers}. Reason: {error}",
+            val botSmsInviteSuccess: String = "{sender} was invited to {roomAlias}.",
+            val botSmsInviteError: String = "There was an error while invite {sender} to {roomAlias}. Reason: {error}",
     )
 }

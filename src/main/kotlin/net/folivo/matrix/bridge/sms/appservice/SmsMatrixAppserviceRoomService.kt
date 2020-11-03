@@ -19,7 +19,7 @@ class SmsMatrixAppserviceRoomService(
 ) : DefaultAppserviceRoomService(roomService, helper) { //FIXME test
 
     override suspend fun getCreateRoomParameter(roomAlias: RoomAliasId): CreateRoomParameter {
-        val invitedUser = UserId(roomAlias.localpart, roomAlias.domain)
+        val invitedUser = UserId(roomAlias.localpart, botProperties.serverName)
         return CreateRoomParameter(
                 visibility = PRIVATE,
                 powerLevelContentOverride = PowerLevelsEventContent(

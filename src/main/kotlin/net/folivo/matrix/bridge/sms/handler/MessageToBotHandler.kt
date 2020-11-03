@@ -17,7 +17,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class MessageToBotHandler(
-        private val helper: SendSmsCommandHelper,
+        private val smsSendCommandHelper: SmsSendCommandHelper,
+        private val smsInviteCommandHelper: SmsInviteCommandHelper,
         private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties,
         private val userService: MatrixUserService,
@@ -54,11 +55,15 @@ class MessageToBotHandler(
 
                         SmsCommand().context { console = answerConsole }
                                 .subcommands(
-                                        SendSmsCommand(
+                                        SmsSendCommand(
                                                 senderId,
-                                                helper,
+                                                smsSendCommandHelper,
                                                 phoneNumberService,
                                                 smsBridgeProperties
+                                        ),
+                                        SmsInviteCommand(
+                                                senderId,
+                                                smsInviteCommandHelper
                                         )
                                 )
                                 .parse(args)
@@ -77,9 +82,8 @@ class MessageToBotHandler(
                     } catch (error: Throwable) {
                         context.answer(
                                 NoticeMessageEventContent(
-                                        smsBridgeProperties.templates.botSmsSendError
+                                        smsBridgeProperties.templates.botSmsError
                                                 .replace("{error}", error.message ?: "unknown")
-                                                .replace("{receiverNumbers}", "unknown")
                                 )
                         )
                     }

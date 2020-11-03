@@ -23,7 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 @ExtendWith(MockKExtension::class)
 class MessageToBotHandlerTest {
     @MockK
-    lateinit var sendSmsCommandHelperMock: SendSmsCommandHelper
+    lateinit var smsSendCommandHelperMock: SmsSendCommandHelper
 
     @MockK
     lateinit var phoneNumberServiceMock: PhoneNumberService
@@ -56,7 +56,7 @@ class MessageToBotHandlerTest {
 
     @Test
     fun `should run command`() {
-        coEvery { sendSmsCommandHelperMock.handleCommand(any(), any(), any(), any(), any(), any()) }
+        coEvery { smsSendCommandHelperMock.handleCommand(any(), any(), any(), any(), any(), any()) }
                 .returns("message send")
         every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
         every { phoneNumberServiceMock.parseToInternationalNumber(any()) }.returns("+4917392837462")

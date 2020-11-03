@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.ALWAYS
-import net.folivo.matrix.bridge.sms.handler.SendSmsCommandHelper.RoomCreationMode.NO
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.ALWAYS
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.NO
 import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMapping
 import net.folivo.matrix.bridge.sms.room.AppserviceRoom
 import net.folivo.matrix.bridge.sms.room.SmsMatrixAppserviceRoomService
@@ -25,7 +25,7 @@ import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 @ExtendWith(MockKExtension::class)
-class SendSmsCommandHelperTest {
+class SmsSendCommandHelperTest {
     @MockK
     lateinit var roomServiceMock: SmsMatrixAppserviceRoomService
 
@@ -39,7 +39,7 @@ class SendSmsCommandHelperTest {
     lateinit var smsBridgePropertiesMock: SmsBridgeProperties
 
     @InjectMockKs
-    lateinit var cut: SendSmsCommandHelper
+    lateinit var cut: SmsSendCommandHelper
 
     lateinit var room: AppserviceRoom
 
