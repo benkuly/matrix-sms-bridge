@@ -31,21 +31,21 @@ class MatrixSmsMappingService(//FIXME test
 
     suspend fun getRoomId(userId: UserId, mappingToken: Int?): RoomId? { //FIXME test
         return if (mappingToken == null) {
-            if (smsBridgeProperties.allowMappingWithoutToken) {
-                val memberships = membershipService.getMembershipsByUserId(userId).take(2).toList()
-                if (memberships.size == 1) memberships.first().roomId else null
-            } else null
+            findRoomIdMapping(userId)
         } else {
             val mapping = mappingRepository.findByUserIdAndMappingToken(userId, mappingToken)
             if (mapping == null) {
-                if (smsBridgeProperties.allowMappingWithoutToken) {
-                    val memberships = membershipService.getMembershipsByUserId(userId).take(2).toList()
-                    if (memberships.size == 1) memberships.first().roomId else null
-                } else null
+                findRoomIdMapping(userId)
             } else {
                 membershipService.getMembership(mapping.membershipId)?.roomId
             }
         }
     }
 
+    private suspend fun findRoomIdMapping(userId: UserId): RoomId? {
+        return if (smsBridgeProperties.allowMappingWithoutToken) {
+            val memberships = membershipService.getMembershipsByUserId(userId).take(2).toList()
+            if (memberships.size == 1) memberships.first().roomId else null
+        } else null
+    }
 }

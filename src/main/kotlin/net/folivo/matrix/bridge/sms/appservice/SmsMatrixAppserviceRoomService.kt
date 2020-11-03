@@ -6,6 +6,7 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.bot.util.BotServiceHelper
 import net.folivo.matrix.core.model.MatrixId.RoomAliasId
+import net.folivo.matrix.core.model.MatrixId.UserId
 import net.folivo.matrix.core.model.events.m.room.PowerLevelsEvent.PowerLevelsEventContent
 import net.folivo.matrix.restclient.api.rooms.Visibility.PRIVATE
 import org.springframework.stereotype.Service
@@ -18,13 +19,16 @@ class SmsMatrixAppserviceRoomService(
 ) : DefaultAppserviceRoomService(roomService, helper) { //FIXME test
 
     override suspend fun getCreateRoomParameter(roomAlias: RoomAliasId): CreateRoomParameter {
+        val invitedUser = UserId(roomAlias.localpart, roomAlias.domain)
         return CreateRoomParameter(
                 visibility = PRIVATE,
                 powerLevelContentOverride = PowerLevelsEventContent(
                         invite = 0,
                         kick = 0,
-                        events = mapOf("m.room.name" to 0, "m.room.topic" to 0)
-                )
+                        events = mapOf("m.room.name" to 0, "m.room.topic" to 0),
+                        users = mapOf(invitedUser to 100)
+                ),
+                invite = setOf(invitedUser)
         )
     }
 }

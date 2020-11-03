@@ -38,7 +38,7 @@ class SendSmsCommandTest {
 
     @BeforeEach
     fun beforeEach() {
-        coEvery { helper.createRoomAndSendMessage(any(), any(), any(), any(), any(), any()) }.returns("answer")
+        coEvery { helper.handleCommand(any(), any(), any(), any(), any(), any()) }.returns("answer")
         every { smsBridgePropertiesMock.templates.botSmsSendInvalidTelephoneNumber }.returns("invalid")
         every { phoneNumberServiceMock.parseToInternationalNumber("017331111111") }.returns("+4917331111111")
         every { phoneNumberServiceMock.parseToInternationalNumber("017332222222") }.returns("+4917332222222")
@@ -51,7 +51,7 @@ class SendSmsCommandTest {
         cut.parse(listOf("some text", "-t", "017331111111", "-t", "017332222222"))
 
         coVerifyAll {
-            helper.createRoomAndSendMessage(
+            helper.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     receiverNumbers = listOf("+4917331111111"),
@@ -59,7 +59,7 @@ class SendSmsCommandTest {
                     roomCreationMode = AUTO,
                     sendAfterLocal = null
             )
-            helper.createRoomAndSendMessage(
+            helper.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     receiverNumbers = listOf("+4917332222222"),
@@ -75,7 +75,7 @@ class SendSmsCommandTest {
         cut.parse(listOf("some text", "-t", "017331111111", "-a", "1955-11-09T12:00"))
 
         coVerifyAll {
-            helper.createRoomAndSendMessage(
+            helper.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     receiverNumbers = listOf("+4917331111111"),
@@ -91,7 +91,7 @@ class SendSmsCommandTest {
         cut.parse(listOf("some text", "-t", "017331111111", "-t", "017332222222", "-n", "some name", "-g"))
 
         coVerify {
-            helper.createRoomAndSendMessage(
+            helper.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     receiverNumbers = listOf("+4917331111111", "+4917332222222"),
@@ -107,7 +107,7 @@ class SendSmsCommandTest {
         cut.parse(listOf("some text", "-t", "017331111111", "-m", "always"))
 
         coVerify {
-            helper.createRoomAndSendMessage(
+            helper.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     receiverNumbers = listOf("+4917331111111"),

@@ -40,7 +40,7 @@ class SendSmsCommand(
             if (useGroup) {
                 LOG.debug("use group and send message")
                 echo(runBlocking {
-                    helper.createRoomAndSendMessage(
+                    helper.handleCommand(
                             body = body,
                             senderId = sender,
                             receiverNumbers = receiverNumbers,
@@ -54,7 +54,7 @@ class SendSmsCommand(
                 receiverNumbers.forEach { number ->
                     echo(
                             runBlocking {
-                                helper.createRoomAndSendMessage(
+                                helper.handleCommand(
                                         body = body,
                                         senderId = sender,
                                         receiverNumbers = listOf(number),

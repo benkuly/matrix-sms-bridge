@@ -70,7 +70,7 @@ class SendSmsCommandHelperTest {
         coEvery { roomServiceMock.getRoomsWithMembers(allAny()) }.returns(flowOf())
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = ALWAYS,
@@ -109,7 +109,7 @@ class SendSmsCommandHelperTest {
                 .returns(flowOf(mockk(), mockk()))
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = ALWAYS,
@@ -149,7 +149,7 @@ class SendSmsCommandHelperTest {
                 .returns(flowOf(mockk(), mockk()))
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "  ",
                     senderId = "someSender",
                     roomCreationMode = ALWAYS,
@@ -194,7 +194,7 @@ class SendSmsCommandHelperTest {
         coEvery { roomServiceMock.getOrCreateRoom("someRoomId") }.returns(roomMock)
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = NO,
@@ -236,7 +236,7 @@ class SendSmsCommandHelperTest {
                 })
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = NO,
@@ -267,7 +267,7 @@ class SendSmsCommandHelperTest {
                 .returns(room)
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = NO,
@@ -311,7 +311,7 @@ class SendSmsCommandHelperTest {
                 })
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = null,
                     senderId = "someSender",
                     roomCreationMode = NO,
@@ -332,7 +332,7 @@ class SendSmsCommandHelperTest {
                 .returns(flowOf(mockk(), mockk()))
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = NO,
@@ -353,7 +353,7 @@ class SendSmsCommandHelperTest {
                 .returns(flowOf())
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = NO,
@@ -375,7 +375,7 @@ class SendSmsCommandHelperTest {
         coEvery { matrixClientMock.roomsApi.createRoom(allAny()) }.throws(RuntimeException("unicorn"))
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = ALWAYS,
@@ -409,7 +409,7 @@ class SendSmsCommandHelperTest {
                 .returns(room)
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = NO,
@@ -456,7 +456,7 @@ class SendSmsCommandHelperTest {
                 .returns(room)
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = NO,
@@ -506,7 +506,7 @@ class SendSmsCommandHelperTest {
                 .returns(room)
 
         val result = runBlocking {
-            cut.createRoomAndSendMessage(
+            cut.handleCommand(
                     body = "some text",
                     senderId = "someSender",
                     roomCreationMode = NO,

@@ -47,7 +47,7 @@ class MessageToSmsHandler(
                     if (isTextMessage) {
                         LOG.debug("send SMS from $roomId to +$receiverNumber")
                         val mappingToken = mappingService.getOrCreateMapping(receiverId, roomId).mappingToken
-                        val needsToken = roomService.getRoomsByMembers(setOf(receiverId))
+                        val needsToken = roomService.getRoomsByMembers(setOf(receiverId))//FIXME disable token in single mode when from managed room
                                                  .take(2)
                                                  .count() > 1 // FIXME test
                         try {
