@@ -13,7 +13,7 @@ class SmsMatrixAppserviceUserService(
         userService: MatrixUserService,
         helper: BotServiceHelper,
         private val botProperties: MatrixBotProperties
-) : DefaultAppserviceUserService(userService, helper, botProperties) { //FIXME test
+) : DefaultAppserviceUserService(userService, helper, botProperties) {
 
     override suspend fun getRegisterUserParameter(userId: UserId): RegisterUserParameter {
         return if (userId == botProperties.botUserId) {

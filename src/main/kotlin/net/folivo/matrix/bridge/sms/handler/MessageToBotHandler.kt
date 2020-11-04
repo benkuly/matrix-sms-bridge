@@ -10,7 +10,6 @@ import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.core.model.MatrixId.RoomId
 import net.folivo.matrix.core.model.MatrixId.UserId
-import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.apache.tools.ant.types.Commandline
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -37,12 +36,12 @@ class MessageToBotHandler(
         val sender = userService.getOrCreateUser(senderId)
         val membershipSize = membershipService.getMembershipsSizeByRoomId(roomId)
         return if (sender.isManaged) {
-            LOG.debug("ignore message from managed (or unknown) user")
+            LOG.debug("ignore message from managed user")
             false
         } else if (body.startsWith("sms")) {
             if (membershipSize > 2) {
                 LOG.debug("to many members in room form sms command")
-                context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botTooManyMembers))
+                context.answer(smsBridgeProperties.templates.botTooManyMembers)
                 true
             } else {
                 LOG.debug("run sms command $body")
@@ -81,10 +80,8 @@ class MessageToBotHandler(
                         answerConsole.print("Aborted!", true)
                     } catch (error: Throwable) {
                         context.answer(
-                                NoticeMessageEventContent(
-                                        smsBridgeProperties.templates.botSmsError
-                                                .replace("{error}", error.message ?: "unknown")
-                                )
+                                smsBridgeProperties.templates.botSmsError
+                                        .replace("{error}", error.message ?: "unknown")
                         )
                     }
                 }.join()
@@ -92,7 +89,7 @@ class MessageToBotHandler(
             }
         } else if (membershipSize == 2L) {
             LOG.debug("it seems to be a bot room, but message didn't start with 'sms'")
-            context.answer(NoticeMessageEventContent(smsBridgeProperties.templates.botHelp))
+            context.answer(smsBridgeProperties.templates.botHelp)
             true
         } else false
     }

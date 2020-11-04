@@ -40,16 +40,16 @@ class MessageToSmsHandler(
     ) {
 
         userService.getUsersByRoom(roomId)
-                .filter { it.id != senderId && it.isManaged }
-                .map { it.id.localpart.removePrefix("sms_") to it.id }
-                .filter { (receiverNumber, _) -> receiverNumber.matches(Regex("[0-9]{6,15}")) } // FIXME do we need this?
+                .filter { it.isManaged && it.id != senderId && it.id != botProperties.botUserId }
+                .map { "+" + it.id.localpart.removePrefix("sms_") to it.id }
                 .map { (receiverNumber, receiverId) ->
                     if (isTextMessage) {
-                        LOG.debug("send SMS from $roomId to +$receiverNumber")
+                        LOG.debug("send SMS from $roomId to $receiverNumber")
                         val mappingToken = mappingService.getOrCreateMapping(receiverId, roomId).mappingToken
+                        val roomIsManaged = roomService.getOrCreateRoom(roomId).isManaged
                         val needsToken = roomService.getRoomsByMembers(setOf(receiverId))//FIXME disable token in single mode when from managed room
                                                  .take(2)
-                                                 .count() > 1 // FIXME test
+                                                 .count() > 1 && !roomIsManaged // FIXME test
                         try {
                             insertBodyAndSend(
                                     sender = senderId,
@@ -69,7 +69,7 @@ class MessageToSmsHandler(
                             )
                         }
                     } else {
-                        LOG.debug("cannot send SMS from $roomId to +$receiverNumber because of incompatible message type")
+                        LOG.debug("cannot send SMS from $roomId to $receiverNumber because of incompatible message type")
                         context.answer(
                                 NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsIncompatibleMessage),
                                 asUserId = receiverId
@@ -97,6 +97,6 @@ class MessageToSmsHandler(
                 .replace("{body}", body)
                 .replace("{token}", "#$mappingToken")
 
-        smsProvider.sendSms(receiver = "+$receiverNumber", body = templateBody)
+        smsProvider.sendSms(receiver = receiverNumber, body = templateBody)
     }
 }

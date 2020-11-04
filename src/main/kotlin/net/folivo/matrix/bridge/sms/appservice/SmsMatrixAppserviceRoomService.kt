@@ -16,7 +16,7 @@ class SmsMatrixAppserviceRoomService(
         roomService: MatrixRoomService,
         helper: BotServiceHelper,
         private val botProperties: MatrixBotProperties
-) : DefaultAppserviceRoomService(roomService, helper) { //FIXME test
+) : DefaultAppserviceRoomService(roomService, helper) {
 
     override suspend fun getCreateRoomParameter(roomAlias: RoomAliasId): CreateRoomParameter {
         val invitedUser = UserId(roomAlias.localpart, botProperties.serverName)

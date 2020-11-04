@@ -1,176 +1,141 @@
 package net.folivo.matrix.bridge.sms.handler
 
-import io.mockk.Called
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.impl.annotations.InjectMockKs
-import io.mockk.impl.annotations.MockK
-import io.mockk.junit5.MockKExtension
-import kotlinx.coroutines.runBlocking
-import net.folivo.matrix.bot.handler.MessageContext
+import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.mockk.*
+import net.folivo.matrix.bot.event.MessageContext
+import net.folivo.matrix.bot.membership.MatrixMembershipService
+import net.folivo.matrix.bot.user.MatrixUser
+import net.folivo.matrix.bot.user.MatrixUserService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMapping
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
-import net.folivo.matrix.bridge.sms.room.AppserviceRoom
-import net.folivo.matrix.bridge.sms.user.AppserviceUser
-import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
+import net.folivo.matrix.core.model.MatrixId.*
 
-@ExtendWith(MockKExtension::class)
-class MessageToBotHandlerTest {
-    @MockK
-    lateinit var smsSendCommandHelperMock: SmsSendCommandHelper
+class MessageToBotHandlerTest : DescribeSpec(testBody())
 
-    @MockK
-    lateinit var phoneNumberServiceMock: PhoneNumberService
+private fun testBody(): DescribeSpec.() -> Unit {
+    return {
+        val smsSendCommandHelperMock: SmsSendCommandHelper = mockk()
+        val smsInviteCommandHelperMock: SmsInviteCommandHelper = mockk()
+        val phoneNumberServiceMock: PhoneNumberService = mockk()
+        val smsBridgePropertiesMock: SmsBridgeProperties = mockk {
+            every { templates.botHelp }.returns("help")
+            every { templates.botSmsError }.returns("error")
+            every { templates.botTooManyMembers }.returns("toMany")
+        }
+        val userServiceMock: MatrixUserService = mockk()
+        val membershipServiceMock: MatrixMembershipService = mockk()
 
-    @MockK
-    lateinit var smsBridgePropertiesMock: SmsBridgeProperties
-
-    @InjectMockKs
-    lateinit var cut: MessageToBotHandler
-
-    @MockK
-    lateinit var roomMock: AppserviceRoom
-
-    @MockK
-    lateinit var contextMock: MessageContext
-
-    @BeforeEach
-    fun beforeEach() {
-        every { smsBridgePropertiesMock.templates.botTooManyMembers }.returns("tooMany")
-        every { smsBridgePropertiesMock.templates.botHelp }.returns("help")
-        every { smsBridgePropertiesMock.templates.botSmsSendError }.returns("error {error} {receiverNumbers}")
-        coEvery { contextMock.answer(any(), any()) }.returns("someMessageId")
-        every { roomMock.memberships }.returns(
-                listOf(
-                        MatrixSmsMapping(AppserviceUser("someManagedUserId", true), 1),
-                        MatrixSmsMapping(AppserviceUser("someUnmanagedUserId", false), 1)
-                )
+        val cut = MessageToBotHandler(
+                smsSendCommandHelperMock,
+                smsInviteCommandHelperMock,
+                phoneNumberServiceMock,
+                smsBridgePropertiesMock,
+                userServiceMock,
+                membershipServiceMock
         )
-    }
 
-    @Test
-    fun `should run command`() {
-        coEvery { smsSendCommandHelperMock.handleCommand(any(), any(), any(), any(), any(), any()) }
-                .returns("message send")
-        every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
-        every { phoneNumberServiceMock.parseToInternationalNumber(any()) }.returns("+4917392837462")
+        val contextMock: MessageContext = mockk {
+            coEvery { answer(any<String>(), any()) }.returns(EventId("message", "server"))
+        }
+        val roomId = RoomId("room", "server")
+        val senderId = UserId("sender", "server")
 
-        val result = runBlocking {
-            cut.handleMessage(
-                    roomMock,
-                    "sms send -t 017392837462 'some Text'",
-                    "someUnmanagedUserId",
-                    contextMock
+        describe(MessageToBotHandler::handleMessage.name) {
+            describe("sender is managed") {
+                it("should do nothing and return false") {
+                    coEvery { userServiceMock.getOrCreateUser(senderId) }.returns(MatrixUser(senderId, true))
+                    coEvery { membershipServiceMock.getMembershipsSizeByRoomId(roomId) }.returns(2L)
+                    cut.handleMessage(roomId, "sms", senderId, contextMock).shouldBeFalse()
+                    coVerifyAll {
+                        smsSendCommandHelperMock wasNot Called
+                        smsInviteCommandHelperMock wasNot Called
+                    }
+                }
+            }
+            describe("to many members in room") {
+                it("should warn user and return true") {
+                    coEvery { userServiceMock.getOrCreateUser(senderId) }.returns(MatrixUser(senderId))
+                    coEvery { membershipServiceMock.getMembershipsSizeByRoomId(roomId) }.returns(3L)
+                    cut.handleMessage(roomId, "sms", senderId, contextMock).shouldBeTrue()
+                    coVerifyAll {
+                        smsSendCommandHelperMock wasNot Called
+                        smsInviteCommandHelperMock wasNot Called
+                        contextMock.answer("toMany")
+                    }
+                }
+            }
+            describe("valid sms command") {
+                beforeTest {
+                    coEvery { userServiceMock.getOrCreateUser(senderId) }.returns(MatrixUser(senderId))
+                    coEvery { membershipServiceMock.getMembershipsSizeByRoomId(roomId) }.returns(2L)
+                }
+                it("should run sms send command") {
+                    coEvery { smsSendCommandHelperMock.handleCommand(any(), any(), any(), any(), any(), any()) }
+                            .returns("message send")
+                    every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
+                    every { phoneNumberServiceMock.parseToInternationalNumber(any()) }.returns("+4917392837462")
+                    cut.handleMessage(
+                            roomId,
+                            "sms send -t 017392837462 'some Text'",
+                            senderId,
+                            contextMock
+                    ).shouldBeTrue()
+
+                    coVerify(exactly = 1) {
+                        contextMock.answer("message send")
+                    }
+                }
+                it("should run sms invite command") {
+                    coEvery { smsInviteCommandHelperMock.handleCommand(any(), any()) }
+                            .returns("invited")
+                    cut.handleMessage(
+                            roomId,
+                            "sms invite #sms_1739283746:server",
+                            senderId,
+                            contextMock
+                    ).shouldBeTrue()
+
+                    coVerify(exactly = 1) {
+                        contextMock.answer("invited")
+                    }
+                }
+                it("should catch errors from command") {
+                    cut.handleMessage(roomId, "sms send bla", senderId, contextMock).shouldBeTrue()
+                    coVerify {
+                        contextMock.answer(match<String> { it.contains("Error") })
+                    }
+                }
+                it("should catch errors from unparsable command") {
+                    cut.handleMessage(roomId, "sms send \" bla", senderId, contextMock).shouldBeTrue()
+                    coVerify {
+                        contextMock.answer("error unbalanced quotes in  send \" bla unknown")
+                    }
+                }
+            }
+            describe("two members but no sms command") {
+                it("should warn user and return true") {
+                    coEvery { userServiceMock.getOrCreateUser(senderId) }.returns(MatrixUser(senderId))
+                    coEvery { membershipServiceMock.getMembershipsSizeByRoomId(roomId) }.returns(2L)
+                    cut.handleMessage(roomId, "dino", senderId, contextMock).shouldBeTrue()
+                    coVerifyAll {
+                        smsSendCommandHelperMock wasNot Called
+                        smsInviteCommandHelperMock wasNot Called
+                        contextMock.answer("help")
+                    }
+                }
+            }
+        }
+
+        afterTest {
+            clearMocks(
+                    smsSendCommandHelperMock,
+                    smsInviteCommandHelperMock,
+                    phoneNumberServiceMock,
+                    userServiceMock,
+                    membershipServiceMock
             )
-        }
-        assertThat(result).isTrue()
-        coVerify(exactly = 1) {
-            contextMock.answer(match<NoticeMessageEventContent> { it.body == "message send" })
-        }
-    }
-
-    @Test
-    fun `should answer with error when too many members for sms command`() {
-        every { roomMock.memberships }.returns(
-                listOf(
-                        MatrixSmsMapping(AppserviceUser("someManagedUserId", true), 1),
-                        MatrixSmsMapping(AppserviceUser("someUnmanagedUserId", false), 1),
-                        MatrixSmsMapping(AppserviceUser("someUserId3", false), 1)
-                )
-        )
-        val result = runBlocking {
-            cut.handleMessage(roomMock, "sms bla", "someUnmanagedUserId", contextMock)
-        }
-        assertThat(result).isTrue()
-        coVerify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "tooMany" }) }
-    }
-
-    @Test
-    fun `should answer with help when not sms command`() {
-        val result = runBlocking {
-            cut.handleMessage(roomMock, "bla", "someUnmanagedUserId", contextMock)
-        }
-        assertThat(result).isTrue()
-        coVerify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "help" }) }
-    }
-
-    @Test
-    fun `should not allow managed user to run command`() {
-        val result1 = runBlocking {
-            cut.handleMessage(roomMock, "sms send", "someManagedUserId", contextMock)
-        }
-        assertThat(result1).isFalse()
-
-        val result2 = runBlocking {
-            cut.handleMessage(roomMock, "sms send", "notKnownUserId", contextMock)
-        }
-        assertThat(result2).isFalse()
-
-        coVerify { contextMock wasNot Called }
-    }
-
-    @Test
-    fun `should do nothing when all members are managed`() {
-        every { roomMock.memberships }.returns(
-                listOf(
-                        MatrixSmsMapping(AppserviceUser("someManagedUserId", true), 1),
-                        MatrixSmsMapping(AppserviceUser("someUnmanagedUserId", true), 1),
-                )
-        )
-        val result = runBlocking {
-            cut.handleMessage(roomMock, "bla", "someManagedUserId", contextMock)
-        }
-        assertThat(result).isFalse()
-        coVerify { contextMock wasNot Called }
-    }
-
-    @Test
-    fun `should do nothing when too many members`() {
-        every { roomMock.memberships }.returns(
-                listOf(
-                        MatrixSmsMapping(AppserviceUser("someManagedUserId", true), 1),
-                        MatrixSmsMapping(AppserviceUser("someUnmanagedUserId", false), 1),
-                        MatrixSmsMapping(AppserviceUser("someUserId3", false), 1)
-                )
-        )
-        val result = runBlocking {
-            cut.handleMessage(roomMock, "bla", "someUnmanagedUserId", contextMock)
-        }
-        assertThat(result).isFalse()
-        coVerify { contextMock wasNot Called }
-    }
-
-    @Test
-    fun `should catch errors from SMSCommand`() {
-        val result = runBlocking {
-            cut.handleMessage(roomMock, "sms send bla", "someUnmanagedUserId", contextMock)
-        }
-        assertThat(result).isTrue()
-        coVerify {
-            contextMock.answer(match<NoticeMessageEventContent> {
-                it.body.contains(
-                        "Error"
-                )
-            })
-        }
-    }
-
-    @Test
-    fun `should catch errors from unparsable command`() {
-        val result = runBlocking {
-            cut.handleMessage(roomMock, "sms send \" bla", "someUnmanagedUserId", contextMock)
-        }
-        assertThat(result).isTrue()
-        coVerify {
-            contextMock.answer(match<NoticeMessageEventContent> {
-                it.body == "error unbalanced quotes in  send \" bla unknown"
-            })
         }
     }
 }
