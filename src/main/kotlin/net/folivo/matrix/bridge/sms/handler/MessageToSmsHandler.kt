@@ -27,6 +27,8 @@ class MessageToSmsHandler(
         private val mappingService: MatrixSmsMappingService
 ) {
 
+    private val templates = smsBridgeProperties.templates
+
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
@@ -45,18 +47,18 @@ class MessageToSmsHandler(
                 .map { (receiverNumber, receiverId) ->
                     if (isTextMessage) {
                         LOG.debug("send SMS from $roomId to $receiverNumber")
-                        val mappingToken = mappingService.getOrCreateMapping(receiverId, roomId).mappingToken
-                        val roomIsManaged = roomService.getOrCreateRoom(roomId).isManaged
-                        val needsToken = roomService.getRoomsByMembers(setOf(receiverId))//FIXME disable token in single mode when from managed room
-                                                 .take(2)
-                                                 .count() > 1 && !roomIsManaged // FIXME test
+                        val needsToken = smsBridgeProperties.allowMappingWithoutToken
+                                         && !roomService.getOrCreateRoom(roomId).isManaged
+                                         && roomService.getRoomsByMembers(setOf(receiverId)).take(2).count() > 1
+                        val mappingToken = if (needsToken)
+                            mappingService.getOrCreateMapping(receiverId, roomId).mappingToken else null
+
                         try {
                             insertBodyAndSend(
                                     sender = senderId,
                                     receiverNumber = receiverNumber,
                                     body = body,
-                                    mappingToken = mappingToken,
-                                    needsToken = needsToken
+                                    mappingToken = mappingToken
                             )
                         } catch (error: Throwable) {
                             LOG.error(
@@ -64,14 +66,14 @@ class MessageToSmsHandler(
                                     "This should be fixed.", error
                             ) // TODO it should send sms later
                             context.answer(
-                                    NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsError),
+                                    NoticeMessageEventContent(templates.sendSmsError),
                                     asUserId = receiverId
                             )
                         }
                     } else {
                         LOG.debug("cannot send SMS from $roomId to $receiverNumber because of incompatible message type")
                         context.answer(
-                                NoticeMessageEventContent(smsBridgeProperties.templates.sendSmsIncompatibleMessage),
+                                NoticeMessageEventContent(templates.sendSmsIncompatibleMessage),
                                 asUserId = receiverId
                         )
                     }
@@ -82,20 +84,19 @@ class MessageToSmsHandler(
             sender: UserId,
             receiverNumber: String,
             body: String,
-            mappingToken: Int,
-            needsToken: Boolean
+            mappingToken: Int?
     ) {
         val messageTemplate =
                 if (sender == botProperties.botUserId)
-                    smsBridgeProperties.templates.outgoingMessageFromBot
-                else smsBridgeProperties.templates.outgoingMessage
+                    templates.outgoingMessageFromBot
+                else templates.outgoingMessage
         val completeTemplate =
-                if (smsBridgeProperties.allowMappingWithoutToken && !needsToken) messageTemplate
-                else messageTemplate + smsBridgeProperties.templates.outgoingMessageToken
+                if (mappingToken == null) messageTemplate
+                else messageTemplate + templates.outgoingMessageToken.replace("{token}", "#$mappingToken")
 
-        val templateBody = completeTemplate.replace("{sender}", sender.full)
+        val templateBody = completeTemplate
+                .replace("{sender}", sender.full)
                 .replace("{body}", body)
-                .replace("{token}", "#$mappingToken")
 
         smsProvider.sendSms(receiver = receiverNumber, body = templateBody)
     }
