@@ -12,8 +12,9 @@ import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMod
 import net.folivo.matrix.bridge.sms.message.MatrixMessage
 import net.folivo.matrix.bridge.sms.message.MatrixMessageService
 import net.folivo.matrix.core.model.MatrixId.*
+import net.folivo.matrix.core.model.events.m.room.PowerLevelsEvent.PowerLevelsEventContent
 import net.folivo.matrix.restclient.MatrixClient
-import net.folivo.matrix.restclient.api.rooms.Preset.TRUSTED_PRIVATE
+import net.folivo.matrix.restclient.api.rooms.Visibility.PRIVATE
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.Instant
@@ -45,7 +46,7 @@ class SmsSendCommandHelper(
     suspend fun handleCommand( //FIXME test
             body: String?,
             senderId: UserId,
-            receiverNumbers: List<String>,
+            receiverNumbers: Set<String>,
             roomName: String?,
             sendAfterLocal: LocalDateTime?,
             roomCreationMode: RoomCreationMode
@@ -61,7 +62,9 @@ class SmsSendCommandHelper(
         try {
             val answer = when (roomCreationMode) {
                 AUTO -> {
-                    when (rooms.size) {
+                    if (smsBridgeProperties.singleModeEnabled && receiverNumbers.size == 1) {
+                        sendMessageToRoomAlias(senderId, body, requiredManagedReceiverIds, sendAfterLocal)
+                    } else when (rooms.size) {
                         0    -> createRoomAndSendMessage(
                                 body,
                                 senderId,
@@ -94,21 +97,7 @@ class SmsSendCommandHelper(
                     if (!smsBridgeProperties.singleModeEnabled) {
                         templates.botSmsSendSingleModeDisabled
                     } else if (receiverNumbers.size == 1) {
-                        val aliasLocalpart = "sms_${receiverNumbers.first().removePrefix("+")}"
-                        val roomAliasId = RoomAliasId(aliasLocalpart, botProperties.serverName)
-                        val existingRoomId = roomService.getRoomAlias(roomAliasId)?.roomId
-                        val roomId = existingRoomId
-                                     ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId//FIXME does this work?
-                        if (existingRoomId == null) {
-                            matrixClient.roomsApi.inviteUser(roomId, senderId)
-                        }
-                        sendMessageToRoom(
-                                roomId,
-                                senderId,
-                                body,
-                                requiredManagedReceiverIds,
-                                sendAfterLocal
-                        )
+                        sendMessageToRoomAlias(senderId, body, requiredManagedReceiverIds, sendAfterLocal)
                     } else {
                         templates.botSmsSendSingleModeOnlyOneTelephoneNumberAllowed
                     }
@@ -137,6 +126,29 @@ class SmsSendCommandHelper(
         }
     }
 
+    private suspend fun sendMessageToRoomAlias(
+            senderId: UserId,
+            body: String?,
+            requiredManagedReceiverIds: Set<UserId>,
+            sendAfterLocal: LocalDateTime?
+    ): String {
+        val aliasLocalpart = requiredManagedReceiverIds.first().localpart
+        val roomAliasId = RoomAliasId(aliasLocalpart, botProperties.serverName)
+        val existingRoomId = roomService.getRoomAlias(roomAliasId)?.roomId
+        val roomId = existingRoomId
+                     ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId//FIXME does this work?
+        if (existingRoomId == null) {
+            matrixClient.roomsApi.inviteUser(roomId, senderId)
+        }
+        return sendMessageToRoom(
+                roomId,
+                senderId,
+                body,
+                requiredManagedReceiverIds,
+                sendAfterLocal
+        )
+    }
+
     private suspend fun createRoomAndSendMessage(
             body: String?,
             senderId: UserId,
@@ -149,7 +161,12 @@ class SmsSendCommandHelper(
         val roomId = matrixClient.roomsApi.createRoom(
                 name = roomName,
                 invite = invitedMembers,
-                preset = TRUSTED_PRIVATE, // FIXME maybe managed ids not admins to kick them?
+                visibility = PRIVATE,
+                powerLevelContentOverride = PowerLevelsEventContent(
+                        invite = 0,
+                        kick = 0,
+                        events = mapOf("m.room.name" to 0, "m.room.topic" to 0)
+                )
         )
 
         return if (body.isNullOrEmpty()) {
