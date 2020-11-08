@@ -4,8 +4,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
-import net.folivo.matrix.bot.handler.MessageContext
-import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
+import net.folivo.matrix.bot.event.MessageContext
+import net.folivo.matrix.core.model.MatrixId.EventId
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -18,10 +18,10 @@ class SmsBotConsoleTest {
 
     @Test
     fun `should send text to matrix room`() {
-        coEvery { contextMock.answer(any(), any()) }.returns("someMessageId")
+        coEvery { contextMock.answer(any<String>(), any()) }.returns(EventId("event", "server"))
         val cut = SmsBotConsole(contextMock)
         cut.print("some Text", true)
-        coVerify { contextMock.answer(match<NoticeMessageEventContent> { it.body == "some Text" }) }
+        coVerify { contextMock.answer("some Text") }
     }
 
     @Test

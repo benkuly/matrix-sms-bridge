@@ -23,20 +23,20 @@ class SmsInviteCommandHelper(
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    suspend fun handleCommand( //FIXME test
+    suspend fun handleCommand(
             sender: UserId,
             alias: RoomAliasId
     ): String {
-        try {
+        return try {
             val roomId = roomService.getRoomAlias(alias)?.roomId
                          ?: matrixClient.roomsApi.getRoomAlias(alias).roomId
             matrixClient.roomsApi.inviteUser(roomId, sender)
-            return templates.botSmsInviteError
+            templates.botSmsInviteSuccess
                     .replace("{roomAlias}", alias.full)
                     .replace("{sender}", sender.full)
         } catch (ex: Error) {
             LOG.debug("got exception")
-            return templates.botSmsInviteError
+            templates.botSmsInviteError
                     .replace("{roomAlias}", alias.full)
                     .replace("{sender}", sender.full)
                     .replace("{error}", ex.message ?: "unknown")
