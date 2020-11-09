@@ -56,5 +56,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
             }
         }
 
+        afterTest { clearMocks(roomServiceMock, matrixClientMock, smsBridgePropertiesMock) }
+
     }
 }

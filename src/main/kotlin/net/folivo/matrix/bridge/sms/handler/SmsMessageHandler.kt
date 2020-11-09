@@ -4,7 +4,6 @@ import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.event.MatrixMessageHandler
 import net.folivo.matrix.bot.event.MessageContext
 import net.folivo.matrix.bot.membership.MatrixMembershipService
-import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.core.model.events.m.room.message.MessageEvent.MessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Component
 class SmsMessageHandler(
         private val messageToSmsHandler: MessageToSmsHandler,
         private val messageToBotHandler: MessageToBotHandler,
-        private val roomService: MatrixRoomService,
         private val membershipService: MatrixMembershipService,
         private val botProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties
@@ -31,29 +29,20 @@ class SmsMessageHandler(
         val senderId = context.originalEvent.sender
         LOG.debug("handle message in room $roomId from sender $senderId")
 
-        roomService.getOrCreateRoom(roomId)
-
-        if (context.roomId == smsBridgeProperties.defaultRoomId) {
+        if (context.roomId == smsBridgeProperties.defaultRoomId || content is NoticeMessageEventContent) {
             LOG.debug("ignored message to default room")
             return
-        } else { // FIXME can be better
-            val didHandleMessage = if (content is TextMessageEventContent
-                                       && membershipService.doesRoomContainsMembers(
-                            roomId,
-                            setOf(botProperties.botUserId)
+        } else {
+            val didHandleMessage =
+                    membershipService.doesRoomContainsMembers(roomId, setOf(botProperties.botUserId))
+                    && messageToBotHandler.handleMessage(
+                            roomId = roomId,
+                            body = content.body,
+                            senderId = senderId,
+                            context = context
                     )
-            ) {
-                messageToBotHandler.handleMessage(
-                        roomId = roomId,
-                        body = content.body,
-                        senderId = senderId,
-                        context = context
-                )
-            } else {
-                LOG.debug("room didn't contain bot user or event was no text message")
-                false
-            }
-            if (didHandleMessage || content is NoticeMessageEventContent) {
+
+            if (didHandleMessage) {
                 LOG.debug("ignored message because it was for bot or only a notice message")
                 return
             } else {
