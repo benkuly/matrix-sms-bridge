@@ -9,12 +9,12 @@ import net.folivo.matrix.core.model.MatrixId.UserId
 
 class SmsInviteCommand(
         private val sender: UserId,
-        private val helper: SmsInviteCommandHelper
+        private val handler: SmsInviteCommandHandler
 ) : CliktCommand(name = "invite") { //FIXME test
 
     private val alias by argument("alias").convert { RoomAliasId(it) }
 
     override fun run() {
-        echo(runBlocking { helper.handleCommand(sender, alias) })
+        echo(runBlocking { handler.handleCommand(sender, alias) })
     }
 }

@@ -1,14 +1,15 @@
 package net.folivo.matrix.bridge.sms.handler
 
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.toSet
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.membership.MatrixMembershipService
-import net.folivo.matrix.bot.room.MatrixRoom
 import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties.SmsBridgeTemplateProperties
-import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.*
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode.*
 import net.folivo.matrix.bridge.sms.message.MatrixMessage
 import net.folivo.matrix.bridge.sms.message.MatrixMessageService
 import net.folivo.matrix.core.model.MatrixId.*
@@ -24,7 +25,7 @@ import java.time.temporal.ChronoUnit
 
 
 @Component
-class SmsSendCommandHelper(
+class SmsSendCommandHandler(
         private val roomService: MatrixRoomService,
         private val membershipService: MatrixMembershipService,
         private val messageService: MatrixMessageService,
@@ -39,11 +40,7 @@ class SmsSendCommandHelper(
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    enum class RoomCreationMode {
-        AUTO, ALWAYS, NO, SINGLE
-    }
-
-    suspend fun handleCommand( //FIXME test
+    suspend fun handleCommand(
             body: String?,
             senderId: UserId,
             receiverNumbers: Set<String>,
@@ -55,26 +52,26 @@ class SmsSendCommandHelper(
             UserId("sms_${it.removePrefix("+")}", botProperties.serverName)
         }.toSet()
         val membersWithoutBot = setOf(senderId, *requiredManagedReceiverIds.toTypedArray())
-        val rooms: List<MatrixRoom> = roomService.getRoomsByMembers(membersWithoutBot)
+        val rooms = roomService.getRoomsByMembers(membersWithoutBot)
                 .take(2)
-                .toList()
+                .map { it.id }
+                .toSet()
 
         try {
             val answer = when (roomCreationMode) {
                 AUTO -> {
                     if (smsBridgeProperties.singleModeEnabled && receiverNumbers.size == 1) {
-                        sendMessageToRoomAlias(senderId, body, requiredManagedReceiverIds, sendAfterLocal)
+                        sendMessageToRoomAlias(senderId, body, requiredManagedReceiverIds.first(), sendAfterLocal)
                     } else when (rooms.size) {
                         0    -> createRoomAndSendMessage(
                                 body,
                                 senderId,
                                 roomName,
-                                membersWithoutBot,
                                 requiredManagedReceiverIds,
                                 sendAfterLocal
                         )
                         1    -> sendMessageToRoom(
-                                rooms.first().id,
+                                rooms.first(),
                                 senderId,
                                 body,
                                 requiredManagedReceiverIds,
@@ -88,7 +85,6 @@ class SmsSendCommandHelper(
                             body,
                             senderId,
                             roomName,
-                            membersWithoutBot,
                             requiredManagedReceiverIds,
                             sendAfterLocal
                     )
@@ -97,7 +93,7 @@ class SmsSendCommandHelper(
                     if (!smsBridgeProperties.singleModeEnabled) {
                         templates.botSmsSendSingleModeDisabled
                     } else if (receiverNumbers.size == 1) {
-                        sendMessageToRoomAlias(senderId, body, requiredManagedReceiverIds, sendAfterLocal)
+                        sendMessageToRoomAlias(senderId, body, requiredManagedReceiverIds.first(), sendAfterLocal)
                     } else {
                         templates.botSmsSendSingleModeOnlyOneTelephoneNumberAllowed
                     }
@@ -106,7 +102,7 @@ class SmsSendCommandHelper(
                     when (rooms.size) {
                         0    -> templates.botSmsSendDisabledRoomCreation
                         1    -> sendMessageToRoom(
-                                rooms.first().id,
+                                rooms.first(),
                                 senderId,
                                 body,
                                 requiredManagedReceiverIds,
@@ -126,41 +122,40 @@ class SmsSendCommandHelper(
         }
     }
 
-    private suspend fun sendMessageToRoomAlias(
+    internal suspend fun sendMessageToRoomAlias(
             senderId: UserId,
             body: String?,
-            requiredManagedReceiverIds: Set<UserId>,
+            requiredManagedReceiverId: UserId,
             sendAfterLocal: LocalDateTime?
     ): String {
-        val aliasLocalpart = requiredManagedReceiverIds.first().localpart
+        val aliasLocalpart = requiredManagedReceiverId.localpart
         val roomAliasId = RoomAliasId(aliasLocalpart, botProperties.serverName)
         val existingRoomId = roomService.getRoomAlias(roomAliasId)?.roomId
         val roomId = existingRoomId
                      ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId//FIXME does this work?
-        if (existingRoomId == null) {
+        if (existingRoomId == null || !membershipService.doesRoomContainsMembers(roomId, setOf(senderId))) {
             matrixClient.roomsApi.inviteUser(roomId, senderId)
         }
         return sendMessageToRoom(
                 roomId,
                 senderId,
                 body,
-                requiredManagedReceiverIds,
+                setOf(requiredManagedReceiverId),
                 sendAfterLocal
         )
     }
 
-    private suspend fun createRoomAndSendMessage(
+    internal suspend fun createRoomAndSendMessage(
             body: String?,
             senderId: UserId,
             roomName: String?,
-            invitedMembers: Set<UserId>,
             requiredManagedReceiverIds: Set<UserId>,
             sendAfterLocal: LocalDateTime?
     ): String {
         LOG.debug("create room")
         val roomId = matrixClient.roomsApi.createRoom(
                 name = roomName,
-                invite = invitedMembers,
+                invite = setOf(senderId, *requiredManagedReceiverIds.toTypedArray()),
                 visibility = PRIVATE,
                 powerLevelContentOverride = PowerLevelsEventContent(
                         invite = 0,
@@ -177,7 +172,7 @@ class SmsSendCommandHelper(
         }
     }
 
-    private suspend fun sendMessageToRoom(
+    internal suspend fun sendMessageToRoom(
             roomId: RoomId,
             senderId: UserId,
             body: String?,
@@ -187,7 +182,7 @@ class SmsSendCommandHelper(
         if (body.isNullOrBlank()) {
             return templates.botSmsSendNoMessage
         } else {
-            val botIsMember = membershipService.doesRoomContainsMembers( //FIXME test
+            val botIsMember = membershipService.doesRoomContainsMembers(
                     roomId,
                     setOf(botProperties.botUserId)
             )

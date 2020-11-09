@@ -8,8 +8,7 @@ import com.github.ajalt.clikt.parameters.types.enum
 import com.google.i18n.phonenumbers.NumberParseException
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode
-import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.AUTO
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode.AUTO
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.core.model.MatrixId.UserId
 import org.slf4j.LoggerFactory
@@ -17,7 +16,7 @@ import java.time.LocalDateTime
 
 class SmsSendCommand(
         private val sender: UserId,
-        private val helper: SmsSendCommandHelper,
+        private val handler: SmsSendCommandHandler,
         private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties
 ) : CliktCommand(name = "send") {
@@ -34,16 +33,20 @@ class SmsSendCommand(
     private val useGroup by option("-g", "--group").flag()
     private val sendAfter by option("-a", "--sendAfter").convert { LocalDateTime.parse(it) }
 
+    enum class RoomCreationMode {
+        AUTO, ALWAYS, NO, SINGLE
+    }
+
     override fun run() {
         try {
             val receiverNumbers = telephoneNumbers.map { phoneNumberService.parseToInternationalNumber(it) }
             if (useGroup) {
                 LOG.debug("use group and send message")
                 echo(runBlocking {
-                    helper.handleCommand(
+                    handler.handleCommand(
                             body = body,
                             senderId = sender,
-                            receiverNumbers = receiverNumbers,
+                            receiverNumbers = receiverNumbers.toSet(),
                             roomName = roomName,
                             roomCreationMode = roomCreationMode,
                             sendAfterLocal = sendAfter
@@ -54,10 +57,10 @@ class SmsSendCommand(
                 receiverNumbers.forEach { number ->
                     echo(
                             runBlocking {
-                                helper.handleCommand(
+                                handler.handleCommand(
                                         body = body,
                                         senderId = sender,
-                                        receiverNumbers = listOf(number),
+                                        receiverNumbers = setOf(number),
                                         roomName = roomName,
                                         roomCreationMode = roomCreationMode,
                                         sendAfterLocal = sendAfter

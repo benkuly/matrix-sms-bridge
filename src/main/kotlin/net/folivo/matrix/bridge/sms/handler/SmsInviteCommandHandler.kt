@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 
 
 @Component
-class SmsInviteCommandHelper(
+class SmsInviteCommandHandler(
         private val roomService: MatrixRoomService,
         private val matrixClient: MatrixClient,
         smsBridgeProperties: SmsBridgeProperties,

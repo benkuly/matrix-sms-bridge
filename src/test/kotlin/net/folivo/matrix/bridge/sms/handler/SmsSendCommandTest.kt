@@ -11,9 +11,10 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.ALWAYS
-import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHelper.RoomCreationMode.AUTO
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHandler.RoomCreationMode.ALWAYS
+import net.folivo.matrix.bridge.sms.handler.SmsSendCommandHandler.RoomCreationMode.AUTO
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
+import net.folivo.matrix.core.model.MatrixId.UserId
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -22,7 +23,7 @@ import java.time.LocalDateTime
 @ExtendWith(MockKExtension::class)
 class SmsSendCommandTest {
     @MockK
-    lateinit var helper: SmsSendCommandHelper
+    lateinit var handler: SmsSendCommandHandler
 
     @MockK
     lateinit var phoneNumberServiceMock: PhoneNumberService
@@ -35,14 +36,16 @@ class SmsSendCommandTest {
     @MockK(relaxed = true)
     lateinit var consoleMock: CliktConsole
 
+    private val senderId = UserId("sender", "server")
+
 
     @BeforeEach
     fun beforeEach() {
-        coEvery { helper.handleCommand(any(), any(), any(), any(), any(), any()) }.returns("answer")
+        coEvery { handler.handleCommand(any(), any(), any(), any(), any(), any()) }.returns("answer")
         every { smsBridgePropertiesMock.templates.botSmsSendInvalidTelephoneNumber }.returns("invalid")
         every { phoneNumberServiceMock.parseToInternationalNumber("017331111111") }.returns("+4917331111111")
         every { phoneNumberServiceMock.parseToInternationalNumber("017332222222") }.returns("+4917332222222")
-        cut = SmsSendCommand("someSender", helper, phoneNumberServiceMock, smsBridgePropertiesMock)
+        cut = SmsSendCommand(senderId, handler, phoneNumberServiceMock, smsBridgePropertiesMock)
         cut.context { console = consoleMock }
     }
 
@@ -51,18 +54,18 @@ class SmsSendCommandTest {
         cut.parse(listOf("some text", "-t", "017331111111", "-t", "017332222222"))
 
         coVerifyAll {
-            helper.handleCommand(
+            handler.handleCommand(
                     body = "some text",
-                    senderId = "someSender",
-                    receiverNumbers = listOf("+4917331111111"),
+                    senderId = senderId,
+                    receiverNumbers = setOf("+4917331111111"),
                     roomName = null,
                     roomCreationMode = AUTO,
                     sendAfterLocal = null
             )
-            helper.handleCommand(
+            handler.handleCommand(
                     body = "some text",
-                    senderId = "someSender",
-                    receiverNumbers = listOf("+4917332222222"),
+                    senderId = senderId,
+                    receiverNumbers = setOf("+4917332222222"),
                     roomName = null,
                     roomCreationMode = AUTO,
                     sendAfterLocal = null
@@ -75,10 +78,10 @@ class SmsSendCommandTest {
         cut.parse(listOf("some text", "-t", "017331111111", "-a", "1955-11-09T12:00"))
 
         coVerifyAll {
-            helper.handleCommand(
+            handler.handleCommand(
                     body = "some text",
-                    senderId = "someSender",
-                    receiverNumbers = listOf("+4917331111111"),
+                    senderId = senderId,
+                    receiverNumbers = setOf("+4917331111111"),
                     roomName = null,
                     roomCreationMode = AUTO,
                     sendAfterLocal = LocalDateTime.of(1955, 11, 9, 12, 0)
@@ -91,10 +94,10 @@ class SmsSendCommandTest {
         cut.parse(listOf("some text", "-t", "017331111111", "-t", "017332222222", "-n", "some name", "-g"))
 
         coVerify {
-            helper.handleCommand(
+            handler.handleCommand(
                     body = "some text",
-                    senderId = "someSender",
-                    receiverNumbers = listOf("+4917331111111", "+4917332222222"),
+                    senderId = senderId,
+                    receiverNumbers = setOf("+4917331111111", "+4917332222222"),
                     roomName = "some name",
                     roomCreationMode = AUTO,
                     sendAfterLocal = null
@@ -107,10 +110,10 @@ class SmsSendCommandTest {
         cut.parse(listOf("some text", "-t", "017331111111", "-m", "always"))
 
         coVerify {
-            helper.handleCommand(
+            handler.handleCommand(
                     body = "some text",
-                    senderId = "someSender",
-                    receiverNumbers = listOf("+4917331111111"),
+                    senderId = senderId,
+                    receiverNumbers = setOf("+4917331111111"),
                     roomName = null,
                     roomCreationMode = ALWAYS,
                     sendAfterLocal = null

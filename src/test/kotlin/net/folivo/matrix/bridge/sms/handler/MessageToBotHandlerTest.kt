@@ -16,8 +16,8 @@ class MessageToBotHandlerTest : DescribeSpec(testBody())
 
 private fun testBody(): DescribeSpec.() -> Unit {
     return {
-        val smsSendCommandHelperMock: SmsSendCommandHelper = mockk()
-        val smsInviteCommandHelperMock: SmsInviteCommandHelper = mockk()
+        val smsSendCommandHandlerMock: SmsSendCommandHandler = mockk()
+        val smsInviteCommandHandlerMock: SmsInviteCommandHandler = mockk()
         val phoneNumberServiceMock: PhoneNumberService = mockk()
         val smsBridgePropertiesMock: SmsBridgeProperties = mockk {
             every { templates.botHelp }.returns("help")
@@ -28,8 +28,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val membershipServiceMock: MatrixMembershipService = mockk()
 
         val cut = MessageToBotHandler(
-                smsSendCommandHelperMock,
-                smsInviteCommandHelperMock,
+                smsSendCommandHandlerMock,
+                smsInviteCommandHandlerMock,
                 phoneNumberServiceMock,
                 smsBridgePropertiesMock,
                 userServiceMock,
@@ -49,8 +49,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     coEvery { membershipServiceMock.getMembershipsSizeByRoomId(roomId) }.returns(2L)
                     cut.handleMessage(roomId, "sms", senderId, contextMock).shouldBeFalse()
                     coVerifyAll {
-                        smsSendCommandHelperMock wasNot Called
-                        smsInviteCommandHelperMock wasNot Called
+                        smsSendCommandHandlerMock wasNot Called
+                        smsInviteCommandHandlerMock wasNot Called
                     }
                 }
             }
@@ -60,8 +60,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     coEvery { membershipServiceMock.getMembershipsSizeByRoomId(roomId) }.returns(3L)
                     cut.handleMessage(roomId, "sms", senderId, contextMock).shouldBeTrue()
                     coVerifyAll {
-                        smsSendCommandHelperMock wasNot Called
-                        smsInviteCommandHelperMock wasNot Called
+                        smsSendCommandHandlerMock wasNot Called
+                        smsInviteCommandHandlerMock wasNot Called
                         contextMock.answer("toMany")
                     }
                 }
@@ -72,7 +72,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     coEvery { membershipServiceMock.getMembershipsSizeByRoomId(roomId) }.returns(2L)
                 }
                 it("should run sms send command") {
-                    coEvery { smsSendCommandHelperMock.handleCommand(any(), any(), any(), any(), any(), any()) }
+                    coEvery { smsSendCommandHandlerMock.handleCommand(any(), any(), any(), any(), any(), any()) }
                             .returns("message send")
                     every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
                     every { phoneNumberServiceMock.parseToInternationalNumber(any()) }.returns("+4917392837462")
@@ -88,7 +88,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                 }
                 it("should run sms invite command") {
-                    coEvery { smsInviteCommandHelperMock.handleCommand(any(), any()) }
+                    coEvery { smsInviteCommandHandlerMock.handleCommand(any(), any()) }
                             .returns("invited")
                     cut.handleMessage(
                             roomId,
@@ -120,8 +120,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     coEvery { membershipServiceMock.getMembershipsSizeByRoomId(roomId) }.returns(2L)
                     cut.handleMessage(roomId, "dino", senderId, contextMock).shouldBeTrue()
                     coVerifyAll {
-                        smsSendCommandHelperMock wasNot Called
-                        smsInviteCommandHelperMock wasNot Called
+                        smsSendCommandHandlerMock wasNot Called
+                        smsInviteCommandHandlerMock wasNot Called
                         contextMock.answer("help")
                     }
                 }
@@ -130,8 +130,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
 
         afterTest {
             clearMocks(
-                    smsSendCommandHelperMock,
-                    smsInviteCommandHelperMock,
+                    smsSendCommandHandlerMock,
+                    smsInviteCommandHandlerMock,
                     phoneNumberServiceMock,
                     userServiceMock,
                     membershipServiceMock

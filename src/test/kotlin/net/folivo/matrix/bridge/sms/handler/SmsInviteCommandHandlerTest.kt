@@ -18,7 +18,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
             every { templates.botSmsInviteSuccess }.returns("{sender} invited to {roomAlias}")
             every { templates.botSmsInviteError }.returns("{sender} not invited to {roomAlias}:{error}")
         }
-        val cut = SmsInviteCommandHelper(roomServiceMock, matrixClientMock, smsBridgePropertiesMock)
+        val cut = SmsInviteCommandHandler(roomServiceMock, matrixClientMock, smsBridgePropertiesMock)
 
         val senderId = UserId("sender", "server")
         val aliasId = RoomAliasId("alias", "server")

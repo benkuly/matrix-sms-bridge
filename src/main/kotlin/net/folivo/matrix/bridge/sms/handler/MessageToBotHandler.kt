@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class MessageToBotHandler(
-        private val smsSendCommandHelper: SmsSendCommandHelper,
-        private val smsInviteCommandHelper: SmsInviteCommandHelper,
+        private val smsSendCommandHandler: SmsSendCommandHandler,
+        private val smsInviteCommandHandler: SmsInviteCommandHandler,
         private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties,
         private val userService: MatrixUserService,
@@ -56,13 +56,13 @@ class MessageToBotHandler(
                                 .subcommands(
                                         SmsSendCommand(
                                                 senderId,
-                                                smsSendCommandHelper,
+                                                smsSendCommandHandler,
                                                 phoneNumberService,
                                                 smsBridgeProperties
                                         ),
                                         SmsInviteCommand(
                                                 senderId,
-                                                smsInviteCommandHelper
+                                                smsInviteCommandHandler
                                         )
                                 )
                                 .parse(args)

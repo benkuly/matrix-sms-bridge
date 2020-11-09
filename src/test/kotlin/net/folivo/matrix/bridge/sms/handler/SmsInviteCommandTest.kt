@@ -15,15 +15,15 @@ private fun testBody(): DescribeSpec.() -> Unit {
     return {
         val sender = UserId("sender", "server")
         val roomAliasId = RoomAliasId("alias", "server")
-        val helperMock: SmsInviteCommandHelper = mockk()
+        val handlerMock: SmsInviteCommandHandler = mockk()
         val consoleMock: CliktConsole = mockk(relaxed = true)
-        val cut = SmsInviteCommand(sender, helperMock)
+        val cut = SmsInviteCommand(sender, handlerMock)
         cut.context { console = consoleMock }
 
         describe("alias was given") {
-            coEvery { helperMock.handleCommand(sender, roomAliasId) }.returns("answer")
+            coEvery { handlerMock.handleCommand(sender, roomAliasId) }.returns("answer")
             cut.parse(listOf("invite", "#alias:server"))
-            coVerify { helperMock.handleCommand(sender, roomAliasId) }
+            coVerify { handlerMock.handleCommand(sender, roomAliasId) }
             coVerify { consoleMock.print("answer", false) }
         }
         describe("alias was not given") {
