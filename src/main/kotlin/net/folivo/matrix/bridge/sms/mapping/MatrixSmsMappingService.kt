@@ -10,7 +10,7 @@ import net.folivo.matrix.core.model.MatrixId.UserId
 import org.springframework.stereotype.Service
 
 @Service
-class MatrixSmsMappingService(//FIXME test
+class MatrixSmsMappingService(
         private val mappingRepository: MatrixSmsMappingRepository,
         private val membershipService: MatrixMembershipService,
         private val smsBridgeProperties: SmsBridgeProperties
@@ -19,7 +19,7 @@ class MatrixSmsMappingService(//FIXME test
     suspend fun getOrCreateMapping(
             userId: UserId,
             roomId: RoomId
-    ): MatrixSmsMapping {//FIXME only mapping token creation
+    ): MatrixSmsMapping {
         val membership = membershipService.getOrCreateMembership(userId, roomId)
         val mapping = mappingRepository.findByMembershipId(membership.id)
         return if (mapping == null) {
@@ -29,20 +29,20 @@ class MatrixSmsMappingService(//FIXME test
         } else mapping
     }
 
-    suspend fun getRoomId(userId: UserId, mappingToken: Int?): RoomId? { //FIXME test
+    suspend fun getRoomId(userId: UserId, mappingToken: Int?): RoomId? {
         return if (mappingToken == null) {
-            findRoomIdMapping(userId)
+            findSingleRoomIdMapping(userId)
         } else {
             val mapping = mappingRepository.findByUserIdAndMappingToken(userId, mappingToken)
             if (mapping == null) {
-                findRoomIdMapping(userId)
+                findSingleRoomIdMapping(userId)
             } else {
                 membershipService.getMembership(mapping.membershipId)?.roomId
             }
         }
     }
 
-    private suspend fun findRoomIdMapping(userId: UserId): RoomId? {
+    private suspend fun findSingleRoomIdMapping(userId: UserId): RoomId? {
         return if (smsBridgeProperties.allowMappingWithoutToken) {
             val memberships = membershipService.getMembershipsByUserId(userId).take(2).toList()
             if (memberships.size == 1) memberships.first().roomId else null

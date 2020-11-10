@@ -45,6 +45,9 @@ dependencies {
     }
     implementation("com.googlecode.libphonenumber:libphonenumber:${Versions.libphonenumber}")
 
+    implementation("io.r2dbc:r2dbc-h2")
+    implementation("com.h2database:h2")
+
     annotationProcessor("org.springframework.boot:spring-boot-autoconfigure-processor")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 

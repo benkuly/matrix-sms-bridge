@@ -1,4 +1,4 @@
-matrix:
+  matrix:6 plus
   bot:
     mode: APPSERVICE
     username: "smsbot"

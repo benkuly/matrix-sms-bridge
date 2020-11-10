@@ -14,7 +14,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 @Service
-class MatrixMessageService( //FIXME test
+class MatrixMessageService(
         private val messageRepository: MatrixMessageRepository,
         private val messageReceiverRepository: MatrixMessageReceiverRepository,
         private val membershipService: MatrixMembershipService,
@@ -25,24 +25,20 @@ class MatrixMessageService( //FIXME test
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    suspend fun sendRoomMessage(message: MatrixMessage, requiredReceiverIds: Set<UserId> = setOf()) {
+    suspend fun sendRoomMessage(message: MatrixMessage, requiredReceivers: Set<UserId>) {
         val isNew = message.id == null
-
-        val requiredReceivers =
-                if (message.id == null) requiredReceiverIds
-                else messageReceiverRepository.findByRoomMessageId(message.id).map { it.userId }.toSet()
 
         if (Instant.now().isAfter(message.sendAfter)) {
             val roomId = message.roomId
             val containsReceivers = membershipService.doesRoomContainsMembers(roomId, requiredReceivers)
             if (containsReceivers) {
                 try {
+                    LOG.debug("send cached message to room $roomId and delete from db")
                     matrixClient.roomsApi.sendRoomEvent(
                             roomId = roomId,
                             eventContent = if (message.isNotice) NoticeMessageEventContent(message.body)
                             else TextMessageEventContent(message.body)
                     )
-                    LOG.debug("sent cached message to room $roomId")
                     deleteMessage(message)
                 } catch (error: Throwable) {
                     LOG.debug(
@@ -59,7 +55,9 @@ class MatrixMessageService( //FIXME test
                         // TODO directly notify user
                     }
                 }
-            } else if (!isNew && message.sendAfter.until(Instant.now(), ChronoUnit.DAYS) > 3) {
+            } else if (isNew) {
+                saveMessageAndReceivers(message.copy(sendAfter = Instant.now()), requiredReceivers)
+            } else if (message.sendAfter.until(Instant.now(), ChronoUnit.DAYS) > 3) {
                 LOG.warn(
                         "We have cached messages for the room $roomId, but the required receivers " +
                         "${requiredReceivers.joinToString()} didn't join since 3 days. " +
@@ -67,8 +65,6 @@ class MatrixMessageService( //FIXME test
                 )
                 deleteMessage(message)
                 // TODO directly notify user
-            } else if (isNew) {
-                saveMessageAndReceivers(message.copy(sendAfter = Instant.now()), requiredReceivers)
             } else {
                 LOG.debug("wait for required receivers to join")
             }
@@ -77,7 +73,7 @@ class MatrixMessageService( //FIXME test
         }
     }
 
-    private suspend fun saveMessageAndReceivers(message: MatrixMessage, requiredReceiverIds: Set<UserId>) {
+    internal suspend fun saveMessageAndReceivers(message: MatrixMessage, requiredReceiverIds: Set<UserId>) {
         val savedMessage = messageRepository.save(message)
         requiredReceiverIds.forEach {
             if (savedMessage.id != null)
@@ -85,11 +81,19 @@ class MatrixMessageService( //FIXME test
         }
     }
 
-    private suspend fun deleteMessage(message: MatrixMessage) {
+    internal suspend fun deleteMessage(message: MatrixMessage) {
         if (message.id != null) messageRepository.delete(message)
     }
 
     suspend fun processMessageQueue() {
-        messageRepository.findAll().collect { sendRoomMessage(it) }
+        messageRepository.findAll()
+                .collect { message ->
+                    if (message.id != null) {
+                        val requiredReceivers = messageReceiverRepository.findByRoomMessageId(message.id)
+                                .map { it.userId }
+                                .toSet()
+                        sendRoomMessage(message, requiredReceivers)
+                    }
+                }
     }
 }
