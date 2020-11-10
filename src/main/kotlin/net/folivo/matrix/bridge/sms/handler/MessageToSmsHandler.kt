@@ -1,9 +1,6 @@
 package net.folivo.matrix.bridge.sms.handler
 
-import kotlinx.coroutines.flow.count
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.*
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.event.MessageContext
 import net.folivo.matrix.bot.room.MatrixRoomService
@@ -13,7 +10,6 @@ import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMappingService
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.core.model.MatrixId.RoomId
 import net.folivo.matrix.core.model.MatrixId.UserId
-import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -40,15 +36,14 @@ class MessageToSmsHandler(
             context: MessageContext,
             isTextMessage: Boolean
     ) {
-
         userService.getUsersByRoom(roomId)
                 .filter { it.isManaged && it.id != senderId && it.id != botProperties.botUserId }
                 .map { "+" + it.id.localpart.removePrefix("sms_") to it.id }
-                .map { (receiverNumber, receiverId) ->
+                .collect { (receiverNumber, receiverId) ->
                     if (isTextMessage) {
                         LOG.debug("send SMS from $roomId to $receiverNumber")
-                        val needsToken = smsBridgeProperties.allowMappingWithoutToken
-                                         && !roomService.getOrCreateRoom(roomId).isManaged
+                        val needsToken = !smsBridgeProperties.allowMappingWithoutToken
+                                         || !roomService.getOrCreateRoom(roomId).isManaged
                                          && roomService.getRoomsByMembers(setOf(receiverId)).take(2).count() > 1
                         val mappingToken = if (needsToken)
                             mappingService.getOrCreateMapping(receiverId, roomId).mappingToken else null
@@ -66,16 +61,13 @@ class MessageToSmsHandler(
                                     "This should be fixed.", error
                             ) // TODO it should send sms later
                             context.answer(
-                                    NoticeMessageEventContent(templates.sendSmsError),
+                                    templates.sendSmsError.replace("{error}", error.message ?: "unknown"),
                                     asUserId = receiverId
                             )
                         }
                     } else {
                         LOG.debug("cannot send SMS from $roomId to $receiverNumber because of incompatible message type")
-                        context.answer(
-                                NoticeMessageEventContent(templates.sendSmsIncompatibleMessage),
-                                asUserId = receiverId
-                        )
+                        context.answer(templates.sendSmsIncompatibleMessage, asUserId = receiverId)
                     }
                 }
     }

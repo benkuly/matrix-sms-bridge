@@ -61,13 +61,13 @@ databaseChangeLog:
                     references: matrix_message(id)
                     onDelete: CASCADE
               - column:
-                  name: room_user_id
+                  name: user_id
                   type: VARCHAR(250)
                   constraints:
                     nullable: false
                     primaryKey: false
-                    foreignKeyName: fk_matrix_message_receiver_matrix_message
-                    references: matrix_message(id)
+                    foreignKeyName: fk_matrix_message_receiver_matrix_user
+                    references: matrix_user(id)
                     onDelete: CASCADE
               - column:
                   name: version
@@ -87,7 +87,7 @@ databaseChangeLog:
                     references: matrix_membership(id)
                     onDelete: CASCADE
               - column:
-                  name: maping_token
+                  name: mapping_token
                   type: INTEGER
                   constraints:
                     nullable: true

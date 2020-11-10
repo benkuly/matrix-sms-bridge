@@ -15,9 +15,7 @@ class SmsMessageHandlerTest : DescribeSpec(testBody())
 
 private fun testBody(): DescribeSpec.() -> Unit {
     return {
-        val messageToSmsHandlerMock: MessageToSmsHandler = mockk {
-            coEvery { handleMessage(any(), any(), any(), any(), any()) } just Runs
-        }
+        val messageToSmsHandlerMock: MessageToSmsHandler = mockk()
         val messageToBotHandlerMock: MessageToBotHandler = mockk()
         val membershipServiceMock: MatrixMembershipService = mockk()
         val botPropertiesMock: MatrixBotProperties = mockk {
@@ -39,6 +37,10 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val roomId = RoomId("room", "server")
         val contextMock: MessageContext = mockk {
             every { originalEvent.sender }.returns(senderId)
+        }
+
+        beforeTest {
+            coEvery { messageToSmsHandlerMock.handleMessage(any(), any(), any(), any(), any()) } just Runs
         }
 
         describe(SmsMessageHandler::handleMessage.name) {
@@ -78,6 +80,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                     it("should delegate to sms handler when not handled by bot handler") {
                         coEvery { messageToBotHandlerMock.handleMessage(any(), any(), any(), any()) }.returns(false)
+                        coEvery { messageToSmsHandlerMock.handleMessage(any(), any(), any(), any(), any()) } just Runs
                         cut.handleMessage(TextMessageEventContent("body"), contextMock)
                         coVerify {
                             messageToBotHandlerMock.handleMessage(roomId, "body", senderId, contextMock)
@@ -90,6 +93,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         coEvery { membershipServiceMock.doesRoomContainsMembers(roomId, any()) }.returns(false)
                     }
                     it("should delegate to sms handler") {
+                        coEvery { messageToSmsHandlerMock.handleMessage(any(), any(), any(), any(), any()) } just Runs
                         cut.handleMessage(TextMessageEventContent("body"), contextMock)
                         coVerify {
                             messageToBotHandlerMock wasNot Called
@@ -97,6 +101,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         }
                     }
                     it("should detect if text message") {
+                        coEvery { messageToSmsHandlerMock.handleMessage(any(), any(), any(), any(), any()) } just Runs
                         cut.handleMessage(mockk { every { body }.returns("body") }, contextMock)
                         coVerify {
                             messageToBotHandlerMock wasNot Called

@@ -7,6 +7,12 @@ matrix:
     username: "smsbot"
     trackMembership: ALL
     serverName: matrix-local
+    migration:
+      url: jdbc:h2:mem:testdb
+      username: sa
+    database:
+      url: r2dbc:h2:mem:///testdb
+      username: sa
   appservice:
     hsToken: 312df522183efd404ec1cd22d2ffa4bbc76a8c1ccf541dd692eef281356bb74e
     namespaces:
@@ -25,3 +31,4 @@ matrix:
 logging:
   level:
     net.folivo.matrix.bridge.sms: DEBUG
+    org.springframework.data: DEBUG

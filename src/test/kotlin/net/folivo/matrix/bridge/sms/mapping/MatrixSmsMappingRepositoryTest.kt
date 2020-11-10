@@ -7,23 +7,29 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.awaitFirst
+import net.folivo.matrix.bot.config.MatrixBotDatabaseAutoconfiguration
 import net.folivo.matrix.bot.membership.MatrixMembership
 import net.folivo.matrix.bot.room.MatrixRoom
 import net.folivo.matrix.bot.user.MatrixUser
+import net.folivo.matrix.bridge.sms.SmsBridgeDatabaseConfiguration
 import net.folivo.matrix.core.model.MatrixId.RoomId
 import net.folivo.matrix.core.model.MatrixId.UserId
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.test.autoconfigure.data.r2dbc.DataR2dbcTest
+import org.springframework.data.r2dbc.core.DatabaseClient
 import org.springframework.data.r2dbc.core.R2dbcEntityTemplate
 import org.springframework.data.r2dbc.core.delete
 
 @DataR2dbcTest
+@ImportAutoConfiguration(value = [MatrixBotDatabaseAutoconfiguration::class, SmsBridgeDatabaseConfiguration::class])
 class MatrixSmsMappingRepositoryTest(
         cut: MatrixSmsMappingRepository,
-        entityTemplate: R2dbcEntityTemplate
-) : DescribeSpec(testBody(cut, entityTemplate))
+        dbClient: DatabaseClient
+) : DescribeSpec(testBody(cut, dbClient))
 
-private fun testBody(cut: MatrixSmsMappingRepository, entityTemplate: R2dbcEntityTemplate): DescribeSpec.() -> Unit {
+private fun testBody(cut: MatrixSmsMappingRepository, dbClient: DatabaseClient): DescribeSpec.() -> Unit {
     return {
+        val entityTemplate = R2dbcEntityTemplate(dbClient)
 
         val user1 = UserId("user1", "server")
         val user2 = UserId("user2", "server")

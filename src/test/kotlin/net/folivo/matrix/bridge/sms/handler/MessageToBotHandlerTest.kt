@@ -36,11 +36,13 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 membershipServiceMock
         )
 
-        val contextMock: MessageContext = mockk {
-            coEvery { answer(any<String>(), any()) }.returns(EventId("message", "server"))
-        }
+        val contextMock: MessageContext = mockk()
         val roomId = RoomId("room", "server")
         val senderId = UserId("sender", "server")
+
+        beforeTest {
+            coEvery { contextMock.answer(any<String>(), any()) }.returns(EventId("message", "server"))
+        }
 
         describe(MessageToBotHandler::handleMessage.name) {
             describe("sender is managed") {
@@ -107,10 +109,10 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         contextMock.answer(match<String> { it.contains("Error") })
                     }
                 }
-                it("should catch errors from unparsable command") {
+                it("should catch errors from unparseable command") {
                     cut.handleMessage(roomId, "sms send \" bla", senderId, contextMock).shouldBeTrue()
                     coVerify {
-                        contextMock.answer("error unbalanced quotes in  send \" bla unknown")
+                        contextMock.answer("error")
                     }
                 }
             }
@@ -134,7 +136,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     smsInviteCommandHandlerMock,
                     phoneNumberServiceMock,
                     userServiceMock,
-                    membershipServiceMock
+                    membershipServiceMock,
+                    contextMock
             )
         }
     }

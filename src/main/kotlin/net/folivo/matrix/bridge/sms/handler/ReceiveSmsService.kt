@@ -23,7 +23,6 @@ class ReceiveSmsService(
 ) {
 
     private val templates = smsBridgeProperties.templates
-    private val defaultRoomId = smsBridgeProperties.defaultRoomId
 
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
@@ -66,27 +65,27 @@ class ReceiveSmsService(
                     asUserId = userId
             )
             if (membershipService.hasRoomOnlyManagedUsersLeft(roomIdFromAlias)) {
-                if (defaultRoomId != null) {
+                if (smsBridgeProperties.defaultRoomId != null) {
                     val message = templates.defaultRoomIncomingMessageWithSingleMode
                             .replace("{sender}", sender)
                             .replace("{roomAlias}", roomAliasId.toString())
                     matrixClient.roomsApi.sendRoomEvent(
-                            defaultRoomId,
+                            smsBridgeProperties.defaultRoomId,
                             TextMessageEventContent(message)
                     )
                 } else return templates.answerInvalidTokenWithoutDefaultRoom.takeIf { !it.isNullOrEmpty() }
             }
             return null
         } else {
-            LOG.debug("receive SMS without or wrong mappingToken from $sender to default room $defaultRoomId")
+            LOG.debug("receive SMS without or wrong mappingToken from $sender to default room ${smsBridgeProperties.defaultRoomId}")
 
-            return if (defaultRoomId != null) {
+            return if (smsBridgeProperties.defaultRoomId != null) {
                 val message = templates.defaultRoomIncomingMessage
                         .replace("{sender}", sender)
                         .replace("{body}", cleanedBody)
 
                 matrixClient.roomsApi.sendRoomEvent(
-                        defaultRoomId,
+                        smsBridgeProperties.defaultRoomId,
                         TextMessageEventContent(message)
                 )
                 templates.answerInvalidTokenWithDefaultRoom.takeIf { !it.isNullOrEmpty() }

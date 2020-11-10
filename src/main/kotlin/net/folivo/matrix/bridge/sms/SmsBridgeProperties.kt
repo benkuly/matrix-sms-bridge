@@ -20,7 +20,7 @@ data class SmsBridgeProperties(
             val outgoingMessageToken: String = "\n\nTo answer to this message add this token to your message: {token}",
             val answerInvalidTokenWithDefaultRoom: String? = null,
             val answerInvalidTokenWithoutDefaultRoom: String? = "Your message did not contain any valid token. Nobody can and will read your message.",
-            val sendSmsError: String = "Could not send SMS to this user. Please try it again later.",
+            val sendSmsError: String = "Could not send SMS to this user: {error}",
             val sendSmsIncompatibleMessage: String = "Only text messages can be send to this SMS user.",
             val defaultRoomIncomingMessage: String = "{sender} wrote:\n\n{body}",
             val defaultRoomIncomingMessageWithSingleMode: String = "A message from {sender} was send to room {roomAlias}. Someone should join the room. Otherwise nobody will read the message.\n\nType `sms invite {roomAlias}` to get invited to the room.",

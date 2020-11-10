@@ -7,7 +7,7 @@ import org.springframework.data.relational.core.mapping.Table
 
 
 @Table("matrix_sms_mapping")
-class MatrixSmsMapping(
+data class MatrixSmsMapping(
         @Id
         @Column("membership_id")
         val membershipId: String,

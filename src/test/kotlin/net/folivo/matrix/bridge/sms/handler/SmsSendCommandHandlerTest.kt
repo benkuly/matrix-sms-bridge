@@ -14,10 +14,12 @@ import net.folivo.matrix.bridge.sms.message.MatrixMessageService
 import net.folivo.matrix.core.model.MatrixId.*
 import net.folivo.matrix.core.model.events.m.room.PowerLevelsEvent.PowerLevelsEventContent
 import net.folivo.matrix.restclient.MatrixClient
+import net.folivo.matrix.restclient.api.rooms.GetRoomAliasResponse
 import net.folivo.matrix.restclient.api.rooms.Visibility.PRIVATE
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 class SmsSendCommandHelperTest : DescribeSpec(testBody())
 
@@ -27,14 +29,10 @@ private fun testBody(): DescribeSpec.() -> Unit {
 
         val roomServiceMock: MatrixRoomService = mockk()
         val membershipServiceMock: MatrixMembershipService = mockk()
-        val messageServiceMock: MatrixMessageService = mockk()
-        val matrixClientMock: MatrixClient = mockk()
-        val botPropertiesMock: MatrixBotProperties = mockk {
-            every { serverName } returns "server"
-            every { botUserId } returns botUserId
-        }
+        val messageServiceMock: MatrixMessageService = mockk(relaxed = true)
+        val matrixClientMock: MatrixClient = mockk(relaxed = true)
+        val botPropertiesMock: MatrixBotProperties = mockk()
         val smsBridgePropertiesMock: SmsBridgeProperties = mockk {
-            every { defaultTimeZone }.returns("Europe/Berlin")
             every { templates.botSmsSendNewRoomMessage }.returns("message {sender} {body}")
             every { templates.botSmsSendCreatedRoomAndSendMessage }.returns("create room and send message {receiverNumbers}")
             every { templates.botSmsSendCreatedRoomAndSendNoMessage }.returns("create room and send no message {receiverNumbers}")
@@ -68,6 +66,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val sendAfterInstant = Instant.now()
         val sendAfter = LocalDateTime.ofInstant(sendAfterInstant, ZoneId.of("Europe/Berlin"))
 
+        beforeTest {
+            every { botPropertiesMock.serverName } returns "server"
+            every { botPropertiesMock.botUserId } returns botUserId
+            every { smsBridgePropertiesMock.defaultTimeZone }.returns("Europe/Berlin")
+        }
+
         describe(SmsSendCommandHandler::handleCommand.name) {
             beforeTest {
                 coEvery { cut.sendMessageToRoomAlias(any(), any(), any(), any()) }
@@ -97,7 +101,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         beforeTest { every { roomServiceMock.getRoomsByMembers(any()) }.returns(flowOf()) }
                         it("should create room and send message") {
                             cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, AUTO)
-                                    .shouldBe("create $tel1,$tel2")
+                                    .shouldBe("create $tel1, $tel2")
                             coVerify {
                                 cut.createRoomAndSendMessage(
                                         "body", senderId, "room name",
@@ -114,11 +118,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         }
                         it("should send message to room") {
                             cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, AUTO)
-                                    .shouldBe("send $tel1,$tel2")
+                                    .shouldBe("send $tel1, $tel2")
                             coVerify {
                                 cut.sendMessageToRoom(
                                         roomId, senderId, "body",
-                                        setOf(userId1, userId2, senderId), sendAfter
+                                        setOf(userId1, userId2), sendAfter
                                 )
                             }
                         }
@@ -132,7 +136,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         }
                         it("should do nothing") {
                             cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, AUTO)
-                                    .shouldBe("too many rooms $tel1,$tel2")
+                                    .shouldBe("too many rooms $tel1, $tel2")
                             coVerify(exactly = 0) {
                                 cut.sendMessageToRoomAlias(any(), any(), any(), any())
                                 cut.createRoomAndSendMessage(any(), any(), any(), any(), any())
@@ -150,7 +154,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should create room and send message") {
                     cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, ALWAYS)
-                            .shouldBe("create $tel1,$tel2")
+                            .shouldBe("create $tel1, $tel2")
                     coVerify {
                         cut.createRoomAndSendMessage(
                                 "body", senderId, "room name",
@@ -177,7 +181,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     describe("more then one receiver given") {
                         it("should do nothing") {
                             cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, SINGLE)
-                                    .shouldBe("too many numbers $tel1,$tel2")
+                                    .shouldBe("too many numbers $tel1, $tel2")
                             coVerify(exactly = 0) {
                                 cut.sendMessageToRoomAlias(any(), any(), any(), any())
                                 cut.createRoomAndSendMessage(any(), any(), any(), any(), any())
@@ -222,7 +226,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         cut.handleCommand("body", senderId, setOf(tel1), "room name", sendAfter, NO)
                                 .shouldBe("send $tel1")
                         coVerify {
-                            cut.sendMessageToRoom(roomId, senderId, "body", setOf(userId1, senderId), sendAfter)
+                            cut.sendMessageToRoom(roomId, senderId, "body", setOf(userId1), sendAfter)
                         }
                     }
                 }
@@ -247,7 +251,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
 
         describe(SmsSendCommandHandler::sendMessageToRoomAlias.name) {
-            val roomAliasId = RoomAliasId("alias", "server")
+            val roomAliasId = RoomAliasId("sms_111111", "server")
             beforeTest {
                 coEvery { cut.sendMessageToRoom(any(), any(), any(), any(), any()) }
                         .returns("send")
@@ -301,7 +305,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             .returns(null)
                 }
                 it("should get room alias, invite user and send message") {
-                    coEvery { matrixClientMock.roomsApi.getRoomAlias(any()).roomId }.returns(roomId)
+                    coEvery { matrixClientMock.roomsApi.getRoomAlias(any()) }
+                            .returns(GetRoomAliasResponse(roomId, listOf()))
                     cut.sendMessageToRoomAlias(senderId, "body", userId1, sendAfter)
                             .shouldBe("send")
                     coVerify {
@@ -340,7 +345,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
             describe("body contains message") {
                 it("should create room and send message") {
                     cut.createRoomAndSendMessage("body", senderId, "room name", setOf(userId1), sendAfter)
-                            .shouldBe("create room and send no message {receiverNumbers}")
+                            .shouldBe("create room and send message {receiverNumbers}")
                     coVerify {
                         matrixClientMock.roomsApi.createRoom(
                                 name = "room name",
@@ -362,7 +367,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
             describe("body is null or blank") {
                 it("should do nothing") {
                     cut.sendMessageToRoom(roomId, senderId, null, setOf(userId1), null)
-                            .shouldBe("no message $tel1")
+                            .shouldBe("no message {receiverNumbers}")
                     coVerify {
                         messageServiceMock wasNot Called
                     }
@@ -378,7 +383,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should invite bot with first user and send message") {
                     cut.sendMessageToRoom(roomId, senderId, "body", setOf(userId1, userId2), sendAfter)
-                            .shouldBe("send message $tel1,$tel2")
+                            .shouldBe("send message {receiverNumbers}")
                     coVerify {
                         matrixClientMock.roomsApi.inviteUser(roomId, botUserId, userId1)
                         messageServiceMock.sendRoomMessage(
@@ -401,7 +406,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should send message") {
                     cut.sendMessageToRoom(roomId, senderId, "body", setOf(userId1, userId2), sendAfter)
-                            .shouldBe("send message $tel1,$tel2")
+                            .shouldBe("send message {receiverNumbers}")
                     coVerify {
                         messageServiceMock.sendRoomMessage(
                                 MatrixMessage(
@@ -414,27 +419,31 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 describe("send after is more then 15 seconds in future") {
                     it("should notify user about this") {
+                        val sendAfterStatic = LocalDateTime.ofInstant(
+                                Instant.ofEpochMilli(4104433464000),
+                                ZoneId.of("Europe/Berlin")
+                        )
                         cut.sendMessageToRoom(
                                 roomId,
                                 senderId,
                                 "body",
                                 setOf(userId1, userId2),
-                                sendAfter.plusSeconds(2424)
-                        )
-                                .shouldBe("send message $tel1,$tel2")
+                                sendAfterStatic
+                        ).shouldBe("send message {receiverNumbers}")
                         coVerify {
                             messageServiceMock.sendRoomMessage(
-                                    MatrixMessage(
-                                            roomId = roomId,
-                                            body = "notice at bla",
-                                            isNotice = true
-                                    ), setOf(userId1, userId2)
+                                    match {
+                                        it.roomId == roomId
+                                        && it.body == "notice at 2100-01-24T01:24:24"
+                                        && it.isNotice == true
+                                        && it.sendAfter.until(Instant.now(), ChronoUnit.SECONDS) < 2424
+                                    }, setOf(userId1, userId2)
                             )
                             messageServiceMock.sendRoomMessage(
                                     MatrixMessage(
                                             roomId = roomId,
                                             body = "message @sender:server body",
-                                            sendAfter = sendAfterInstant.plusSeconds(2424)
+                                            sendAfter = Instant.ofEpochMilli(4104433464000)
                                     ), setOf(userId1, userId2)
                             )
                         }
@@ -444,11 +453,14 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
         describe("some error occurs") {
             beforeTest {
-                every { roomServiceMock.getRoomsByMembers(any()) }.throws(RuntimeException("mimimi"))
+                every { roomServiceMock.getRoomsByMembers(any()) }.returns(flowOf())
+                coEvery { cut.sendMessageToRoomAlias(any(), any(), any(), any()) }
+                        .throws(RuntimeException("mimimi"))
+                every { smsBridgePropertiesMock.singleModeEnabled }.returns(true)
             }
             it("should catch exception and notify user") {
                 cut.handleCommand("body", senderId, setOf(tel1), "room name", sendAfter, AUTO)
-                        .shouldBe("error mimimi $tel1")
+                        .shouldBe("error mimimi +111111")
             }
         }
 

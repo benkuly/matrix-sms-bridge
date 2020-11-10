@@ -68,42 +68,45 @@ private fun testBody(): DescribeSpec.() -> Unit {
             }
         }
         describe(MatrixSmsMappingService::getRoomId.name) {
-            val testFindSingleRoomIdMapping = describeSpec {
-                describe("allow mapping without token") {
-                    beforeTest { every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true) }
-                    describe("user is in no room") {
-                        beforeTest { coEvery { membershipServiceMock.getMembershipsByUserId(userId) }.returns(flowOf()) }
+            val testFindSingleRoomIdMapping = { name: String ->
+                describeSpec {
+                    describe("$name allow mapping without token") {
+                        beforeTest { every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true) }
+                        describe("user is in no room") {
+                            beforeTest { coEvery { membershipServiceMock.getMembershipsByUserId(userId) }.returns(flowOf()) }
+                            it("should return null") {
+                                cut.getRoomId(userId, null).shouldBeNull()
+                            }
+                        }
+                        describe("user is in one room") {
+                            beforeTest {
+                                coEvery { membershipServiceMock.getMembershipsByUserId(userId) }
+                                        .returns(flowOf(membership))
+                            }
+                            it("should return room id") {
+                                cut.getRoomId(userId, null).shouldBe(membership.roomId)
+                            }
+                        }
+                        describe("user is in more then one room") {
+                            beforeTest {
+                                coEvery { membershipServiceMock.getMembershipsByUserId(userId) }
+                                        .returns(flowOf(mockk(), mockk()))
+                            }
+                            it("should return null") {
+                                cut.getRoomId(userId, null).shouldBeNull()
+                            }
+                        }
+                    }
+                    describe("$name not allow mapping without token") {
+                        beforeTest { every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false) }
                         it("should return null") {
                             cut.getRoomId(userId, null).shouldBeNull()
                         }
-                    }
-                    describe("user is in one room") {
-                        beforeTest {
-                            coEvery { membershipServiceMock.getMembershipsByUserId(userId) }
-                                    .returns(flowOf(membership))
-                        }
-                        it("should return room id") {
-                            cut.getRoomId(userId, null).shouldBe(membership.roomId)
-                        }
-                    }
-                    describe("user is in more then one room") {
-                        beforeTest {
-                            coEvery { membershipServiceMock.getMembershipsByUserId(userId) }
-                                    .returns(flowOf(mockk(), mockk()))
-                        }
-                        it("should return null") {
-                            cut.getRoomId(userId, null).shouldBeNull()
-                        }
-                    }
-                }
-                describe("not allow mapping without token") {
-                    beforeTest { every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false) }
-                    it("should return null") {
-                        cut.getRoomId(userId, null).shouldBeNull()
                     }
                 }
             }
             describe("mapping token present") {
+                beforeTest { every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true) }
                 describe("mapping token in database") {
                     beforeTest {
                         coEvery { mappingRepositoryMock.findByUserIdAndMappingToken(userId, 2) }
@@ -112,7 +115,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                                 .returns(membership)
                     }
                     it("should return room id from database") {
-                        cut.getRoomId(userId, null).shouldBe(membership.roomId)
+                        cut.getRoomId(userId, 2).shouldBe(membership.roomId)
                     }
                 }
                 describe("mapping token not in database") {
@@ -120,11 +123,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         coEvery { mappingRepositoryMock.findByUserIdAndMappingToken(userId, 2) }
                                 .returns(null)
                     }
-                    include(testFindSingleRoomIdMapping)
+                    include(testFindSingleRoomIdMapping("a"))
                 }
             }
             describe("mapping token not present") {
-                include(testFindSingleRoomIdMapping)
+                include(testFindSingleRoomIdMapping("b"))
             }
         }
 

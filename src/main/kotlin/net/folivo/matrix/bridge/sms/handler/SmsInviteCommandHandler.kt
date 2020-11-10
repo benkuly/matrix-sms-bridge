@@ -34,7 +34,7 @@ class SmsInviteCommandHandler(
             templates.botSmsInviteSuccess
                     .replace("{roomAlias}", alias.full)
                     .replace("{sender}", sender.full)
-        } catch (ex: Error) {
+        } catch (ex: Throwable) {
             LOG.debug("got exception")
             templates.botSmsInviteError
                     .replace("{roomAlias}", alias.full)

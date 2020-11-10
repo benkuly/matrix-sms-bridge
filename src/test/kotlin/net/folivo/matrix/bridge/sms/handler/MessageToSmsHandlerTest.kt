@@ -20,14 +20,12 @@ class MessageToSmsHandlerTest : DescribeSpec(testBody())
 private fun testBody(): DescribeSpec.() -> Unit {
     return {
         val botUserId = UserId("bot", "server")
-        val botPropertiesMock: MatrixBotProperties = mockk {
-            every { botUserId }.returns(botUserId)
-        }
+        val botPropertiesMock: MatrixBotProperties = mockk()
         val smsBridgePropertiesMock: SmsBridgeProperties = mockk {
-            every { templates.outgoingMessageToken }.returns(" with #{token}")
+            every { templates.outgoingMessageToken }.returns(" with {token}")
             every { templates.outgoingMessage }.returns("{sender} wrote {body}")
             every { templates.outgoingMessageFromBot }.returns("bot wrote {body}")
-            every { templates.sendSmsError }.returns("error")
+            every { templates.sendSmsError }.returns("error: {error}")
             every { templates.sendSmsIncompatibleMessage }.returns("incompatible")
             every { allowMappingWithoutToken }.returns(false)
         }
@@ -45,11 +43,14 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 mappingServiceMock
         )
 
-        val contextMock: MessageContext = mockk {
-            coEvery { answer(any<String>(), any()) }.returns(EventId("event", "server"))
-        }
+        val contextMock: MessageContext = mockk()
         val roomId = RoomId("room", "server")
         val senderId = UserId("sender", "server")
+
+        beforeTest {
+            every { botPropertiesMock.botUserId }.returns(botUserId)
+            coEvery { contextMock.answer(any<String>(), any()) }.returns(EventId("event", "server"))
+        }
 
         describe(MessageToSmsHandler::handleMessage.name) {
             val userId1 = UserId("sms_11111", "server")
@@ -58,9 +59,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 coEvery { userServiceMock.getUsersByRoom(roomId) }.returns(
                         flowOf(
                                 MatrixUser(botUserId, true),
-                                MatrixUser(senderId, true),
-                                MatrixUser(userId1),
-                                MatrixUser(userId2)
+                                MatrixUser(senderId, false),
+                                MatrixUser(userId1, true),
+                                MatrixUser(userId2, true)
                         )
                 )
                 coEvery { mappingServiceMock.getOrCreateMapping(userId1, roomId) }
@@ -77,8 +78,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             .returns(MatrixRoom(roomId, true))
                     cut.handleMessage(roomId, "body", senderId, contextMock, true)
                     coVerify {
-                        smsProviderMock.sendSms("+11111", "+11111 wrote body")
-                        smsProviderMock.sendSms("+22222", "+22222 wrote body")
+                        smsProviderMock.sendSms("+11111", "@sender:server wrote body")
+                        smsProviderMock.sendSms("+22222", "@sender:server wrote body")
                     }
                 }
                 it("should ignore token when room is the only room") {
@@ -88,8 +89,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             .returns(flowOf(mockk()))
                     cut.handleMessage(roomId, "body", senderId, contextMock, true)
                     coVerifyAll {
-                        smsProviderMock.sendSms("+11111", "+11111 wrote body")
-                        smsProviderMock.sendSms("+22222", "+22222 wrote body")
+                        smsProviderMock.sendSms("+11111", "@sender:server wrote body")
+                        smsProviderMock.sendSms("+22222", "@sender:server wrote body")
                     }
                 }
                 it("should not ignore token when room is not managed and not the only room") {
@@ -101,8 +102,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             .returns(2)
                     cut.handleMessage(roomId, "body", senderId, contextMock, true)
                     coVerifyAll {
-                        smsProviderMock.sendSms("+11111", "+11111 wrote body with #2")
-                        smsProviderMock.sendSms("+22222", "+22222 wrote body")
+                        smsProviderMock.sendSms("+11111", "@sender:server wrote body with #2")
+                        smsProviderMock.sendSms("+22222", "@sender:server wrote body")
                     }
                 }
             }
@@ -119,14 +120,14 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 it("should send sms") {
                     cut.handleMessage(roomId, "body", senderId, contextMock, true)
                     coVerifyAll {
-                        smsProviderMock.sendSms("+11111", "+11111 wrote body with #2")
-                        smsProviderMock.sendSms("+22222", "+22222 wrote body with #2")
+                        smsProviderMock.sendSms("+11111", "@sender:server wrote body with #2")
+                        smsProviderMock.sendSms("+22222", "@sender:server wrote body with #2")
                     }
                 }
                 it("should not send sms back to sender (no loop)") {
                     cut.handleMessage(roomId, "body", userId1, contextMock, true)
                     coVerifyAll {
-                        smsProviderMock.sendSms("+22222", "+22222 wrote body with #2")
+                        smsProviderMock.sendSms("+22222", "@sms_11111:server wrote body with #2")
                     }
                 }
                 it("should use other string with bot user") {
@@ -144,11 +145,10 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             .returns(MatrixRoom(roomId, true))
                 }
                 it("when send sms fails") {
-                    coEvery { smsProviderMock.sendSms("+11111", any()) }.throws(RuntimeException())
+                    coEvery { smsProviderMock.sendSms("+11111", any()) }.throws(RuntimeException("reason"))
                     cut.handleMessage(roomId, "body", senderId, contextMock, true)
                     coVerify {
-                        smsProviderMock wasNot Called
-                        contextMock.answer("error", asUserId = userId1)
+                        contextMock.answer("error: reason", asUserId = userId1)
                     }
                 }
                 it("when wrong message type") {
@@ -165,7 +165,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
             clearMocks(
                     roomServiceMock,
                     userServiceMock,
-                    mappingServiceMock
+                    smsProviderMock,
+                    mappingServiceMock,
+                    contextMock
             )
         }
     }
