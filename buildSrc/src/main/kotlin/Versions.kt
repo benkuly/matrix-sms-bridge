@@ -1,6 +1,6 @@
 object Versions {
     const val kotlin = "1.4.10" // https://kotlinlang.org/
-    const val kotlinxCoroutines = "1.4.1" // https://github.com/Kotlin/kotlinx.coroutines/releases
+    const val kotlinxCoroutines = "1.3.9" // https://github.com/Kotlin/kotlinx.coroutines/releases
     const val kotlinRetry = "1.0.6" // https://github.com/michaelbull/kotlin-retry
     const val kotest = "4.3.1" // https://github.com/kotest/kotest/releases
     const val springBoot = "2.3.4.RELEASE" // https://spring.io/projects/spring-boot

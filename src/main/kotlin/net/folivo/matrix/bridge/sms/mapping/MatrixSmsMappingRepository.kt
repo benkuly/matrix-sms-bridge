@@ -17,7 +17,7 @@ interface MatrixSmsMappingRepository : CoroutineCrudRepository<MatrixSmsMapping,
         ORDER BY map.mapping_token DESC
         """
     )
-    fun findByUserIdSortByMappingTokenDesc(userId: UserId): Flow<MatrixSmsMapping> //FIXME
+    fun findByUserIdSortByMappingTokenDesc(userId: UserId): Flow<MatrixSmsMapping>
 
     @Query(
             """
@@ -26,7 +26,7 @@ interface MatrixSmsMappingRepository : CoroutineCrudRepository<MatrixSmsMapping,
         WHERE map.mapping_token = :mappingToken AND mem.user_id = :userId
         """
     )
-    fun findByUserIdAndMappingToken(userId: UserId, mappingToken: Int): MatrixSmsMapping?
+    suspend fun findByUserIdAndMappingToken(userId: UserId, mappingToken: Int): MatrixSmsMapping?
 
     suspend fun findByMembershipId(membershipId: String): MatrixSmsMapping?
 }
