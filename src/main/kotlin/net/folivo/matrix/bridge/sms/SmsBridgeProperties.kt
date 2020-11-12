@@ -23,7 +23,7 @@ data class SmsBridgeProperties(
             val sendSmsError: String = "Could not send SMS to this user: {error}",
             val sendSmsIncompatibleMessage: String = "Only text messages can be send to this SMS user.",
             val defaultRoomIncomingMessage: String = "{sender} wrote:\n\n{body}",
-            val defaultRoomIncomingMessageWithSingleMode: String = "A message from {sender} was send to room {roomAlias}. Someone should join the room. Otherwise nobody will read the message.\n\nType `sms invite {roomAlias}` to get invited to the room.",
+            val defaultRoomIncomingMessageWithSingleMode: String = "A message from {sender} was send to room {roomAlias}. Someone should join the room. Otherwise nobody will read the message.\n\nType `sms invite {roomAlias}` in a bot room to get invited to the room.",
             val botHelp: String = "To use this bot, type 'sms'",
             val botTooManyMembers: String = "Only rooms with two members are allowed to write with this bot.",
             val botSmsError: String = "There was an error while using sms command. Reason: {error}",

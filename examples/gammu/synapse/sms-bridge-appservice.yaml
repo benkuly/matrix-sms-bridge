@@ -7,5 +7,7 @@ namespaces:
   users:
     - exclusive: true
       regex: "^@sms_.+:matrix-local"
-  aliases: []
-  rooms: []
+  aliases:
+    - exclusive: true
+      regex: "^#sms_.+:matrix-local"
+  rooms: [ ]

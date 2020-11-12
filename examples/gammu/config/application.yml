@@ -1,13 +1,6 @@
-spring:
-  neo4j:
-    uri: bolt://neo4j:7687
-    authentication:
-      username: neo4j
-      password: secret
-
 logging:
   level:
-    net.folivo.matrix.bridge.sms: DEBUG
+    net.folivo.matrix: DEBUG
 
 matrix:
   bridge:
@@ -18,8 +11,15 @@ matrix:
       defaultRoomId: "!tRraLABExGeUDmOWvF:matrix-local"
       defaultRegion: DE
       defaultTimeZone: Europe/Berlin
+      singleModeEnabled: true
   bot:
     serverName: matrix-local
+    migration:
+      url: jdbc:h2:file:/data/db/testdb
+      username: sa
+    database:
+      url: r2dbc:h2:file:////data/db/testdb
+      username: sa
   client:
     homeServer:
       hostname: matrix-synapse

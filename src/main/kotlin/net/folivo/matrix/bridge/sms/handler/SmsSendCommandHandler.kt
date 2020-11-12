@@ -13,6 +13,7 @@ import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode.*
 import net.folivo.matrix.bridge.sms.message.MatrixMessage
 import net.folivo.matrix.bridge.sms.message.MatrixMessageService
 import net.folivo.matrix.core.model.MatrixId.*
+import net.folivo.matrix.core.model.events.m.room.NameEvent.NameEventContent
 import net.folivo.matrix.core.model.events.m.room.PowerLevelsEvent.PowerLevelsEventContent
 import net.folivo.matrix.restclient.MatrixClient
 import net.folivo.matrix.restclient.api.rooms.Visibility.PRIVATE
@@ -48,6 +49,7 @@ class SmsSendCommandHandler(
             sendAfterLocal: LocalDateTime?,
             roomCreationMode: RoomCreationMode
     ): String {
+        LOG.debug("handle command")
         val requiredManagedReceiverIds = receiverNumbers.map {
             UserId("sms_${it.removePrefix("+")}", botProperties.serverName)
         }.toSet()
@@ -61,7 +63,13 @@ class SmsSendCommandHandler(
             val answer = when (roomCreationMode) {
                 AUTO -> {
                     if (smsBridgeProperties.singleModeEnabled && receiverNumbers.size == 1) {
-                        sendMessageToRoomAlias(senderId, body, requiredManagedReceiverIds.first(), sendAfterLocal)
+                        sendMessageToRoomAlias(
+                                senderId,
+                                body,
+                                roomName,
+                                requiredManagedReceiverIds.first(),
+                                sendAfterLocal
+                        )
                     } else when (rooms.size) {
                         0    -> createRoomAndSendMessage(
                                 body,
@@ -74,6 +82,7 @@ class SmsSendCommandHandler(
                                 rooms.first(),
                                 senderId,
                                 body,
+                                roomName,
                                 requiredManagedReceiverIds,
                                 sendAfterLocal
                         )
@@ -93,7 +102,13 @@ class SmsSendCommandHandler(
                     if (!smsBridgeProperties.singleModeEnabled) {
                         templates.botSmsSendSingleModeDisabled
                     } else if (receiverNumbers.size == 1) {
-                        sendMessageToRoomAlias(senderId, body, requiredManagedReceiverIds.first(), sendAfterLocal)
+                        sendMessageToRoomAlias(
+                                senderId,
+                                body,
+                                roomName,
+                                requiredManagedReceiverIds.first(),
+                                sendAfterLocal
+                        )
                     } else {
                         templates.botSmsSendSingleModeOnlyOneTelephoneNumberAllowed
                     }
@@ -105,6 +120,7 @@ class SmsSendCommandHandler(
                                 rooms.first(),
                                 senderId,
                                 body,
+                                roomName,
                                 requiredManagedReceiverIds,
                                 sendAfterLocal
                         )
@@ -125,14 +141,16 @@ class SmsSendCommandHandler(
     internal suspend fun sendMessageToRoomAlias(
             senderId: UserId,
             body: String?,
+            roomName: String?,
             requiredManagedReceiverId: UserId,
             sendAfterLocal: LocalDateTime?
     ): String {
+        LOG.debug("send message to room alias")
         val aliasLocalpart = requiredManagedReceiverId.localpart
         val roomAliasId = RoomAliasId(aliasLocalpart, botProperties.serverName)
         val existingRoomId = roomService.getRoomAlias(roomAliasId)?.roomId
         val roomId = existingRoomId
-                     ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId//FIXME does this work?
+                     ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId
         if (existingRoomId == null || !membershipService.doesRoomContainsMembers(roomId, setOf(senderId))) {
             matrixClient.roomsApi.inviteUser(roomId, senderId)
         }
@@ -140,8 +158,10 @@ class SmsSendCommandHandler(
                 roomId,
                 senderId,
                 body,
+                roomName,
                 setOf(requiredManagedReceiverId),
-                sendAfterLocal
+                sendAfterLocal,
+                denyBotInvite = true
         )
     }
 
@@ -152,7 +172,7 @@ class SmsSendCommandHandler(
             requiredManagedReceiverIds: Set<UserId>,
             sendAfterLocal: LocalDateTime?
     ): String {
-        LOG.debug("create room")
+        LOG.debug("create room and send message")
         val roomId = matrixClient.roomsApi.createRoom(
                 name = roomName,
                 invite = setOf(senderId, *requiredManagedReceiverIds.toTypedArray()),
@@ -160,14 +180,19 @@ class SmsSendCommandHandler(
                 powerLevelContentOverride = PowerLevelsEventContent(
                         invite = 0,
                         kick = 0,
-                        events = mapOf("m.room.name" to 0, "m.room.topic" to 0)
+                        events = mapOf("m.room.name" to 0, "m.room.topic" to 0),
+                        users = mapOf(
+                                botProperties.botUserId to 100,
+                                *requiredManagedReceiverIds.map { it to 100 }.toTypedArray()
+                        )
                 )
         )
+        roomService.getOrCreateRoom(roomId)//FIXME test
 
         return if (body.isNullOrEmpty()) {
             templates.botSmsSendCreatedRoomAndSendNoMessage
         } else {
-            sendMessageToRoom(roomId, senderId, body, requiredManagedReceiverIds, sendAfterLocal)
+            sendMessageToRoom(roomId, senderId, body, roomName, requiredManagedReceiverIds, sendAfterLocal, true)
             templates.botSmsSendCreatedRoomAndSendMessage
         }
     }
@@ -176,13 +201,18 @@ class SmsSendCommandHandler(
             roomId: RoomId,
             senderId: UserId,
             body: String?,
+            roomName: String?,
             requiredManagedReceiverIds: Set<UserId>,
-            sendAfterLocal: LocalDateTime?
+            sendAfterLocal: LocalDateTime?,
+            denyBotInvite: Boolean = false //FIXME test
     ): String {
+        if (roomName != null) {
+            matrixClient.roomsApi.sendStateEvent(roomId, NameEventContent(roomName))//FIXME test
+        }
         if (body.isNullOrBlank()) {
             return templates.botSmsSendNoMessage
         } else {
-            val botIsMember = membershipService.doesRoomContainsMembers(
+            val botIsMember = denyBotInvite || membershipService.doesRoomContainsMembers(
                     roomId,
                     setOf(botProperties.botUserId)
             )

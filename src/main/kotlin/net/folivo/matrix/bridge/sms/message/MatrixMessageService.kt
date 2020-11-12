@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toSet
 import net.folivo.matrix.bot.membership.MatrixMembershipService
+import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.core.model.MatrixId.UserId
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -17,6 +18,7 @@ import java.time.temporal.ChronoUnit
 class MatrixMessageService(
         private val messageRepository: MatrixMessageRepository,
         private val messageReceiverRepository: MatrixMessageReceiverRepository,
+        private val roomService: MatrixRoomService,
         private val membershipService: MatrixMembershipService,
         private val matrixClient: MatrixClient
 ) {
@@ -25,19 +27,20 @@ class MatrixMessageService(
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
-    suspend fun sendRoomMessage(message: MatrixMessage, requiredReceivers: Set<UserId>) {
+    suspend fun sendRoomMessage(message: MatrixMessage, requiredMembers: Set<UserId>) {
         val isNew = message.id == null
 
         if (Instant.now().isAfter(message.sendAfter)) {
             val roomId = message.roomId
-            val containsReceivers = membershipService.doesRoomContainsMembers(roomId, requiredReceivers)
+            val containsReceivers = membershipService.doesRoomContainsMembers(roomId, requiredMembers)
             if (containsReceivers) {
                 try {
                     LOG.debug("send cached message to room $roomId and delete from db")
                     matrixClient.roomsApi.sendRoomEvent(
                             roomId = roomId,
                             eventContent = if (message.isNotice) NoticeMessageEventContent(message.body)
-                            else TextMessageEventContent(message.body)
+                            else TextMessageEventContent(message.body),
+                            asUserId = message.asUserId
                     )
                     deleteMessage(message)
                 } catch (error: Throwable) {
@@ -56,11 +59,11 @@ class MatrixMessageService(
                     }
                 }
             } else if (isNew) {
-                saveMessageAndReceivers(message.copy(sendAfter = Instant.now()), requiredReceivers)
+                saveMessageAndReceivers(message.copy(sendAfter = Instant.now()), requiredMembers)
             } else if (message.sendAfter.until(Instant.now(), ChronoUnit.DAYS) > 3) {
                 LOG.warn(
                         "We have cached messages for the room $roomId, but the required receivers " +
-                        "${requiredReceivers.joinToString()} didn't join since 3 days. " +
+                        "${requiredMembers.joinToString()} didn't join since 3 days. " +
                         "This usually should never happen! The message will now be deleted."
                 )
                 deleteMessage(message)
@@ -69,13 +72,13 @@ class MatrixMessageService(
                 LOG.debug("wait for required receivers to join")
             }
         } else if (isNew) { //FIXME test
-            saveMessageAndReceivers(message, requiredReceivers)
+            saveMessageAndReceivers(message, requiredMembers)
         }
     }
 
-    internal suspend fun saveMessageAndReceivers(message: MatrixMessage, requiredReceiverIds: Set<UserId>) {
+    internal suspend fun saveMessageAndReceivers(message: MatrixMessage, requiredMembers: Set<UserId>) {
         val savedMessage = messageRepository.save(message)
-        requiredReceiverIds.forEach {
+        requiredMembers.forEach {
             if (savedMessage.id != null)
                 messageReceiverRepository.save(MatrixMessageReceiver(savedMessage.id, it))
         }

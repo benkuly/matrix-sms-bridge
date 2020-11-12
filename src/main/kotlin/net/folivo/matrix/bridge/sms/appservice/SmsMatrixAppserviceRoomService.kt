@@ -1,5 +1,6 @@
 package net.folivo.matrix.bridge.sms.appservice
 
+import net.folivo.matrix.appservice.api.room.AppserviceRoomService.RoomExistingState
 import net.folivo.matrix.appservice.api.room.CreateRoomParameter
 import net.folivo.matrix.bot.appservice.DefaultAppserviceRoomService
 import net.folivo.matrix.bot.config.MatrixBotProperties
@@ -26,9 +27,13 @@ class SmsMatrixAppserviceRoomService(
                         invite = 0,
                         kick = 0,
                         events = mapOf("m.room.name" to 0, "m.room.topic" to 0),
-                        users = mapOf(invitedUser to 100)
+                        users = mapOf(invitedUser to 100, botProperties.botUserId to 100)
                 ),
                 invite = setOf(invitedUser)
         )
+    }
+
+    override suspend fun roomExistingState(roomAlias: RoomAliasId): RoomExistingState {
+        return super.roomExistingState(roomAlias)//FIXME single mode
     }
 }

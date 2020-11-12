@@ -1,15 +1,12 @@
-  matrix:6 plus
+matrix:
   bot:
     mode: APPSERVICE
-    username: "smsbot"
+    username: smsbot
     trackMembership: ALL
-  client:
   appservice:
     namespaces:
       users:
-        - exclusive: true
-          regex: "sms_[0-9]{6,15}"
-      aliases:
-        - exclusive: true
-          regex: "sms_[0-9]{6,15}"
-      rooms: [ ]
+        - localpartRegex: "sms_[0-9]{6,15}"
+      rooms:
+        - localpartRegex: "sms_[0-9]{6,15}"
+      aliases: [ ]

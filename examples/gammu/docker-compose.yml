@@ -14,28 +14,15 @@ services:
         target: /data
       #devices:
       #- "/dev/ttyUSB1:/dev/ttyModem"
-    depends_on:
-      - neo4j
     environment:
       - CONFIG_LOCATION=/config/application.yml
       - GAMMU_CONFIG=/config/gammu-smsdrc
-      # - SPRING_PROFILES_ACTIVE=initialsync
+      #- SPRING_PROFILES_ACTIVE=initialsync
     networks:
       - local-kannel
     expose:
       - 8080
     restart: on-failure
-  neo4j:
-    image: neo4j:latest
-    volumes:
-      - ./neo4j:/data
-    environment:
-      - NEO4J_AUTH=neo4j/secret
-    networks:
-      - local-kannel
-    ports:
-      - 7687:7687
-      - 7474:7474
   matrix-synapse:
     image: matrixdotorg/synapse:latest
     volumes:

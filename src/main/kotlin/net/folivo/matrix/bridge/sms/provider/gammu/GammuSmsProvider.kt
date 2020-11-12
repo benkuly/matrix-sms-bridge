@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.text.Charsets.UTF_8
 
 
-// TODO Tests!
 @Profile("!initialsync")
 @Component
 @Primary

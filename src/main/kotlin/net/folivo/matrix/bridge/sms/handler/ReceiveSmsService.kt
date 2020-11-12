@@ -5,6 +5,8 @@ import net.folivo.matrix.bot.membership.MatrixMembershipService
 import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMappingService
+import net.folivo.matrix.bridge.sms.message.MatrixMessage
+import net.folivo.matrix.bridge.sms.message.MatrixMessageService
 import net.folivo.matrix.core.model.MatrixId.RoomAliasId
 import net.folivo.matrix.core.model.MatrixId.UserId
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service
 class ReceiveSmsService(
         private val matrixClient: MatrixClient,
         private val mappingService: MatrixSmsMappingService,
+        private val messageService: MatrixMessageService,
         private val membershipService: MatrixMembershipService,
         private val roomService: MatrixRoomService,
         private val matrixBotProperties: MatrixBotProperties,
@@ -58,12 +61,13 @@ class ReceiveSmsService(
             LOG.debug("receive SMS without or wrong mappingToken from $sender to single room")
             val roomAliasId = RoomAliasId(userIdLocalpart, matrixBotProperties.serverName)
             val roomIdFromAlias = roomService.getRoomAlias(roomAliasId)?.roomId
-                                  ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId // FIXME does this work?
-            matrixClient.roomsApi.sendRoomEvent(
-                    roomIdFromAlias,
-                    TextMessageEventContent(cleanedBody),
-                    asUserId = userId
+                                  ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId
+
+            messageService.sendRoomMessage(//FIXME test
+                    MatrixMessage(roomIdFromAlias, body, isNotice = false, asUserId = userId),
+                    setOf(userId)
             )
+
             if (membershipService.hasRoomOnlyManagedUsersLeft(roomIdFromAlias)) {
                 if (smsBridgeProperties.defaultRoomId != null) {
                     val message = templates.defaultRoomIncomingMessageWithSingleMode
