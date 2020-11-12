@@ -14,10 +14,10 @@ import org.springframework.stereotype.Service
 @Service
 class SmsMatrixMembershipChangeService(
         private val roomService: MatrixRoomService,
-        private val membershipService: MatrixMembershipService,
-        private val userService: MatrixUserService,
-        private val membershipSyncService: MatrixMembershipSyncService,
-        private val matrixClient: MatrixClient,
+        membershipService: MatrixMembershipService,
+        userService: MatrixUserService,
+        membershipSyncService: MatrixMembershipSyncService,
+        matrixClient: MatrixClient,
         private val botProperties: MatrixBotProperties
 ) : DefaultMembershipChangeService(
         roomService,
@@ -28,6 +28,13 @@ class SmsMatrixMembershipChangeService(
         botProperties
 ) {
     override suspend fun shouldJoinRoom(userId: UserId, roomId: RoomId): Boolean {
-        return super.shouldJoinRoom(userId, roomId) // FIXME deny join to alias from foreign user
+        if (userId == botProperties.botUserId) return super.shouldJoinRoom(userId, roomId)
+
+        val roomAlias = roomService.getRoomAliasByRoomId(roomId)
+        if (roomAlias != null && roomAlias.alias.localpart != userId.localpart) {
+            return false
+        }
+
+        return super.shouldJoinRoom(userId, roomId)
     }
 }

@@ -3,9 +3,11 @@ package net.folivo.matrix.bridge.sms.handler
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toSet
+import net.folivo.matrix.appservice.api.AppserviceHandlerHelper
 import net.folivo.matrix.bot.config.MatrixBotProperties
 import net.folivo.matrix.bot.membership.MatrixMembershipService
 import net.folivo.matrix.bot.room.MatrixRoomService
+import net.folivo.matrix.bot.user.MatrixUserService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties.SmsBridgeTemplateProperties
 import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode
@@ -27,9 +29,11 @@ import java.time.temporal.ChronoUnit
 
 @Component
 class SmsSendCommandHandler(
+        private val userService: MatrixUserService,
         private val roomService: MatrixRoomService,
         private val membershipService: MatrixMembershipService,
         private val messageService: MatrixMessageService,
+        private val appserviceHandlerHelper: AppserviceHandlerHelper,
         private val matrixClient: MatrixClient,
         private val botProperties: MatrixBotProperties,
         private val smsBridgeProperties: SmsBridgeProperties,
@@ -172,6 +176,13 @@ class SmsSendCommandHandler(
             requiredManagedReceiverIds: Set<UserId>,
             sendAfterLocal: LocalDateTime?
     ): String {
+        LOG.debug("ensure that users has already been created")
+        requiredManagedReceiverIds.forEach {
+            if (!userService.existsUser(it)) {
+                appserviceHandlerHelper.registerManagedUser(it)
+            }
+        }
+
         LOG.debug("create room and send message")
         val roomId = matrixClient.roomsApi.createRoom(
                 name = roomName,
@@ -187,7 +198,7 @@ class SmsSendCommandHandler(
                         )
                 )
         )
-        roomService.getOrCreateRoom(roomId)//FIXME test
+        roomService.getOrCreateRoom(roomId)
 
         return if (body.isNullOrEmpty()) {
             templates.botSmsSendCreatedRoomAndSendNoMessage
@@ -204,10 +215,10 @@ class SmsSendCommandHandler(
             roomName: String?,
             requiredManagedReceiverIds: Set<UserId>,
             sendAfterLocal: LocalDateTime?,
-            denyBotInvite: Boolean = false //FIXME test
+            denyBotInvite: Boolean = false
     ): String {
         if (roomName != null) {
-            matrixClient.roomsApi.sendStateEvent(roomId, NameEventContent(roomName))//FIXME test
+            matrixClient.roomsApi.sendStateEvent(roomId, NameEventContent(roomName))
         }
         if (body.isNullOrBlank()) {
             return templates.botSmsSendNoMessage

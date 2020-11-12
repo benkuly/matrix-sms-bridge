@@ -17,9 +17,9 @@ matrix:
     hsToken: 312df522183efd404ec1cd22d2ffa4bbc76a8c1ccf541dd692eef281356bb74e
     namespaces:
       users:
-        - exclusive: true
-          regex: "sms_[0-9]{6,15}"
-      aliases: [ ]
+        - localpartRegex: "sms_[0-9]{6,15}"
+      aliases:
+        - localpartRegex: "sms_[0-9]{6,15}"
       rooms: [ ]
   client:
     homeServer:

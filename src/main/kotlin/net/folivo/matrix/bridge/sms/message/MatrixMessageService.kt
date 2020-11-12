@@ -4,7 +4,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toSet
 import net.folivo.matrix.bot.membership.MatrixMembershipService
-import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.core.model.MatrixId.UserId
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -18,7 +17,6 @@ import java.time.temporal.ChronoUnit
 class MatrixMessageService(
         private val messageRepository: MatrixMessageRepository,
         private val messageReceiverRepository: MatrixMessageReceiverRepository,
-        private val roomService: MatrixRoomService,
         private val membershipService: MatrixMembershipService,
         private val matrixClient: MatrixClient
 ) {
@@ -71,7 +69,7 @@ class MatrixMessageService(
             } else {
                 LOG.debug("wait for required receivers to join")
             }
-        } else if (isNew) { //FIXME test
+        } else if (isNew) {
             saveMessageAndReceivers(message, requiredMembers)
         }
     }

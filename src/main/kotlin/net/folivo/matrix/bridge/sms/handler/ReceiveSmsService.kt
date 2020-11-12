@@ -64,7 +64,7 @@ class ReceiveSmsService(
                                   ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId
 
             messageService.sendRoomMessage(//FIXME test
-                    MatrixMessage(roomIdFromAlias, body, isNotice = false, asUserId = userId),
+                    MatrixMessage(roomIdFromAlias, cleanedBody, isNotice = false, asUserId = userId),
                     setOf(userId)
             )
 

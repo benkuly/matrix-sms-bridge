@@ -10,6 +10,7 @@ import net.folivo.matrix.bot.membership.MatrixMembershipService
 import net.folivo.matrix.bot.room.MatrixRoomService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.mapping.MatrixSmsMappingService
+import net.folivo.matrix.bridge.sms.message.MatrixMessageService
 import net.folivo.matrix.core.model.MatrixId.*
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
@@ -20,6 +21,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
     return {
         val matrixClientMock: MatrixClient = mockk()
         val mappingServiceMock: MatrixSmsMappingService = mockk()
+        val messageServiceMock: MatrixMessageService = mockk(relaxed = true)
         val membershipServiceMock: MatrixMembershipService = mockk()
         val roomServiceMock: MatrixRoomService = mockk(relaxed = true)
         val matrixBotPropertiesMock: MatrixBotProperties = mockk()
@@ -32,6 +34,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val cut = ReceiveSmsService(
                 matrixClientMock,
                 mappingServiceMock,
+                messageServiceMock,
                 membershipServiceMock,
                 roomServiceMock,
                 matrixBotPropertiesMock,
@@ -42,6 +45,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
             every { matrixBotPropertiesMock.serverName } returns "server"
             coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                     .returns(EventId("event", "server"))
+            coEvery { messageServiceMock.sendRoomMessage(any(), any()) } just Runs
         }
 
         describe(ReceiveSmsService::receiveSms.name) {
@@ -87,11 +91,13 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         it("should send message to alias room") {
                             cut.receiveSms("body #123", "+111111").shouldBeNull()
                             coVerify {
-                                matrixClientMock.roomsApi.sendRoomEvent(
-                                        roomId,
-                                        match<TextMessageEventContent> { it.body == "body" },
-                                        txnId = any(),
-                                        asUserId = UserId("sms_111111", "server")
+                                messageServiceMock.sendRoomMessage(
+                                        match {
+                                            it.roomId == roomId
+                                            && it.body == "body"
+                                            && it.isNotice == false
+                                            && it.asUserId == UserId("sms_111111", "server")
+                                        }, setOf(UserId("sms_111111", "server"))
                                 )
                             }
                         }
@@ -119,7 +125,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             it("should answer and do nothing") {
                                 cut.receiveSms("message #3", "+111111").shouldBe("invalid token without default room")
                                 coVerify(exactly = 1) {
-                                    matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any())
+                                    messageServiceMock.sendRoomMessage(any(), any())
                                 }
                             }
                         }
@@ -166,6 +172,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
             clearMocks(
                     matrixClientMock,
                     mappingServiceMock,
+                    messageServiceMock,
                     membershipServiceMock,
                     roomServiceMock,
                     smsBridgePropertiesMock
