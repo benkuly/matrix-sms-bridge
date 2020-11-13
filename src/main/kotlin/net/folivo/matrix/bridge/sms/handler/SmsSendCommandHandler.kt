@@ -49,6 +49,7 @@ class SmsSendCommandHandler(
             body: String?,
             senderId: UserId,
             receiverNumbers: Set<String>,
+            inviteUserIds: Set<UserId>,
             roomName: String?,
             sendAfterLocal: LocalDateTime?,
             roomCreationMode: RoomCreationMode
@@ -72,6 +73,7 @@ class SmsSendCommandHandler(
                                 body,
                                 roomName,
                                 requiredManagedReceiverIds.first(),
+                                inviteUserIds,
                                 sendAfterLocal
                         )
                     } else when (rooms.size) {
@@ -80,6 +82,7 @@ class SmsSendCommandHandler(
                                 senderId,
                                 roomName,
                                 requiredManagedReceiverIds,
+                                inviteUserIds,
                                 sendAfterLocal
                         )
                         1    -> sendMessageToRoom(
@@ -99,6 +102,7 @@ class SmsSendCommandHandler(
                             senderId,
                             roomName,
                             requiredManagedReceiverIds,
+                            inviteUserIds,
                             sendAfterLocal
                     )
                 }
@@ -111,6 +115,7 @@ class SmsSendCommandHandler(
                                 body,
                                 roomName,
                                 requiredManagedReceiverIds.first(),
+                                inviteUserIds,
                                 sendAfterLocal
                         )
                     } else {
@@ -147,6 +152,7 @@ class SmsSendCommandHandler(
             body: String?,
             roomName: String?,
             requiredManagedReceiverId: UserId,
+            inviteUserIds: Set<UserId>,
             sendAfterLocal: LocalDateTime?
     ): String {
         LOG.debug("send message to room alias")
@@ -157,6 +163,11 @@ class SmsSendCommandHandler(
                      ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId
         if (existingRoomId == null || !membershipService.doesRoomContainsMembers(roomId, setOf(senderId))) {
             matrixClient.roomsApi.inviteUser(roomId, senderId)
+        }
+        if (existingRoomId == null && !membershipService.doesRoomContainsMembers(roomId, inviteUserIds)) {//FIXME test
+            inviteUserIds.forEach {
+                matrixClient.roomsApi.inviteUser(roomId, it)
+            }
         }
         return sendMessageToRoom(
                 roomId,
@@ -174,6 +185,7 @@ class SmsSendCommandHandler(
             senderId: UserId,
             roomName: String?,
             requiredManagedReceiverIds: Set<UserId>,
+            inviteUserIds: Set<UserId>,
             sendAfterLocal: LocalDateTime?
     ): String {
         LOG.debug("ensure that users has already been created")
@@ -185,8 +197,8 @@ class SmsSendCommandHandler(
 
         LOG.debug("create room and send message")
         val roomId = matrixClient.roomsApi.createRoom(
-                name = roomName,
-                invite = setOf(senderId, *requiredManagedReceiverIds.toTypedArray()),
+                name = roomName,//FIXME test
+                invite = setOf(senderId, *requiredManagedReceiverIds.toTypedArray(), *inviteUserIds.toTypedArray()),
                 visibility = PRIVATE,
                 powerLevelContentOverride = PowerLevelsEventContent(
                         invite = 0,

@@ -68,6 +68,8 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val roomId = RoomId("room", "server")
         val userId1 = UserId("sms_111111", "server")
         val userId2 = UserId("sms_222222", "server")
+        val unmanagedUser1 = UserId("unma1", "server")
+        val unmanagedUser2 = UserId("unma2", "server")
         val tel1 = "+111111"
         val tel2 = "+222222"
         val sendAfterInstant = Instant.now()
@@ -81,9 +83,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
 
         describe(SmsSendCommandHandler::handleCommand.name) {
             beforeTest {
-                coEvery { cut.sendMessageToRoomAlias(any(), any(), any(), any(), any()) }
+                coEvery { cut.sendMessageToRoomAlias(any(), any(), any(), any(), any(), any()) }
                         .returns("alias {receiverNumbers}")
-                coEvery { cut.createRoomAndSendMessage(any(), any(), any(), any(), any()) }
+                coEvery { cut.createRoomAndSendMessage(any(), any(), any(), any(), any(), any()) }
                         .returns("create {receiverNumbers}")
                 coEvery { cut.sendMessageToRoom(any(), any(), any(), any(), any(), any(), any()) }
                         .returns("send {receiverNumbers}")
@@ -95,9 +97,18 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         every { roomServiceMock.getRoomsByMembers(any()) }.returns(flowOf())
                     }
                     it("should send message to room alias") {
-                        cut.handleCommand("body", senderId, setOf(tel1), "room name", sendAfter, AUTO)
+                        cut.handleCommand("body", senderId, setOf(tel1), setOf(), "room name", sendAfter, AUTO)
                                 .shouldBe("alias $tel1")
-                        coVerify { cut.sendMessageToRoomAlias(senderId, "body", "room name", userId1, sendAfter) }
+                        coVerify {
+                            cut.sendMessageToRoomAlias(
+                                    senderId,
+                                    "body",
+                                    "room name",
+                                    userId1,
+                                    setOf(),
+                                    sendAfter
+                            )
+                        }
                     }
                 }
                 describe("single mode is disabled") {
@@ -107,12 +118,20 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     describe("no matching room found") {
                         beforeTest { every { roomServiceMock.getRoomsByMembers(any()) }.returns(flowOf()) }
                         it("should create room and send message") {
-                            cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, AUTO)
+                            cut.handleCommand(
+                                    "body",
+                                    senderId,
+                                    setOf(tel1, tel2),
+                                    setOf(),
+                                    "room name",
+                                    sendAfter,
+                                    AUTO
+                            )
                                     .shouldBe("create $tel1, $tel2")
                             coVerify {
                                 cut.createRoomAndSendMessage(
                                         "body", senderId, "room name",
-                                        setOf(userId1, userId2), sendAfter
+                                        setOf(userId1, userId2), setOf(), sendAfter
                                 )
                             }
                         }
@@ -124,7 +143,15 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             ))
                         }
                         it("should send message to room") {
-                            cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, AUTO)
+                            cut.handleCommand(
+                                    "body",
+                                    senderId,
+                                    setOf(tel1, tel2),
+                                    setOf(),
+                                    "room name",
+                                    sendAfter,
+                                    AUTO
+                            )
                                     .shouldBe("send $tel1, $tel2")
                             coVerify {
                                 cut.sendMessageToRoom(
@@ -142,11 +169,19 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             ))
                         }
                         it("should do nothing") {
-                            cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, AUTO)
+                            cut.handleCommand(
+                                    "body",
+                                    senderId,
+                                    setOf(tel1, tel2),
+                                    setOf(),
+                                    "room name",
+                                    sendAfter,
+                                    AUTO
+                            )
                                     .shouldBe("too many rooms $tel1, $tel2")
                             coVerify(exactly = 0) {
-                                cut.sendMessageToRoomAlias(any(), any(), any(), any(), any())
-                                cut.createRoomAndSendMessage(any(), any(), any(), any(), any())
+                                cut.sendMessageToRoomAlias(any(), any(), any(), any(), any(), any())
+                                cut.createRoomAndSendMessage(any(), any(), any(), any(), any(), any())
                                 cut.sendMessageToRoom(any(), any(), any(), any(), any(), any(), any())
                             }
                         }
@@ -160,12 +195,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     ))
                 }
                 it("should create room and send message") {
-                    cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, ALWAYS)
+                    cut.handleCommand("body", senderId, setOf(tel1, tel2), setOf(), "room name", sendAfter, ALWAYS)
                             .shouldBe("create $tel1, $tel2")
                     coVerify {
                         cut.createRoomAndSendMessage(
                                 "body", senderId, "room name",
-                                setOf(userId1, userId2), sendAfter
+                                setOf(userId1, userId2), setOf(), sendAfter
                         )
                     }
                 }
@@ -180,18 +215,35 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     beforeTest { every { smsBridgePropertiesMock.singleModeEnabled }.returns(true) }
                     describe("one receiver given") {
                         it("should send message to room alias") {
-                            cut.handleCommand("body", senderId, setOf(tel1), "room name", sendAfter, SINGLE)
+                            cut.handleCommand("body", senderId, setOf(tel1), setOf(), "room name", sendAfter, SINGLE)
                                     .shouldBe("alias $tel1")
-                            coVerify { cut.sendMessageToRoomAlias(senderId, "body", "room name", userId1, sendAfter) }
+                            coVerify {
+                                cut.sendMessageToRoomAlias(
+                                        senderId,
+                                        "body",
+                                        "room name",
+                                        userId1,
+                                        setOf(),
+                                        sendAfter
+                                )
+                            }
                         }
                     }
                     describe("more then one receiver given") {
                         it("should do nothing") {
-                            cut.handleCommand("body", senderId, setOf(tel1, tel2), "room name", sendAfter, SINGLE)
+                            cut.handleCommand(
+                                    "body",
+                                    senderId,
+                                    setOf(tel1, tel2),
+                                    setOf(),
+                                    "room name",
+                                    sendAfter,
+                                    SINGLE
+                            )
                                     .shouldBe("too many numbers $tel1, $tel2")
                             coVerify(exactly = 0) {
-                                cut.sendMessageToRoomAlias(any(), any(), any(), any(), any())
-                                cut.createRoomAndSendMessage(any(), any(), any(), any(), any())
+                                cut.sendMessageToRoomAlias(any(), any(), any(), any(), any(), any())
+                                cut.createRoomAndSendMessage(any(), any(), any(), any(), any(), any())
                                 cut.sendMessageToRoom(any(), any(), any(), any(), any(), any(), any())
                             }
                         }
@@ -200,11 +252,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 describe("single mode is disabled") {
                     beforeTest { every { smsBridgePropertiesMock.singleModeEnabled }.returns(false) }
                     it("should do nothing") {
-                        cut.handleCommand("body", senderId, setOf(tel1), "room name", sendAfter, SINGLE)
+                        cut.handleCommand("body", senderId, setOf(tel1), setOf(), "room name", sendAfter, SINGLE)
                                 .shouldBe("single disabled $tel1")
                         coVerify(exactly = 0) {
-                            cut.sendMessageToRoomAlias(any(), any(), any(), any(), any())
-                            cut.createRoomAndSendMessage(any(), any(), any(), any(), any())
+                            cut.sendMessageToRoomAlias(any(), any(), any(), any(), any(), any())
+                            cut.createRoomAndSendMessage(any(), any(), any(), any(), any(), any())
                             cut.sendMessageToRoom(any(), any(), any(), any(), any(), any(), any())
                         }
                     }
@@ -214,11 +266,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 describe("no matching room found") {
                     beforeTest { every { roomServiceMock.getRoomsByMembers(any()) }.returns(flowOf()) }
                     it("should do nothing") {
-                        cut.handleCommand("body", senderId, setOf(tel1), "room name", sendAfter, NO)
+                        cut.handleCommand("body", senderId, setOf(tel1), setOf(), "room name", sendAfter, NO)
                                 .shouldBe("disabled room creation $tel1")
                         coVerify(exactly = 0) {
-                            cut.sendMessageToRoomAlias(any(), any(), any(), any(), any())
-                            cut.createRoomAndSendMessage(any(), any(), any(), any(), any())
+                            cut.sendMessageToRoomAlias(any(), any(), any(), any(), any(), any())
+                            cut.createRoomAndSendMessage(any(), any(), any(), any(), any(), any())
                             cut.sendMessageToRoom(any(), any(), any(), any(), any(), any(), any())
                         }
                     }
@@ -230,7 +282,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         ))
                     }
                     it("should send message to room") {
-                        cut.handleCommand("body", senderId, setOf(tel1), "room name", sendAfter, NO)
+                        cut.handleCommand("body", senderId, setOf(tel1), setOf(), "room name", sendAfter, NO)
                                 .shouldBe("send $tel1")
                         coVerify {
                             cut.sendMessageToRoom(roomId, senderId, "body", "room name", setOf(userId1), sendAfter)
@@ -245,11 +297,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         ))
                     }
                     it("should do nothing") {
-                        cut.handleCommand("body", senderId, setOf(tel1), "room name", sendAfter, NO)
+                        cut.handleCommand("body", senderId, setOf(tel1), setOf(), "room name", sendAfter, NO)
                                 .shouldBe("too many rooms $tel1")
                         coVerify(exactly = 0) {
-                            cut.sendMessageToRoomAlias(any(), any(), any(), any(), any())
-                            cut.createRoomAndSendMessage(any(), any(), any(), any(), any())
+                            cut.sendMessageToRoomAlias(any(), any(), any(), any(), any(), any())
+                            cut.createRoomAndSendMessage(any(), any(), any(), any(), any(), any())
                             cut.sendMessageToRoom(any(), any(), any(), any(), any(), any(), any())
                         }
                     }
@@ -277,7 +329,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                     it("should send message to room alias") {
                         coEvery { roomServiceMock.getRoomsByMembers(any()) }.returns(flowOf())
-                        cut.sendMessageToRoomAlias(senderId, "body", "room name", userId1, sendAfter)
+                        cut.sendMessageToRoomAlias(senderId, "body", "room name", userId1, setOf(), sendAfter)
                                 .shouldBe("send")
                         coVerify {
                             cut.sendMessageToRoom(
@@ -305,7 +357,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                                     .getRoomsByMembers(match { it.containsAll(setOf(userId1, senderId)) })
                         }.returns(flowOf())
 
-                        cut.sendMessageToRoomAlias(senderId, "body", "room name", userId1, sendAfter)
+                        cut.sendMessageToRoomAlias(senderId, "body", "room name", userId1, setOf(), sendAfter)
                                 .shouldBe("send")
                         coVerify {
                             matrixClientMock.roomsApi.inviteUser(roomId, senderId)
@@ -326,15 +378,21 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 beforeTest {
                     coEvery { roomServiceMock.getRoomAlias(RoomAliasId("sms_111111", "server")) }
                             .returns(null)
+                    coEvery { membershipServiceMock.doesRoomContainsMembers(roomId, any()) }.returns(false)
                 }
-                it("should get room alias, invite user and send message") {
+                it("should get room alias, invite users and send message") {
                     coEvery { matrixClientMock.roomsApi.getRoomAlias(any()) }
                             .returns(GetRoomAliasResponse(roomId, listOf()))
-                    cut.sendMessageToRoomAlias(senderId, "body", "room name", userId1, sendAfter)
+                    cut.sendMessageToRoomAlias(
+                            senderId, "body", "room name", userId1,
+                            setOf(unmanagedUser1, unmanagedUser2), sendAfter
+                    )
                             .shouldBe("send")
                     coVerify {
                         matrixClientMock.roomsApi.getRoomAlias(roomAliasId)
                         matrixClientMock.roomsApi.inviteUser(roomId, senderId)
+                        matrixClientMock.roomsApi.inviteUser(roomId, unmanagedUser1)
+                        matrixClientMock.roomsApi.inviteUser(roomId, unmanagedUser2)
                         cut.sendMessageToRoom(roomId, senderId, "body", "room name", setOf(userId1), sendAfter, true)
                     }
                 }
@@ -351,12 +409,15 @@ private fun testBody(): DescribeSpec.() -> Unit {
             }
             describe("body is null or empty") {
                 it("should only create room") {
-                    cut.createRoomAndSendMessage(null, senderId, "room name", setOf(userId1), sendAfter)
+                    cut.createRoomAndSendMessage(
+                            null, senderId, "room name", setOf(userId1),
+                            setOf(unmanagedUser1, unmanagedUser2), sendAfter
+                    )
                             .shouldBe("create room and send no message {receiverNumbers}")
                     coVerify {
                         matrixClientMock.roomsApi.createRoom(
                                 name = "room name",
-                                invite = setOf(senderId, userId1),
+                                invite = setOf(senderId, userId1, unmanagedUser1, unmanagedUser2),
                                 visibility = PRIVATE,
                                 powerLevelContentOverride = PowerLevelsEventContent(
                                         invite = 0,
@@ -371,12 +432,15 @@ private fun testBody(): DescribeSpec.() -> Unit {
             }
             describe("body contains message") {
                 it("should create room and send message") {
-                    cut.createRoomAndSendMessage("body", senderId, "room name", setOf(userId1), sendAfter)
+                    cut.createRoomAndSendMessage(
+                            "body", senderId, "room name", setOf(userId1),
+                            setOf(unmanagedUser1), sendAfter
+                    )
                             .shouldBe("create room and send message {receiverNumbers}")
                     coVerify {
                         matrixClientMock.roomsApi.createRoom(
                                 name = "room name",
-                                invite = setOf(senderId, userId1),
+                                invite = setOf(senderId, userId1, unmanagedUser1),
                                 visibility = PRIVATE,
                                 powerLevelContentOverride = PowerLevelsEventContent(
                                         invite = 0,
@@ -394,7 +458,14 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 it("should register user") {
                     coEvery { userServiceMock.existsUser(userId2) }.returns(false)
                     coEvery { appserviceHandlerHelperMock.registerManagedUser(any()) } just Runs
-                    cut.createRoomAndSendMessage(null, senderId, "room name", setOf(userId1, userId2), sendAfter)
+                    cut.createRoomAndSendMessage(
+                            null,
+                            senderId,
+                            "room name",
+                            setOf(userId1, userId2),
+                            setOf(),
+                            sendAfter
+                    )
                             .shouldBe("create room and send no message {receiverNumbers}")
                     coVerify {
                         appserviceHandlerHelperMock.registerManagedUser(userId2)
@@ -512,12 +583,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
         describe("some error occurs") {
             beforeTest {
                 every { roomServiceMock.getRoomsByMembers(any()) }.returns(flowOf())
-                coEvery { cut.sendMessageToRoomAlias(any(), any(), any(), any(), any()) }
+                coEvery { cut.sendMessageToRoomAlias(any(), any(), any(), any(), any(), any()) }
                         .throws(RuntimeException("mimimi"))
                 every { smsBridgePropertiesMock.singleModeEnabled }.returns(true)
             }
             it("should catch exception and notify user") {
-                cut.handleCommand("body", senderId, setOf(tel1), "room name", sendAfter, AUTO)
+                cut.handleCommand("body", senderId, setOf(tel1), setOf(), "room name", sendAfter, AUTO)
                         .shouldBe("error mimimi +111111")
             }
         }

@@ -30,7 +30,7 @@ class SmsMessageHandler(
         LOG.debug("handle message in room $roomId from sender $senderId")
 
         if (context.roomId == smsBridgeProperties.defaultRoomId || content is NoticeMessageEventContent) {
-            LOG.debug("ignored message to default room")
+            LOG.debug("ignored notice message or message to default room")
             return
         } else {
             val didHandleMessage =

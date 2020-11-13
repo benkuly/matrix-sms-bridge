@@ -13,6 +13,7 @@ Features:
     * creates rooms for you
     * writes messages for you
     * allows you to send SMS at a specific time (in future)
+    * invites users for you, when room gets created
 * provider:
     * modem (with [Gammu](https://github.com/gammu/gammu))
 
@@ -41,14 +42,6 @@ The bridge can be configured to route all SMS without a valid token to a default
 ### Configure Application Service
 The Application Service gets configured with a yaml-file:
 ```yaml
-# Database connection
-spring:
-  neo4j:
-    uri: bolt://neo4j:7687
-    authentication:
-      username: neo4j
-      password: secret
-
 matrix:
   bridge:
     sms:
@@ -61,12 +54,21 @@ matrix:
       defaultRegion: DE
       # (optional) The default timezone to use for `sms send` `-a` argument
       defaultTimeZone: Europe/Berlin
+      # (optional) Allows you to enable one room alias for one telephone number. Default is false.
+      singleModeEnabled: true
       # (optional) In this section you can override the default templates.
       templates:
         # See SmsBridgeProperties.kt for the keys.
   bot:
     # The domain-part of matrix-ids. E. g. example.org when your userIds look like @unicorn:example.org
     serverName: matrix-local
+    # Database settings
+    migration:
+      url: jdbc:h2:file:/data/db/testdb
+      username: sa
+    database:
+      url: r2dbc:h2:file:////data/db/testdb
+      username: sa
   client:
     homeServer:
       # The hostname of your Homeserver.
@@ -99,8 +101,10 @@ sender_localpart: "smsbot"
 namespaces:
   users:
     - exclusive: true
-      regex: "^@sms_.+:yourHomeServerDomain"
-  aliases: []
+      regex: "^@sms_.+:yourHomeServerDomain$"
+  aliases:
+    - exclusive: true
+      regex: "^#sms_.+:yourHomeServerDomain$"
   rooms: []
 ```
 

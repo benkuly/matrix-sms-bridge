@@ -32,6 +32,7 @@ class SmsSendCommand(
     private val roomCreationMode by option("-m", "--roomCreationMode").enum<RoomCreationMode>().default(AUTO)
     private val useGroup by option("-g", "--group").flag()
     private val sendAfter by option("-a", "--sendAfter").convert { LocalDateTime.parse(it) }
+    private val inviteUserIds by option("-i", "--invite").convert { UserId(it) }.multiple().unique()
 
     enum class RoomCreationMode {
         AUTO, ALWAYS, NO, SINGLE
@@ -47,6 +48,7 @@ class SmsSendCommand(
                             body = body,
                             senderId = sender,
                             receiverNumbers = receiverNumbers.toSet(),
+                            inviteUserIds = inviteUserIds,
                             roomName = roomName,
                             roomCreationMode = roomCreationMode,
                             sendAfterLocal = sendAfter
@@ -61,6 +63,7 @@ class SmsSendCommand(
                                         body = body,
                                         senderId = sender,
                                         receiverNumbers = setOf(number),
+                                        inviteUserIds = inviteUserIds,
                                         roomName = roomName,
                                         roomCreationMode = roomCreationMode,
                                         sendAfterLocal = sendAfter

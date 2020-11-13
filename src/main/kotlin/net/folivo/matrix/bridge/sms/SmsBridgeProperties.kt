@@ -16,7 +16,7 @@ data class SmsBridgeProperties(
 ) {
     data class SmsBridgeTemplateProperties(
             val outgoingMessage: String = "{sender} wrote:\n\n{body}",
-            val outgoingMessageFromBot: String = "{body}",
+            val outgoingMessageFromBot: String = "{body}",//FIXME bad
             val outgoingMessageToken: String = "\n\nTo answer to this message add this token to your message: {token}",
             val answerInvalidTokenWithDefaultRoom: String? = null,
             val answerInvalidTokenWithoutDefaultRoom: String? = "Your message did not contain any valid token. Nobody can and will read your message.",
@@ -28,7 +28,7 @@ data class SmsBridgeProperties(
             val botTooManyMembers: String = "Only rooms with two members are allowed to write with this bot.",
             val botSmsError: String = "There was an error while using sms command. Reason: {error}",
             val botSmsSendInvalidTelephoneNumber: String = "The telephone number is invalid.",
-            val botSmsSendNewRoomMessage: String = "{sender} wrote:\n\n{body}",
+            val botSmsSendNewRoomMessage: String = "{sender} wrote:\n\n{body}",//FIXME bad
             val botSmsSendNoticeDelayedMessage: String = "A message will be sent for you at {sendAfter}.",
             val botSmsSendCreatedRoomAndSendMessage: String = "You were invited to a new created room and (if given) the message to the telephone number(s) {receiverNumbers} was (or will be) sent for you.",
             val botSmsSendCreatedRoomAndSendNoMessage: String = "You were invited to a new created room.",

@@ -41,7 +41,7 @@ class SmsSendCommandTest {
 
     @BeforeEach
     fun beforeEach() {
-        coEvery { handler.handleCommand(any(), any(), any(), any(), any(), any()) }.returns("answer")
+        coEvery { handler.handleCommand(any(), any(), any(), any(), any(), any(), any()) }.returns("answer")
         every { smsBridgePropertiesMock.templates.botSmsSendInvalidTelephoneNumber }.returns("invalid")
         every { phoneNumberServiceMock.parseToInternationalNumber("017331111111") }.returns("+4917331111111")
         every { phoneNumberServiceMock.parseToInternationalNumber("017332222222") }.returns("+4917332222222")
@@ -58,6 +58,7 @@ class SmsSendCommandTest {
                     body = "some text",
                     senderId = senderId,
                     receiverNumbers = setOf("+4917331111111"),
+                    inviteUserIds = setOf(),
                     roomName = null,
                     roomCreationMode = AUTO,
                     sendAfterLocal = null
@@ -66,6 +67,7 @@ class SmsSendCommandTest {
                     body = "some text",
                     senderId = senderId,
                     receiverNumbers = setOf("+4917332222222"),
+                    inviteUserIds = setOf(),
                     roomName = null,
                     roomCreationMode = AUTO,
                     sendAfterLocal = null
@@ -82,6 +84,7 @@ class SmsSendCommandTest {
                     body = "some text",
                     senderId = senderId,
                     receiverNumbers = setOf("+4917331111111"),
+                    inviteUserIds = setOf(),
                     roomName = null,
                     roomCreationMode = AUTO,
                     sendAfterLocal = LocalDateTime.of(1955, 11, 9, 12, 0)
@@ -98,6 +101,7 @@ class SmsSendCommandTest {
                     body = "some text",
                     senderId = senderId,
                     receiverNumbers = setOf("+4917331111111", "+4917332222222"),
+                    inviteUserIds = setOf(),
                     roomName = "some name",
                     roomCreationMode = AUTO,
                     sendAfterLocal = null
@@ -114,8 +118,26 @@ class SmsSendCommandTest {
                     body = "some text",
                     senderId = senderId,
                     receiverNumbers = setOf("+4917331111111"),
+                    inviteUserIds = setOf(),
                     roomName = null,
                     roomCreationMode = ALWAYS,
+                    sendAfterLocal = null
+            )
+        }
+    }
+
+    @Test
+    fun `should invite users`() {
+        cut.parse(listOf("some text", "-t", "017331111111", "-i", "@test1:test", "-i", "@test2:test"))
+
+        coVerify {
+            handler.handleCommand(
+                    body = "some text",
+                    senderId = senderId,
+                    receiverNumbers = setOf("+4917331111111"),
+                    inviteUserIds = setOf(UserId("test1", "test"), UserId("test2", "test")),
+                    roomName = null,
+                    roomCreationMode = AUTO,
                     sendAfterLocal = null
             )
         }
