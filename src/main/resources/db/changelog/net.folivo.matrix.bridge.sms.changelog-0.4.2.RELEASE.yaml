@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: net.folivo.matrix.bridge.sms.changelog-0.4.2.RELEASE
+      author: benkuly
+      changes:
+        - modifyDataType:
+            tableName: matrix_message
+            columnName: body
+            newDataType: VARCHAR(2000)
