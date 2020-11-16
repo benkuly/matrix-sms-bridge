@@ -164,14 +164,10 @@ class SmsSendCommandHandler(
         if (roomName != null && (existingRoomId == null || tryGetRoomName(roomId).isNullOrEmpty())) {
             matrixClient.roomsApi.sendStateEvent(roomId, NameEventContent(roomName))
         }
-        if (existingRoomId == null || !membershipService.doesRoomContainsMembers(roomId, setOf(senderId))) {
-            matrixClient.roomsApi.inviteUser(roomId, senderId)
-        }
-        if (existingRoomId == null && !membershipService.doesRoomContainsMembers(roomId, inviteUserIds)) {
-            inviteUserIds.forEach {
-                matrixClient.roomsApi.inviteUser(roomId, it)
-            }
-        }
+        setOf(senderId, *inviteUserIds.toTypedArray())
+                .filter { !membershipService.doesRoomContainsMembers(roomId, setOf(it)) }
+                .forEach { matrixClient.roomsApi.inviteUser(roomId, it) }
+        
         return sendMessageToRoom(
                 roomId,
                 senderId,
