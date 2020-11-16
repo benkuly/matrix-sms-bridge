@@ -14,6 +14,7 @@ import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode
 import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode.*
 import net.folivo.matrix.bridge.sms.message.MatrixMessage
 import net.folivo.matrix.bridge.sms.message.MatrixMessageService
+import net.folivo.matrix.core.api.MatrixServerException
 import net.folivo.matrix.core.model.MatrixId.*
 import net.folivo.matrix.core.model.events.m.room.NameEvent.NameEventContent
 import net.folivo.matrix.core.model.events.m.room.PowerLevelsEvent.PowerLevelsEventContent
@@ -89,7 +90,6 @@ class SmsSendCommandHandler(
                                 rooms.first(),
                                 senderId,
                                 body,
-                                roomName,
                                 requiredManagedReceiverIds,
                                 sendAfterLocal
                         )
@@ -129,7 +129,6 @@ class SmsSendCommandHandler(
                                 rooms.first(),
                                 senderId,
                                 body,
-                                roomName,
                                 requiredManagedReceiverIds,
                                 sendAfterLocal
                         )
@@ -161,10 +160,14 @@ class SmsSendCommandHandler(
         val existingRoomId = roomService.getRoomAlias(roomAliasId)?.roomId
         val roomId = existingRoomId
                      ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId
+
+        if (roomName != null && (existingRoomId == null || tryGetRoomName(roomId).isNullOrEmpty())) {
+            matrixClient.roomsApi.sendStateEvent(roomId, NameEventContent(roomName))
+        }
         if (existingRoomId == null || !membershipService.doesRoomContainsMembers(roomId, setOf(senderId))) {
             matrixClient.roomsApi.inviteUser(roomId, senderId)
         }
-        if (existingRoomId == null && !membershipService.doesRoomContainsMembers(roomId, inviteUserIds)) {//FIXME test
+        if (existingRoomId == null && !membershipService.doesRoomContainsMembers(roomId, inviteUserIds)) {
             inviteUserIds.forEach {
                 matrixClient.roomsApi.inviteUser(roomId, it)
             }
@@ -173,11 +176,18 @@ class SmsSendCommandHandler(
                 roomId,
                 senderId,
                 body,
-                roomName,
                 setOf(requiredManagedReceiverId),
                 sendAfterLocal,
                 denyBotInvite = true
         )
+    }
+
+    private suspend inline fun tryGetRoomName(roomId: RoomId): String? {
+        return try {
+            matrixClient.roomsApi.getStateEvent<NameEventContent>(roomId).name
+        } catch (error: MatrixServerException) {
+            null
+        }
     }
 
     internal suspend fun createRoomAndSendMessage(
@@ -197,7 +207,7 @@ class SmsSendCommandHandler(
 
         LOG.debug("create room and send message")
         val roomId = matrixClient.roomsApi.createRoom(
-                name = roomName,//FIXME test
+                name = roomName,
                 invite = setOf(senderId, *requiredManagedReceiverIds.toTypedArray(), *inviteUserIds.toTypedArray()),
                 visibility = PRIVATE,
                 powerLevelContentOverride = PowerLevelsEventContent(
@@ -215,7 +225,7 @@ class SmsSendCommandHandler(
         return if (body.isNullOrEmpty()) {
             templates.botSmsSendCreatedRoomAndSendNoMessage
         } else {
-            sendMessageToRoom(roomId, senderId, body, roomName, requiredManagedReceiverIds, sendAfterLocal, true)
+            sendMessageToRoom(roomId, senderId, body, requiredManagedReceiverIds, sendAfterLocal, true)
             templates.botSmsSendCreatedRoomAndSendMessage
         }
     }
@@ -224,14 +234,10 @@ class SmsSendCommandHandler(
             roomId: RoomId,
             senderId: UserId,
             body: String?,
-            roomName: String?,
             requiredManagedReceiverIds: Set<UserId>,
             sendAfterLocal: LocalDateTime?,
             denyBotInvite: Boolean = false
     ): String {
-        if (roomName != null) {
-            matrixClient.roomsApi.sendStateEvent(roomId, NameEventContent(roomName))
-        }
         if (body.isNullOrBlank()) {
             return templates.botSmsSendNoMessage
         } else {

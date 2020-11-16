@@ -28,7 +28,7 @@ class SmsSendCommand(
     private val body by argument("body").optional()
 
     private val telephoneNumbers by option("-t", "--telephoneNumber").multiple(required = true).unique()
-    private val roomName by option("-n", "--roomName")
+    private val roomName by option("-n", "--newRoomName")
     private val roomCreationMode by option("-m", "--roomCreationMode").enum<RoomCreationMode>().default(AUTO)
     private val useGroup by option("-g", "--group").flag()
     private val sendAfter by option("-a", "--sendAfter").convert { LocalDateTime.parse(it) }
