@@ -8,9 +8,13 @@ matrix:
       provider:
         android:
           enabled: true
-          basePath: https://192.168.25.26:9090
+          baseUrl: https://192.168.25.26:9090
           username: admin
           password: 123
+          trustStore:
+            path: /data/matrix-sms-bridge-android.p12
+            password: 123
+            type: PKCS12
       defaultRoomId: "!tRraLABExGeUDmOWvF:matrix-local"
       defaultRegion: DE
       defaultTimeZone: Europe/Berlin

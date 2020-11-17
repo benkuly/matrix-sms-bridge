@@ -5,6 +5,7 @@ import com.github.michaelbull.retry.policy.RetryPolicy
 import com.github.michaelbull.retry.policy.binaryExponentialBackoff
 import com.github.michaelbull.retry.policy.plus
 import com.github.michaelbull.retry.retry
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
 import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
@@ -35,6 +36,7 @@ class AndroidSmsProvider(
         while (true) {
             retry(binaryExponentialBackoff(base = 1000, max = 300000) + logAttempt()) {
                 getNewMessages()
+                delay(10000)
             }
         }
     }
@@ -50,13 +52,13 @@ class AndroidSmsProvider(
         }.retrieve().awaitBody<AndroidSmsMessagesResponse>()
         response.messages
                 .sortedBy { it.id }
-                .fold(lastProcessed, { lastProcessed, message ->
+                .fold(lastProcessed, { process, message ->
                     receiveSmsService.receiveSms(
                             message.body,
                             phoneNumberService.parseToInternationalNumber(message.sender)
                     )
                     processedRepository.save(
-                            lastProcessed?.copy(lastProcessedId = message.id)
+                            process?.copy(lastProcessedId = message.id)
                             ?: AndroidSmsProcessed(1, message.id)
                     )
                 })

@@ -16,6 +16,8 @@ import org.springframework.http.client.reactive.ClientHttpConnector
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.netty.http.client.HttpClient
+import java.nio.file.Files
+import java.nio.file.Path
 import java.security.KeyStore
 import java.util.*
 import javax.net.ssl.TrustManagerFactory
@@ -30,13 +32,13 @@ class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProvider
     @Bean("androidSmsProviderWebClient")
     fun androidSmsProviderWebClient(webClientBuilder: WebClient.Builder): WebClient {
         val trustStoreProps = properties.trustStore
-        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+        val keyStore = KeyStore.getInstance(trustStoreProps.type)
         keyStore.load(
-                javaClass.classLoader.getResourceAsStream(trustStoreProps.path),
+                Files.newInputStream(Path.of(trustStoreProps.path)),
                 trustStoreProps.password.toCharArray()
         )
-        val factory = TrustManagerFactory.getInstance(trustStoreProps.type);
-        factory.init(keyStore);
+        val factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        factory.init(keyStore)
         val sslContext = SslContextBuilder.forClient()
                 .trustManager(factory)
                 .build()
