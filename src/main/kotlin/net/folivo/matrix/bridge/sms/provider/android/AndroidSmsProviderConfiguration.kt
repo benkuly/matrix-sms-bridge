@@ -39,11 +39,11 @@ class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProvider
     fun androidSmsProvider(
             receiveSmsService: ReceiveSmsService,
             phoneNumberService: PhoneNumberService,
-            batchRepository: AndroidSmsBatchRepository,
+            processedRepository: AndroidSmsProcessedRepository,
             @Qualifier("androidSmsProviderWebClient")
             webClient: WebClient
     ): AndroidSmsProvider {
-        return AndroidSmsProvider(receiveSmsService, phoneNumberService, batchRepository, webClient)
+        return AndroidSmsProvider(receiveSmsService, phoneNumberService, processedRepository, webClient)
     }
 
     @Bean

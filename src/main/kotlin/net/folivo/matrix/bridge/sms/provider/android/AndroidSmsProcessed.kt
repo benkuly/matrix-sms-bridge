@@ -5,12 +5,14 @@ import org.springframework.data.annotation.Version
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
 
-@Table("AndroidSmsBatch")
-data class AndroidSmsBatch(
-        @Column("nextBatch")
-        var nextBatch: Long,
+@Table("android_sms_processed")
+data class AndroidSmsProcessed(
         @Id
+        @Column("id")
         val id: Long,
+        @Column("last_processed_id")
+        var lastProcessedId: Int,
         @Version
-        var version: Long = 0
+        @Column("version")
+        var version: Int = 0
 )

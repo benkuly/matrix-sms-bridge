@@ -16,7 +16,7 @@ import org.springframework.web.reactive.function.client.awaitBody
 class AndroidSmsProvider(
         private val receiveSmsService: ReceiveSmsService,
         private val phoneNumberService: PhoneNumberService,
-        private val batchRepository: AndroidSmsBatchRepository,
+        private val processedRepository: AndroidSmsProcessedRepository,
         private val webClient: WebClient
 ) : SmsProvider {
 
@@ -25,9 +25,9 @@ class AndroidSmsProvider(
     }
 
     override suspend fun sendSms(receiver: String, body: String) {
-        webClient.post().uri("/messages")
+        webClient.post().uri("/messages/out")
                 .bodyValue(
-                        AndroidSmsMessage(receiver, body)
+                        AndroidSmsMessagesRequest(receiver, body)
                 ).retrieve().toBodilessEntity().awaitFirstOrNull()
     }
 
@@ -41,18 +41,25 @@ class AndroidSmsProvider(
 
     suspend fun getNewMessages() {
         LOG.debug("request new messages")
-        val nextBatch = batchRepository.findById(1).awaitFirstOrNull()
+        val lastProcessed = processedRepository.findById(1)
         val response = webClient.get().uri {
             it.apply {
-                path("/messages")
-                if (nextBatch != null) queryParam("nextBatch", nextBatch.nextBatch)
+                path("/messages/in")
+                if (lastProcessed != null) queryParam("after", lastProcessed.lastProcessedId)
             }.build()
         }.retrieve().awaitBody<AndroidSmsMessagesResponse>()
-        response.messages.forEach {
-            receiveSmsService.receiveSms(it.body, phoneNumberService.parseToInternationalNumber(it.sender))
-        }
-        batchRepository.save(nextBatch?.copy(nextBatch = response.nextBatch) ?: AndroidSmsBatch(1, response.nextBatch))
-                .awaitFirstOrNull()
+        response.messages
+                .sortedBy { it.id }
+                .fold(lastProcessed, { lastProcessed, message ->
+                    receiveSmsService.receiveSms(
+                            message.body,
+                            phoneNumberService.parseToInternationalNumber(message.sender)
+                    )
+                    processedRepository.save(
+                            lastProcessed?.copy(lastProcessedId = message.id)
+                            ?: AndroidSmsProcessed(1, message.id)
+                    )
+                })
         LOG.debug("processed new messages")
     }
 

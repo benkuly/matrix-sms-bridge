@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: net.folivo.matrix.bridge.sms.changelog-0.4.5.RELEASE
+      author: benkuly
+      changes:
+        - createTable:
+            tableName: android_sms_processed
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+              - column:
+                  name: last_processed_id
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false
