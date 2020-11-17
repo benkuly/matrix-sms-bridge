@@ -1,0 +1,21 @@
+[gammu]
+Device = /dev/ttyModem
+LogFile = /data/log/gammu.log
+debugLevel = 1
+
+[smsd]
+Service = files
+LoopSleep = 3
+InboxPath = /data/spool/inbox/
+OutboxPath = /data/spool/outbox/
+SentSMSPath = /data/spool/sent/
+ErrorSMSPath = /data/spool/error/
+InboxFormat = detail
+OutboxFormat = detail
+TransmitFormat = auto
+debugLevel = 1
+LogFile = /data/log/smsd.log
+DeliveryReport = log
+DeliveryReportDelay = 7200
+HangupCalls = 1
+CheckBattery = 0

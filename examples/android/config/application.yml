@@ -1,0 +1,33 @@
+logging:
+  level:
+    net.folivo.matrix: DEBUG
+
+matrix:
+  bridge:
+    sms:
+      provider:
+        android:
+          enabled: true
+          basePath: https://192.168.25.26:9090
+          username: admin
+          password: 123
+      defaultRoomId: "!tRraLABExGeUDmOWvF:matrix-local"
+      defaultRegion: DE
+      defaultTimeZone: Europe/Berlin
+      singleModeEnabled: true
+  bot:
+    serverName: matrix-local
+    migration:
+      url: jdbc:h2:file:/data/db/testdb
+      username: sa
+    database:
+      url: r2dbc:h2:file:////data/db/testdb
+      username: sa
+  client:
+    homeServer:
+      hostname: matrix-synapse
+      port: 8008
+      secure: false
+    token: 30c05ae90a248a4188e620216fa72e349803310ec83e2a77b34fe90be6081f46
+  appservice:
+    hsToken: 312df522183efd404ec1cd22d2ffa4bbc76a8c1ccf541dd692eef281356bb74e

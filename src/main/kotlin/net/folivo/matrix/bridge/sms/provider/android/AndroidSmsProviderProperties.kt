@@ -7,7 +7,14 @@ import org.springframework.boot.context.properties.ConstructorBinding
 @ConstructorBinding
 data class AndroidSmsProviderProperties(
         val enabled: Boolean = false,
-        val basePath: String,
+        val baseUrl: String,
         val username: String,
-        val password: String
-)
+        val password: String,
+        val trustStore: TrustStore
+) {
+    data class TrustStore(
+            val path: String,
+            val password: String,
+            val type: String
+    )
+}
