@@ -22,3 +22,28 @@ databaseChangeLog:
                   type: INTEGER
                   constraints:
                     nullable: false
+        - createTable:
+            tableName: android_out_sms_message
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+              - column:
+                  name: body
+                  type: VARCHAR(2000)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: receiver
+                  type: VARCHAR(250)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: INTEGER
+                  constraints:
+                    nullable: false

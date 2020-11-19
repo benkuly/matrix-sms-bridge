@@ -10,7 +10,7 @@ data class AndroidSmsProviderProperties(
         val baseUrl: String,
         val username: String,
         val password: String,
-        val trustStore: TrustStore
+        val trustStore: TrustStore? = null
 ) {
     data class TrustStore(
             val path: String,

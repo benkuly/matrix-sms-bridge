@@ -2,7 +2,7 @@ package net.folivo.matrix.bridge.sms.provider.android
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class AndroidSmsMessagesRequest(
+data class AndroidOutSmsMessageRequest(
         @JsonProperty("recipientPhoneNumber")
         val receiver: String,
         @JsonProperty("message")
