@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: net.folivo.matrix.bridge.sms.changelog-0.4.5.RELEASE
+      id: net.folivo.matrix.bridge.sms.changelog-0.5.0
       author: benkuly
       changes:
         - createTable:

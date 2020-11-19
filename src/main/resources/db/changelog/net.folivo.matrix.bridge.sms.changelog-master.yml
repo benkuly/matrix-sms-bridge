@@ -4,4 +4,4 @@ databaseChangeLog:
   - include:
       file: db/changelog/net.folivo.matrix.bridge.sms.changelog-0.4.2.RELEASE.yaml
   - include:
-      file: db/changelog/net.folivo.matrix.bridge.sms.changelog-0.5.0.RELEASE.yaml
+      file: db/changelog/net.folivo.matrix.bridge.sms.changelog-0.5.0.yaml

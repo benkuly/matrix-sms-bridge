@@ -36,13 +36,13 @@ class AndroidSmsProvider(
             } else {
                 LOG.error("could not send sms message to android sms gateway: ${error.message}")
                 outSmsMessageRepository.save(AndroidOutSmsMessage(receiver, body))
-                if (smsBridgeProperties.defaultRoomId != null && outSmsMessageRepository.count() == 1L) {
+                if (smsBridgeProperties.defaultRoomId != null) {
                     matrixClient.roomsApi.sendRoomEvent(
                             smsBridgeProperties.defaultRoomId,
                             NoticeMessageEventContent(
-                                    smsBridgeProperties.templates.providerSendError.replace(
-                                            "{error}", error.message ?: "unknown"
-                                    )
+                                    smsBridgeProperties.templates.providerSendError
+                                            .replace("{error}", error.message ?: "unknown")
+                                            .replace("{receiver}", receiver)
                             )
                     )
                 }
@@ -65,8 +65,10 @@ class AndroidSmsProvider(
     }
 
     private suspend fun sendOutSmsMessageRequest(message: AndroidOutSmsMessageRequest) {
+        LOG.debug("start send out sms message via android")
         webClient.post().uri("/messages/out").bodyValue(message)
                 .retrieve().toBodilessEntity().awaitFirstOrNull()
+        LOG.debug("send out sms message via android was successful")
     }
 
     suspend fun getAndProcessNewMessages() {

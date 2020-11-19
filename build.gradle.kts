@@ -17,7 +17,7 @@ allprojects {
     apply(plugin = "kotlin")
 
     group = "net.folivo"
-    version = "0.5.0.RELEASE"
+    version = "0.5.0"
     java.sourceCompatibility = JavaVersion.VERSION_11
 
     repositories {
@@ -33,8 +33,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.kotlinxCoroutines}")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${Versions.kotlinxCoroutines}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("com.michael-bull.kotlin-retry:kotlin-retry:${Versions.kotlinRetry}")
 
     implementation("net.folivo:matrix-spring-boot-bot:${Versions.matrixSDK}")

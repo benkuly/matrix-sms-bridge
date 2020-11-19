@@ -13,7 +13,6 @@ import io.kotest.matchers.shouldBe
 import io.mockk.*
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
-import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
@@ -29,7 +28,6 @@ import org.mockserver.model.HttpResponse
 import org.mockserver.model.JsonBody
 import org.mockserver.model.MediaType
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.data.r2dbc.core.DatabaseClient
 import org.springframework.data.r2dbc.core.R2dbcEntityTemplate
 import org.springframework.data.r2dbc.core.delete
 import org.springframework.data.r2dbc.core.select
@@ -44,8 +42,8 @@ import org.springframework.http.HttpStatus
             "matrix.bridge.sms.provider.android.password=password"
         ]
 )
-class AndroidSmsProviderIT(
-        dbClient: DatabaseClient,
+class AndroidSmsProviderTest(
+        db: R2dbcEntityTemplate,
         @MockkBean(relaxed = true)
         private val receiveSmsServiceMock: ReceiveSmsService,
         @MockkBean
@@ -53,17 +51,16 @@ class AndroidSmsProviderIT(
         @SpykBean
         private val smsBridgeProperties: SmsBridgeProperties,
         cut: AndroidSmsProvider
-) : DescribeSpec(testBody(cut, dbClient, receiveSmsServiceMock, matrixClientMock, smsBridgeProperties))
+) : DescribeSpec(testBody(cut, db, receiveSmsServiceMock, matrixClientMock, smsBridgeProperties))
 
 private fun testBody(
         cut: AndroidSmsProvider,
-        dbClient: DatabaseClient,
+        db: R2dbcEntityTemplate,
         receiveSmsServiceMock: ReceiveSmsService,
         matrixClientMock: MatrixClient,
         smsBridgeProperties: SmsBridgeProperties
 ): DescribeSpec.() -> Unit {
     return {
-        val entityTemplate = R2dbcEntityTemplate(dbClient)
 
         listener(MockServerListener(5100))
         val mockServerClient = MockServerClient("localhost", 5100)
@@ -151,14 +148,14 @@ private fun testBody(
                         )
             }
             it("should save last processed message") {
-                entityTemplate.delete<AndroidSmsProcessed>().all().awaitFirst()
-                entityTemplate.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
+                db.delete<AndroidSmsProcessed>().all().awaitFirstOrNull()
+                db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
                         ?.shouldBeNull()
                 cut.getAndProcessNewMessages()
-                entityTemplate.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
+                db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
                         ?.lastProcessedId.shouldBe(2)
                 cut.getAndProcessNewMessages()
-                entityTemplate.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
+                db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
                         ?.lastProcessedId.shouldBe(3)
             }
             it("should handle exceptions while processing message") {
@@ -167,7 +164,7 @@ private fun testBody(
                 shouldThrow<RuntimeException> {
                     cut.getAndProcessNewMessages()
                 }
-                entityTemplate.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
+                db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
                         ?.lastProcessedId.shouldBe(1)
             }
         }
@@ -230,7 +227,7 @@ private fun testBody(
                     shouldNotThrowAny {
                         cut.sendSms("+491234567", "some body")
                     }
-                    val out = entityTemplate.select<AndroidOutSmsMessage>().all().asFlow().toList()
+                    val out = db.select<AndroidOutSmsMessage>().all().asFlow().toList()
                     out.shouldHaveSize(1)
                     out.first().also {
                         it.body.shouldBe("some body")
@@ -248,11 +245,6 @@ private fun testBody(
                                 it.body == "error: no network"
                             }, any(), any(), any())
                         }
-                    }
-                    it("should not notify when other messages") {
-                        entityTemplate.insert(AndroidOutSmsMessage("receiver", "body")).awaitFirstOrNull()
-                        cut.sendSms("+491234567", "some body")
-                        coVerify { matrixClientMock wasNot Called }
                     }
                 }
                 describe("default room is not present") {
@@ -274,8 +266,8 @@ private fun testBody(
             }
             describe("there are failed messages") {
                 beforeTest {
-                    entityTemplate.insert(AndroidOutSmsMessage("+491234511", "some body 1")).awaitFirstOrNull()
-                    entityTemplate.insert(AndroidOutSmsMessage("+491234522", "some body 2")).awaitFirstOrNull()
+                    db.insert(AndroidOutSmsMessage("+491234511", "some body 1")).awaitFirstOrNull()
+                    db.insert(AndroidOutSmsMessage("+491234522", "some body 2")).awaitFirstOrNull()
                     every { smsBridgeProperties.templates.providerResendSuccess }.returns("resend")
                 }
                 it("should send all messages") {
@@ -363,8 +355,8 @@ private fun testBody(
 
         afterTest {
             clearMocks(receiveSmsServiceMock, matrixClientMock, smsBridgeProperties)
-            entityTemplate.delete<AndroidSmsProcessed>().all().awaitFirst()
-            entityTemplate.delete<AndroidOutSmsMessage>().all().awaitFirst()
+            db.delete<AndroidSmsProcessed>().all().awaitFirstOrNull()
+            db.delete<AndroidOutSmsMessage>().all().awaitFirstOrNull()
         }
     }
 }

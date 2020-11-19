@@ -22,7 +22,7 @@ class AndroidSmsProviderLauncher(private val androidSmsProvider: AndroidSmsProvi
     fun startLoops() {
         GlobalScope.launch {
             while (true) {
-                retry(binaryExponentialBackoff(base = 5000, max = 300000) + logReceiveAttempt()) {
+                retry(binaryExponentialBackoff(base = 5000, max = 60000) + logReceiveAttempt()) {
                     androidSmsProvider.getAndProcessNewMessages()
                     delay(5000)
                 }
@@ -30,7 +30,7 @@ class AndroidSmsProviderLauncher(private val androidSmsProvider: AndroidSmsProvi
         }
         GlobalScope.launch {
             while (true) {
-                retry(binaryExponentialBackoff(base = 10000, max = 300000) + logSendAttempt()) {
+                retry(binaryExponentialBackoff(base = 10000, max = 120000) + logSendAttempt()) {
                     androidSmsProvider.sendOutFailedMessages()
                     delay(10000)
                 }
@@ -40,14 +40,14 @@ class AndroidSmsProviderLauncher(private val androidSmsProvider: AndroidSmsProvi
 
     private fun logReceiveAttempt(): RetryPolicy<Throwable> {
         return {
-            LOG.error("could not retrieve messages from android device or process them: ${reason.message}", reason)
+            LOG.error("could not retrieve messages from android device or process them: ${reason.message}")
             ContinueRetrying
         }
     }
 
     private fun logSendAttempt(): RetryPolicy<Throwable> {
         return {
-            LOG.error("could not send messages to android device: ${reason.message}", reason)
+            LOG.error("could not send messages to android device: ${reason.message}")
             ContinueRetrying
         }
     }
