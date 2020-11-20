@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
 plugins {
     base
@@ -10,20 +11,21 @@ plugins {
 }
 
 repositories {
+    mavenCentral()
+    mavenLocal()
     maven("https://repo.spring.io/milestone")
 }
 
-allprojects {
-    apply(plugin = "kotlin")
+group = "net.folivo"
+version = "0.5.0"
+java.sourceCompatibility = JavaVersion.VERSION_11
 
-    group = "net.folivo"
-    version = "0.5.0"
-    java.sourceCompatibility = JavaVersion.VERSION_11
-
-    repositories {
-        mavenCentral()
-        mavenLocal()
-        maven("https://repo.spring.io/milestone")
+tasks.withType<org.springframework.boot.gradle.tasks.bundling.BootJar>() {
+    manifest {
+        attributes(
+                "Implementation-Title" to "matrix-sms-bridge",
+                "Implementation-Version" to archiveVersion
+        )
     }
 }
 
@@ -76,12 +78,6 @@ configurations {
     }
 }
 
-dependencyManagement {
-    imports {
-        mavenBom(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
-    }
-}
-
 tasks.withType<Test> {
     useJUnitPlatform()
 }
@@ -93,6 +89,10 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+tasks.getByName<BootBuildImage>("bootBuildImage") {
+    imageName = "folivonet/matrix-sms-bridge"
+}
+
 tasks.register<Exec>("docker-gammu") {
     group = "build"
     commandLine(
@@ -101,9 +101,7 @@ tasks.register<Exec>("docker-gammu") {
             "--build-arg",
             "JAR_FILE=./build/libs/*.jar",
             "-t",
-            "folivonet/matrix-sms-bridge:$version",
-            "-t",
-            "folivonet/matrix-sms-bridge:latest",
+            "folivonet/matrix-sms-bridge:$version-gammu",
             "-f",
             "./src/main/docker/gammu/Dockerfile",
             "."

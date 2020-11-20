@@ -2,16 +2,12 @@ package net.folivo.matrix.bridge.sms
 
 import liquibase.integration.spring.SpringLiquibase
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-import org.springframework.boot.autoconfigure.data.jdbc.JdbcRepositoriesAutoConfiguration
-import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.DependsOn
 import javax.sql.DataSource
 
 @Configuration
-@EnableAutoConfiguration(exclude = [JdbcRepositoriesAutoConfiguration::class, DataSourceTransactionManagerAutoConfiguration::class])
 class SmsBridgeDatabaseConfiguration {
 
     @Bean
@@ -22,5 +18,4 @@ class SmsBridgeDatabaseConfiguration {
             dataSource = liquibaseDatasource
         }
     }
-
 }

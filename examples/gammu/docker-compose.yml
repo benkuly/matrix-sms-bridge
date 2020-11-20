@@ -15,11 +15,9 @@ services:
       #devices:
       #- "/dev/ttyUSB1:/dev/ttyModem"
     environment:
-      - CONFIG_LOCATION=/config/application.yml
+      - SPRING_CONFIG_ADDITIONAL_LOCATION=/config/application.yml
       - GAMMU_CONFIG=/config/gammu-smsdrc
       #- SPRING_PROFILES_ACTIVE=initialsync
-    networks:
-      - local-kannel
     expose:
       - 8080
     restart: on-failure
@@ -35,10 +33,5 @@ services:
       - GID=1000
     depends_on:
       - matrix-sms-bridge
-    networks:
-      - local-kannel
     ports:
       - 8008:8008
-
-networks:
-  local-kannel:
