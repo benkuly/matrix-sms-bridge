@@ -1,0 +1,6 @@
+homeserver.db
+
+!.gitignore
+!homeserver.yaml
+!matrix-kotlin-sdk-it-synapse.log.config
+!matrix-kotlin-sdk-it-synapse.signing.key

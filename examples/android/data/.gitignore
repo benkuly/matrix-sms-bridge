@@ -1,0 +1,4 @@
+*.log
+*.txt
+*.smsbackup
+matrix-sms-bridge-android.p12

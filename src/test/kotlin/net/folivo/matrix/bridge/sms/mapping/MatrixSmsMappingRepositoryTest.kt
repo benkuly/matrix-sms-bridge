@@ -16,7 +16,6 @@ import net.folivo.matrix.core.model.MatrixId.RoomId
 import net.folivo.matrix.core.model.MatrixId.UserId
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.test.autoconfigure.data.r2dbc.DataR2dbcTest
-import org.springframework.data.r2dbc.core.DatabaseClient
 import org.springframework.data.r2dbc.core.R2dbcEntityTemplate
 import org.springframework.data.r2dbc.core.delete
 
@@ -24,13 +23,11 @@ import org.springframework.data.r2dbc.core.delete
 @ImportAutoConfiguration(value = [MatrixBotDatabaseAutoconfiguration::class, SmsBridgeDatabaseConfiguration::class])
 class MatrixSmsMappingRepositoryTest(
         cut: MatrixSmsMappingRepository,
-        dbClient: DatabaseClient
-) : DescribeSpec(testBody(cut, dbClient))
+        db: R2dbcEntityTemplate
+) : DescribeSpec(testBody(cut, db))
 
-private fun testBody(cut: MatrixSmsMappingRepository, dbClient: DatabaseClient): DescribeSpec.() -> Unit {
+private fun testBody(cut: MatrixSmsMappingRepository, db: R2dbcEntityTemplate): DescribeSpec.() -> Unit {
     return {
-        val entityTemplate = R2dbcEntityTemplate(dbClient)
-
         val user1 = UserId("user1", "server")
         val user2 = UserId("user2", "server")
         val user3 = UserId("user3", "server")
@@ -39,28 +36,25 @@ private fun testBody(cut: MatrixSmsMappingRepository, dbClient: DatabaseClient):
         val room3 = RoomId("room3", "server")
 
         var map1: MatrixSmsMapping? = null
-        var map2: MatrixSmsMapping? = null
         var map3: MatrixSmsMapping? = null
         var map4: MatrixSmsMapping? = null
         var map5: MatrixSmsMapping? = null
 
         beforeSpec {
-            entityTemplate.insert(MatrixUser(user1)).awaitFirst()
-            entityTemplate.insert(MatrixUser(user2)).awaitFirst()
-            entityTemplate.insert(MatrixUser(user3)).awaitFirst()
-            entityTemplate.insert(MatrixRoom(room1)).awaitFirst()
-            entityTemplate.insert(MatrixRoom(room2)).awaitFirst()
-            entityTemplate.insert(MatrixRoom(room3)).awaitFirst()
-            val mem1 = entityTemplate.insert(MatrixMembership(user1, room1)).awaitFirst().id
-            val mem2 = entityTemplate.insert(MatrixMembership(user2, room1)).awaitFirst().id
-            val mem3 = entityTemplate.insert(MatrixMembership(user1, room2)).awaitFirst().id
-            val mem4 = entityTemplate.insert(MatrixMembership(user1, room3)).awaitFirst().id
-            val mem5 = entityTemplate.insert(MatrixMembership(user2, room3)).awaitFirst().id
-            map1 = entityTemplate.insert(MatrixSmsMapping(mem1, 5)).awaitFirst()
-            map2 = entityTemplate.insert(MatrixSmsMapping(mem2, 4)).awaitFirst()
-            map3 = entityTemplate.insert(MatrixSmsMapping(mem3, 9)).awaitFirst()
-            map4 = entityTemplate.insert(MatrixSmsMapping(mem4, 1)).awaitFirst()
-            map5 = entityTemplate.insert(MatrixSmsMapping(mem5, 1)).awaitFirst()
+            db.insert(MatrixUser(user1)).awaitFirst()
+            db.insert(MatrixUser(user2)).awaitFirst()
+            db.insert(MatrixUser(user3)).awaitFirst()
+            db.insert(MatrixRoom(room1)).awaitFirst()
+            db.insert(MatrixRoom(room2)).awaitFirst()
+            db.insert(MatrixRoom(room3)).awaitFirst()
+            val mem1 = db.insert(MatrixMembership(user1, room1)).awaitFirst().id
+            val mem3 = db.insert(MatrixMembership(user1, room2)).awaitFirst().id
+            val mem4 = db.insert(MatrixMembership(user1, room3)).awaitFirst().id
+            val mem5 = db.insert(MatrixMembership(user2, room3)).awaitFirst().id
+            map1 = db.insert(MatrixSmsMapping(mem1, 5)).awaitFirst()
+            map3 = db.insert(MatrixSmsMapping(mem3, 9)).awaitFirst()
+            map4 = db.insert(MatrixSmsMapping(mem4, 1)).awaitFirst()
+            map5 = db.insert(MatrixSmsMapping(mem5, 1)).awaitFirst()
         }
 
         describe(MatrixSmsMappingRepository::findByUserIdSortByMappingTokenDesc.name) {
@@ -89,10 +83,10 @@ private fun testBody(cut: MatrixSmsMappingRepository, dbClient: DatabaseClient):
 
 
         afterSpec {
-            entityTemplate.delete<MatrixSmsMapping>().all().awaitFirst()
-            entityTemplate.delete<MatrixMembership>().all().awaitFirst()
-            entityTemplate.delete<MatrixRoom>().all().awaitFirst()
-            entityTemplate.delete<MatrixUser>().all().awaitFirst()
+            db.delete<MatrixSmsMapping>().all().awaitFirst()
+            db.delete<MatrixMembership>().all().awaitFirst()
+            db.delete<MatrixRoom>().all().awaitFirst()
+            db.delete<MatrixUser>().all().awaitFirst()
         }
     }
 }

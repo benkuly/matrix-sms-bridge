@@ -28,6 +28,10 @@ matrix:
       secure: false
     token: 30c05ae90a248a4188e620216fa72e349803310ec83e2a77b34fe90be6081f46
 
+spring:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.data.jdbc.JdbcRepositoriesAutoConfiguration,org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+
 logging:
   level:
     net.folivo.matrix.bridge.sms: DEBUG

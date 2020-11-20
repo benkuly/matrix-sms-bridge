@@ -20,7 +20,7 @@ data class SmsBridgeProperties(
             val outgoingMessageToken: String = "\n\nTo answer to this message add this token to your message: {token}",
             val answerInvalidTokenWithDefaultRoom: String? = null,
             val answerInvalidTokenWithoutDefaultRoom: String? = "Your message did not contain any valid token. Nobody can and will read your message.",
-            val sendSmsError: String = "Could not send SMS to this user: {error}",
+            val sendSmsError: String = "Could not send SMS: {error}",
             val sendSmsIncompatibleMessage: String = "Only text messages can be send to this SMS user.",
             val defaultRoomIncomingMessage: String = "{sender} wrote:\n\n{body}",
             val defaultRoomIncomingMessageWithSingleMode: String = "A message from {sender} was send to room {roomAlias}. Someone should join the room. Otherwise nobody will read the message.\n\nType `sms invite {roomAlias}` in a bot room to get invited to the room.",
@@ -41,5 +41,7 @@ data class SmsBridgeProperties(
             val botSmsSendError: String = "There was an error while sending message to the telephone number(s) {receiverNumbers}. Reason: {error}",
             val botSmsInviteSuccess: String = "{sender} was invited to {roomAlias}.",
             val botSmsInviteError: String = "There was an error while invite {sender} to {roomAlias}. Reason: {error}",
+            val providerSendError: String = "Could not send sms to {receiver} with your provider. We will try to resend it and will notify you as soon as it was successful. Reason: {error}",
+            val providerResendSuccess: String = "The resend was successful for all messages."
     )
 }

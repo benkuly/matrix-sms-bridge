@@ -6,22 +6,24 @@ This is a matrix bridge, which allows you to bridge matrix rooms to SMS with one
 You need help? Ask your questions in [#matrix-sms-bridge:imbitbu.de](https://matrix.to/#/#matrix-sms-bridge:imbitbu.de)
 
 Features:
-* use with one telephone number only
+* use with one outgoing telephone number only
 * send SMS
 * receive SMS
+* use room aliases to have one room for incoming telephone number
 * bot for automated sms sending
     * creates rooms for you
     * writes messages for you
     * allows you to send SMS at a specific time (in future)
     * invites users for you, when room gets created
 * provider:
-    * modem (with [Gammu](https://github.com/gammu/gammu))
+    * Android Smartphone with [android-sms-gateway-server}](https://github.com/RebekkaMa/android-sms-gateway-server)
+    * modem (with [Gammu](https://github.com/gammu/gammu)) -> not actively maintained anymore
 
 ## User Guide
 ### Automated room creation
 Create a room with you and `@smsBot:yourHomeServer.org` only. Now you can write `sms send --help` which gives you a help, how to use this command.
 
-Example: `sms send -t 01749292923 "Hello World"` creates a new room with the telephone number and writes "Hello World" for you. If there already is a room with this telephone numer and you participating, then "Hello World" will send it to that room.
+Example: `sms send -t 01749292923 "Hello World"` creates a new room with the telephone number and writes "Hello World" for you. If there already is a room with this telephone number, and you are participating, then "Hello World" will be sent to that room.
 
 ### Invite telephone number to matrix room
 The virtual matrix users, which represents SMS numbers, have the following pattern:
@@ -109,7 +111,30 @@ namespaces:
 ```
 
 ### Configure Provider
-Currently, only modems via [Gammu](https://github.com/gammu/gammu) are supported. If you want your SMS gateway provider to be supported, look into the package [`provider`](./src/main/kotlin/net/folivo/matrix/bridge/sms/provider) to see how you can add your own provider to this bridge.
+If you want your SMS gateway provider to be supported, look into the package [`provider`](./src/main/kotlin/net/folivo/matrix/bridge/sms/provider) to see how you can add your own provider to this bridge.
+
+#### android-sms-gateway-server
+You need to add some properties to the Application Service yaml-file:
+```yaml
+matrix:
+  bridge:
+    sms:
+      provider:
+        android:
+          # (optional) default is disabled
+          enabled: true
+          # The url to the android-sms-gateway-server
+          baseUrl: https://192.168.25.26:9090
+          # The username of the gateway
+          username: admin
+          # The password of the gateway
+          password: 123
+          # (optional) if you use a self signed certificate, you can add the public key here
+          trustStore:
+            path: /data/matrix-sms-bridge-android.p12
+            password: 123
+            type: PKCS12
+```
 
 #### Gammu
 First you need to add some properties to the Application Service yaml-file:
@@ -153,6 +178,9 @@ CheckBattery = 0
 ```
 
 ### Using Docker container
-As long as there is only one Provider, Gammu is integrated into the Docker-container: `docker pull folivonet/matrix-sms-bridge`
+There are two types of docker-containers. One, that is bundled with Gammu and one without:
 
-To see, how a docker setup of the bridge could look like, have a look at the [example](./examples/gammu).
+* Default: `docker pull folivonet/matrix-sms-bridge:latest`
+* Containers bundled with gammu use tags with the suffix `-gammu`: `docker pull folivonet/matrix-sms-bridge:latest-gammu`
+
+To see, how a docker setup of the bridge could look like, have a look at the [examples](./examples).
