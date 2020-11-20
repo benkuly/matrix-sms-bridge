@@ -1,0 +1,13 @@
+id: "SMS Bridge"
+url: "http://matrix-sms-bridge:8080"
+as_token: "30c05ae90a248a4188e620216fa72e349803310ec83e2a77b34fe90be6081f46"
+hs_token: "312df522183efd404ec1cd22d2ffa4bbc76a8c1ccf541dd692eef281356bb74e"
+sender_localpart: "smsbot"
+namespaces:
+  users:
+    - exclusive: true
+      regex: "^@sms_.+:matrix-local"
+  aliases:
+    - exclusive: true
+      regex: "^#sms_.+:matrix-local"
+  rooms: [ ]

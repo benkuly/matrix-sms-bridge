@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service
 @Service
 class PhoneNumberService(private val smsBridgeProperties: SmsBridgeProperties) {
 
-    private val phoneNumberUtil = PhoneNumberUtil.getInstance()
+    private val phoneNumberUtil: PhoneNumberUtil = PhoneNumberUtil.getInstance()
 
     fun parseToInternationalNumber(raw: String): String {
         return phoneNumberUtil.parse(raw, smsBridgeProperties.defaultRegion)

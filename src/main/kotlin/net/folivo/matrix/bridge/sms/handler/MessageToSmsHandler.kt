@@ -59,7 +59,7 @@ class MessageToSmsHandler(
                             LOG.error(
                                     "Could not send sms from room $roomId and $senderId. " +
                                     "This should be fixed.", error
-                            ) // TODO it should send sms later
+                            )
                             context.answer(
                                     templates.sendSmsError.replace("{error}", error.message ?: "unknown"),
                                     asUserId = receiverId

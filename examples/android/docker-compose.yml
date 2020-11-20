@@ -7,16 +7,10 @@ services:
         source: ./config
         target: /config
       - type: bind
-        source: ./config/gammu-smsdrc
-        target: /etc/gammu-smsdrc
-      - type: bind
         source: ./data
         target: /data
-      #devices:
-      #- "/dev/ttyUSB1:/dev/ttyModem"
     environment:
       - SPRING_CONFIG_ADDITIONAL_LOCATION=/config/application.yml
-      - GAMMU_CONFIG=/config/gammu-smsdrc
       #- SPRING_PROFILES_ACTIVE=initialsync
     expose:
       - 8080
