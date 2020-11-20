@@ -16,7 +16,7 @@ Features:
     * allows you to send SMS at a specific time (in future)
     * invites users for you, when room gets created
 * provider:
-    * Android Smartphone with [android-sms-gateway-server}](https://github.com/RebekkaMa/android-sms-gateway-server)
+    * Android Smartphone with [android-sms-gateway-server](https://github.com/RebekkaMa/android-sms-gateway-server)
     * modem (with [Gammu](https://github.com/gammu/gammu)) -> not actively maintained anymore
 
 ## User Guide
