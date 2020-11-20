@@ -2,7 +2,7 @@ name: Docker Image CI with bundled gammu
 
 on:
   release:
-    types: [ published, workflow_dispatch ]
+    types: [ published ]
 
 jobs:
   publish-image:
