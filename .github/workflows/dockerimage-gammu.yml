@@ -1,0 +1,27 @@
+name: Docker Image CI with bundled gammu
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  publish-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - uses: azure/docker-login@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: build image
+        run: gradle docker-gammu
+      - name: Set release version
+        run: echo ::set-env name=RELEASE_VERSION::${GITHUB_REF:11}
+      - name: Publish version tagged image to DockerHub
+        run: docker push folivonet/matrix-sms-bridge:${{ env.RELEASE_VERSION }}-gammu
+      - name: Publish latest image to DockerHub
+        run: docker push folivonet/matrix-sms-bridge:latest-gammu
