@@ -24,7 +24,7 @@ tasks.withType<org.springframework.boot.gradle.tasks.bundling.BootJar>() {
     manifest {
         attributes(
                 "Implementation-Title" to "matrix-sms-bridge",
-                "Implementation-Version" to archiveVersion
+                "Implementation-Version" to project.version
         )
     }
 }
@@ -90,7 +90,7 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.getByName<BootBuildImage>("bootBuildImage") {
-    imageName = "folivonet/matrix-sms-bridge"
+    imageName = "folivonet/matrix-sms-bridge:${project.version}"
 }
 
 tasks.register<Exec>("docker-gammu") {
@@ -102,6 +102,8 @@ tasks.register<Exec>("docker-gammu") {
             "JAR_FILE=./build/libs/*.jar",
             "-t",
             "folivonet/matrix-sms-bridge:$version-gammu",
+            "-t",
+            "folivonet/matrix-sms-bridge:latest-gammu",
             "-f",
             "./src/main/docker/gammu/Dockerfile",
             "."
