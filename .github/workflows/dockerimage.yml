@@ -20,6 +20,6 @@ jobs:
       - name: build image
         run: gradle bootBuildImage
       - name: Publish version tagged image to DockerHub
-        run: docker push folivonet/matrix-sms-bridge:${{ GITHUB_REF:11 }}
+        run: docker push folivonet/matrix-sms-bridge:${GITHUB_REF:11}
       - name: Publish latest image to DockerHub
         run: docker push folivonet/matrix-sms-bridge:latest

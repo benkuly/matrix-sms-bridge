@@ -20,6 +20,6 @@ jobs:
       - name: build image
         run: gradle docker-gammu
       - name: Publish version tagged image to DockerHub
-        run: docker push folivonet/matrix-sms-bridge:${{ GITHUB_REF:11 }}-gammu
+        run: docker push folivonet/matrix-sms-bridge:${GITHUB_REF:11}-gammu
       - name: Publish latest image to DockerHub
         run: docker push folivonet/matrix-sms-bridge:latest-gammu
