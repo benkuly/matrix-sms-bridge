@@ -11,6 +11,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.*
+import kotlinx.coroutines.flow.count
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
@@ -270,7 +271,7 @@ private fun testBody(
                     db.insert(AndroidOutSmsMessage("+491234522", "some body 2")).awaitFirstOrNull()
                     every { smsBridgeProperties.templates.providerResendSuccess }.returns("resend")
                 }
-                it("should send all messages") {
+                it("should send all messages and delete messages") {
                     mockServerClient.`when`(
                             HttpRequest.request()
                                     .withMethod(HttpMethod.POST.name)
@@ -305,6 +306,7 @@ private fun testBody(
                                             )
                                     )
                     )
+                    db.select<AndroidOutSmsMessage>().all().asFlow().count().shouldBe(0)
                 }
                 describe("default room is given") {
                     val defaultRoomId = RoomId("default", "server")

@@ -54,6 +54,7 @@ class AndroidSmsProvider(
         if (outSmsMessageRepository.count() > 0L) {
             outSmsMessageRepository.findAll().collect {
                 sendOutSmsMessageRequest(AndroidOutSmsMessageRequest(it.receiver, it.body))
+                outSmsMessageRepository.delete(it)
             }
             if (smsBridgeProperties.defaultRoomId != null) {
                 matrixClient.roomsApi.sendRoomEvent(
