@@ -41,6 +41,7 @@ class AndroidSmsProviderLauncher(private val androidSmsProvider: AndroidSmsProvi
     private fun logReceiveAttempt(): RetryPolicy<Throwable> {
         return {
             LOG.error("could not retrieve messages from android device or process them: ${reason.message}")
+            LOG.debug("detailed error", reason)
             ContinueRetrying
         }
     }
@@ -48,6 +49,7 @@ class AndroidSmsProviderLauncher(private val androidSmsProvider: AndroidSmsProvi
     private fun logSendAttempt(): RetryPolicy<Throwable> {
         return {
             LOG.error("could not send messages to android device: ${reason.message}")
+            LOG.debug("detailed error", reason)
             ContinueRetrying
         }
     }
