@@ -42,6 +42,7 @@ data class SmsBridgeProperties(
             val botSmsInviteSuccess: String = "{sender} was invited to {roomAlias}.",
             val botSmsInviteError: String = "There was an error while invite {sender} to {roomAlias}. Reason: {error}",
             val providerSendError: String = "Could not send sms to {receiver} with your provider. We will try to resend it and will notify you as soon as it was successful. Reason: {error}",
-            val providerResendSuccess: String = "The resend was successful for all messages."
+            val providerResendSuccess: String = "The resend was successful for all messages.",
+            val providerReceiveError: String = "Could not receive messages through your configured provider. If this message does not appear again in the next few minutes, then retrying the receiving was successful. Reason: {error}"
     )
 }

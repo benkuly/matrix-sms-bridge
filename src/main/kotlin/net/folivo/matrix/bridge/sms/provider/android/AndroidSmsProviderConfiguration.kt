@@ -97,7 +97,11 @@ class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProvider
     }
 
     @Bean
-    fun smsProviderLauncher(androidSmsProvider: AndroidSmsProvider): AndroidSmsProviderLauncher {
-        return AndroidSmsProviderLauncher(androidSmsProvider)
+    fun smsProviderLauncher(
+            androidSmsProvider: AndroidSmsProvider,
+            smsBridgeProperties: SmsBridgeProperties,
+            matrixClient: MatrixClient
+    ): AndroidSmsProviderLauncher {
+        return AndroidSmsProviderLauncher(androidSmsProvider, smsBridgeProperties, matrixClient)
     }
 }

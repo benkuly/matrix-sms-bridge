@@ -6,21 +6,29 @@ import com.github.michaelbull.retry.policy.binaryExponentialBackoff
 import com.github.michaelbull.retry.policy.plus
 import com.github.michaelbull.retry.retry
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import net.folivo.matrix.bridge.sms.SmsBridgeProperties
+import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
+import net.folivo.matrix.restclient.MatrixClient
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 
-class AndroidSmsProviderLauncher(private val androidSmsProvider: AndroidSmsProvider) {
+class AndroidSmsProviderLauncher(
+        private val androidSmsProvider: AndroidSmsProvider,
+        private val smsBridgeProperties: SmsBridgeProperties,
+        private val matrixClient: MatrixClient
+) {
 
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
     @EventListener(ApplicationReadyEvent::class)
-    fun startLoops() {
-        GlobalScope.launch {
+    fun startReceiveLoop(): Job {
+        return GlobalScope.launch {
             while (true) {
                 retry(binaryExponentialBackoff(base = 5000, max = 60000) + logReceiveAttempt()) {
                     androidSmsProvider.getAndProcessNewMessages()
@@ -28,7 +36,11 @@ class AndroidSmsProviderLauncher(private val androidSmsProvider: AndroidSmsProvi
                 }
             }
         }
-        GlobalScope.launch {
+    }
+
+    @EventListener(ApplicationReadyEvent::class)
+    fun startRetrySendLoop(): Job {
+        return GlobalScope.launch {
             while (true) {
                 retry(binaryExponentialBackoff(base = 10000, max = 120000) + logSendAttempt()) {
                     androidSmsProvider.sendOutFailedMessages()
@@ -42,6 +54,14 @@ class AndroidSmsProviderLauncher(private val androidSmsProvider: AndroidSmsProvi
         return {
             LOG.error("could not retrieve messages from android device or process them: ${reason.message}")
             LOG.debug("detailed error", reason)
+            if (smsBridgeProperties.defaultRoomId != null)
+                matrixClient.roomsApi.sendRoomEvent(
+                        smsBridgeProperties.defaultRoomId,
+                        NoticeMessageEventContent(
+                                smsBridgeProperties.templates.providerReceiveError
+                                        .replace("{error}", reason.message ?: "unknown")
+                        )
+                )
             ContinueRetrying
         }
     }
