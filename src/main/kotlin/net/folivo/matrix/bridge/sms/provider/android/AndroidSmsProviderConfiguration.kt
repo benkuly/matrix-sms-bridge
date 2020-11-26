@@ -10,7 +10,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Primary
 import org.springframework.context.annotation.Profile
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -76,7 +75,6 @@ class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProvider
     }
 
     @Bean
-    @Primary
     fun androidSmsProvider(
             receiveSmsService: ReceiveSmsService,
             phoneNumberService: PhoneNumberService,
