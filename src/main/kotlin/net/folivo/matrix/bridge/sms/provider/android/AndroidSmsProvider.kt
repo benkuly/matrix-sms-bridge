@@ -1,5 +1,6 @@
 package net.folivo.matrix.bridge.sms.provider.android
 
+import com.google.i18n.phonenumbers.NumberParseException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
@@ -84,10 +85,22 @@ class AndroidSmsProvider(
         response.messages
                 .sortedBy { it.id }
                 .fold(lastProcessed, { process, message ->
-                    receiveSmsService.receiveSms(
-                            message.body,
-                            phoneNumberService.parseToInternationalNumber(message.sender)
-                    )
+                    try {
+                        receiveSmsService.receiveSms(
+                                message.body,
+                                phoneNumberService.parseToInternationalNumber(message.sender)
+                        )
+                    } catch (error: NumberParseException) {
+                        if (smsBridgeProperties.defaultRoomId != null)
+                            matrixClient.roomsApi.sendRoomEvent(
+                                    smsBridgeProperties.defaultRoomId,
+                                    NoticeMessageEventContent(
+                                            smsBridgeProperties.templates.defaultRoomIncomingMessage
+                                                    .replace("{sender}", message.sender)
+                                                    .replace("{body}", message.body)
+                                    )
+                            )
+                    }
                     processedRepository.save(
                             process?.copy(lastProcessedId = message.id)
                             ?: AndroidSmsProcessed(1, message.id)

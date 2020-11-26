@@ -54,14 +54,18 @@ class AndroidSmsProviderLauncher(
         return {
             LOG.error("could not retrieve messages from android device or process them: ${reason.message}")
             LOG.debug("detailed error", reason)
-            if (smsBridgeProperties.defaultRoomId != null)
-                matrixClient.roomsApi.sendRoomEvent(
-                        smsBridgeProperties.defaultRoomId,
-                        NoticeMessageEventContent(
-                                smsBridgeProperties.templates.providerReceiveError
-                                        .replace("{error}", reason.message ?: "unknown")
-                        )
-                )
+            try {
+                if (smsBridgeProperties.defaultRoomId != null)
+                    matrixClient.roomsApi.sendRoomEvent(
+                            smsBridgeProperties.defaultRoomId,
+                            NoticeMessageEventContent(
+                                    smsBridgeProperties.templates.providerReceiveError
+                                            .replace("{error}", reason.message ?: "unknown")
+                            )
+                    )
+            } catch (error: Throwable) {
+                LOG.error("could not warn user in default room: ${error.message}")
+            }
             ContinueRetrying
         }
     }

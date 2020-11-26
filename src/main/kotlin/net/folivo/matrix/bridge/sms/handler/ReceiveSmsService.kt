@@ -63,7 +63,7 @@ class ReceiveSmsService(
             val roomIdFromAlias = roomService.getRoomAlias(roomAliasId)?.roomId
                                   ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId
 
-            messageService.sendRoomMessage(//FIXME test
+            messageService.sendRoomMessage(
                     MatrixMessage(roomIdFromAlias, cleanedBody, isNotice = false, asUserId = userId),
                     setOf(userId)
             )

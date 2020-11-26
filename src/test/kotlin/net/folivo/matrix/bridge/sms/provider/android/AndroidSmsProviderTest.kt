@@ -159,6 +159,57 @@ private fun testBody(
                 db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
                         ?.lastProcessedId.shouldBe(3)
             }
+            describe("handle unparsable telephone numbers") {
+                beforeTest {
+                    mockServerClient
+                            .`when`(
+                                    HttpRequest.request()
+                                            .withMethod(HttpMethod.GET.name)
+                                            .withPath("/messages/in")
+                                            .withQueryStringParameter("after", "3"),
+                                    Times.exactly(1)
+                            ).respond(
+                                    HttpResponse.response()
+                                            .withBody(
+                                                    """
+                                           {
+                                                "nextBatch":"4",
+                                                "messages":[
+                                                    {
+                                                        "number":"123",
+                                                        "body":"wtf",
+                                                        "id":4
+                                                    }
+                                                ]
+                                            }
+                                          """.trimIndent(), MediaType.APPLICATION_JSON
+                                            )
+                            )
+                }
+                it("should send to default room, when present") {
+                    val defaultRoomId = RoomId("default", "server")
+                    every { smsBridgeProperties.defaultRoomId }.returns(defaultRoomId)
+                    every { smsBridgeProperties.templates.defaultRoomIncomingMessage }.returns("{sender} wrote {body}")
+                    cut.getAndProcessNewMessages()
+                    cut.getAndProcessNewMessages()
+                    cut.getAndProcessNewMessages()
+                    coVerify {
+                        matrixClientMock.roomsApi.sendRoomEvent(defaultRoomId, match<NoticeMessageEventContent> {
+                            println(it.body)
+                            it.body == "123 wrote wtf"
+                        }, any(), any(), any())
+                    }
+                }
+                it("should ignore when not default room") {
+                    every { smsBridgeProperties.defaultRoomId }.returns(null)
+                    cut.getAndProcessNewMessages()
+                    cut.getAndProcessNewMessages()
+                    cut.getAndProcessNewMessages()
+                    coVerify(exactly = 0) {
+                        matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any())
+                    }
+                }
+            }
             it("should handle exceptions while processing message") {
                 coEvery { receiveSmsServiceMock.receiveSms(any(), "+4917332222222") }
                         .throws(RuntimeException())
