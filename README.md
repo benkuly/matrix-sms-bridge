@@ -9,7 +9,7 @@ Features:
 * use with one outgoing telephone number only
 * send SMS
 * receive SMS
-* use room aliases to have one room for incoming telephone number
+* use room aliases to have one room for each incoming telephone number
 * bot for automated sms sending
     * creates rooms for you
     * writes messages for you
