@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component
 class MessageToBotHandler(
         private val smsSendCommandHandler: SmsSendCommandHandler,
         private val smsInviteCommandHandler: SmsInviteCommandHandler,
+        private val smsAbortCommandHandler: SmsAbortCommandHandler,
         private val phoneNumberService: PhoneNumberService,
         private val smsBridgeProperties: SmsBridgeProperties,
         private val userService: MatrixUserService,
@@ -39,8 +40,9 @@ class MessageToBotHandler(
             LOG.debug("ignore message from managed user")
             false
         } else if (body.startsWith("sms")) {
-            if (membershipSize > 2) {
-                LOG.debug("to many members in room form sms command")
+            // TODO is there a less hacky way for "sms abort"? Maybe completely switch to non-console?
+            if (membershipSize > 2 && !body.startsWith("sms abort")) {
+                LOG.debug("to many members in room for sms command")
                 context.answer(smsBridgeProperties.templates.botTooManyMembers)
                 true
             } else {
@@ -63,6 +65,10 @@ class MessageToBotHandler(
                                         SmsInviteCommand(
                                                 senderId,
                                                 smsInviteCommandHandler
+                                        ),
+                                        SmsAbortCommand(
+                                                roomId,
+                                                smsAbortCommandHandler
                                         )
                                 )
                                 .parse(args)

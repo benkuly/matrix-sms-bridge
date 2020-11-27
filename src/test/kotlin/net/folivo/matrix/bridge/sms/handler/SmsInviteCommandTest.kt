@@ -25,19 +25,25 @@ private fun testBody(): DescribeSpec.() -> Unit {
         cut.context { console = consoleMock }
 
         describe("alias was given") {
-            coEvery { handlerMock.handleCommand(sender, roomAliasId) }.returns("answer")
-            cut.parse(listOf("#alias:server"))
-            coVerify { handlerMock.handleCommand(sender, roomAliasId) }
-            coVerify { consoleMock.print("answer", false) }
+            it("should run") {
+                coEvery { handlerMock.handleCommand(sender, roomAliasId) }.returns("answer")
+                cut.parse(listOf("#alias:server"))
+                coVerify { handlerMock.handleCommand(sender, roomAliasId) }
+                coVerify { consoleMock.print("answer", false) }
+            }
         }
         describe("alias was not given") {
-            shouldThrow<MissingArgument> {
-                cut.parse(listOf())
+            it("should throw missing argument") {
+                shouldThrow<MissingArgument> {
+                    cut.parse(listOf())
+                }
             }
         }
         describe("alias was no alias") {
-            shouldThrow<BadParameterValue> {
-                cut.parse(listOf("!noAlias:server"))
+            it("should throw bad parameter") {
+                shouldThrow<BadParameterValue> {
+                    cut.parse(listOf("!noAlias:server"))
+                }
             }
         }
 

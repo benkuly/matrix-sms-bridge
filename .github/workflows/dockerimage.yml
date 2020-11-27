@@ -19,8 +19,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: build image
         run: gradle bootBuildImage
-      - name: tag to latest
-        run: docker tag folivonet/matrix-sms-bridge:${GITHUB_REF:11} folivonet/matrix-sms-bridge:latest
+      - name: tag to version
+        run: docker tag folivonet/matrix-sms-bridge:latest folivonet/matrix-sms-bridge:${GITHUB_REF:11}
       - name: Publish version tagged image to DockerHub
         run: docker push folivonet/matrix-sms-bridge:${GITHUB_REF:11}
       - name: Publish latest image to DockerHub

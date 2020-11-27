@@ -17,7 +17,7 @@ repositories {
 }
 
 group = "net.folivo"
-version = "0.5.3"
+version = "0.5.4"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 tasks.withType<org.springframework.boot.gradle.tasks.bundling.BootJar>() {
@@ -90,7 +90,7 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.getByName<BootBuildImage>("bootBuildImage") {
-    imageName = "folivonet/matrix-sms-bridge:${project.version}"
+    imageName = "folivonet/matrix-sms-bridge:latest"
 }
 
 tasks.register<Exec>("docker-gammu") {

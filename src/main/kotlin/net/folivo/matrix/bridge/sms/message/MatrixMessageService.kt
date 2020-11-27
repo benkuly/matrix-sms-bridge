@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toSet
 import net.folivo.matrix.bot.membership.MatrixMembershipService
+import net.folivo.matrix.core.model.MatrixId.RoomId
 import net.folivo.matrix.core.model.MatrixId.UserId
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -74,7 +75,7 @@ class MatrixMessageService(
         }
     }
 
-    internal suspend fun saveMessageAndReceivers(message: MatrixMessage, requiredMembers: Set<UserId>) {
+    suspend fun saveMessageAndReceivers(message: MatrixMessage, requiredMembers: Set<UserId>) {
         val savedMessage = messageRepository.save(message)
         requiredMembers.forEach {
             if (savedMessage.id != null)
@@ -82,8 +83,12 @@ class MatrixMessageService(
         }
     }
 
-    internal suspend fun deleteMessage(message: MatrixMessage) {
+    suspend fun deleteMessage(message: MatrixMessage) {
         if (message.id != null) messageRepository.delete(message)
+    }
+
+    suspend fun deleteByRoomId(roomId: RoomId) {
+        messageRepository.deleteByRoomId(roomId)
     }
 
     suspend fun processMessageQueue() {

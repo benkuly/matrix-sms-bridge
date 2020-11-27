@@ -18,6 +18,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
     return {
         val smsSendCommandHandlerMock: SmsSendCommandHandler = mockk()
         val smsInviteCommandHandlerMock: SmsInviteCommandHandler = mockk()
+        val smsAbortCommandHandlerMock: SmsAbortCommandHandler = mockk()
         val phoneNumberServiceMock: PhoneNumberService = mockk()
         val smsBridgePropertiesMock: SmsBridgeProperties = mockk {
             every { templates.botHelp }.returns("help")
@@ -30,6 +31,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val cut = MessageToBotHandler(
                 smsSendCommandHandlerMock,
                 smsInviteCommandHandlerMock,
+                smsAbortCommandHandlerMock,
                 phoneNumberServiceMock,
                 smsBridgePropertiesMock,
                 userServiceMock,
@@ -57,14 +59,30 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
             }
             describe("to many members in room") {
-                it("should warn user and return true") {
-                    coEvery { userServiceMock.getOrCreateUser(senderId) }.returns(MatrixUser(senderId))
+                beforeTest {
                     coEvery { membershipServiceMock.getMembershipsSizeByRoomId(roomId) }.returns(3L)
+                    coEvery { userServiceMock.getOrCreateUser(senderId) }.returns(MatrixUser(senderId))
+                }
+                it("should warn user and return true") {
                     cut.handleMessage(roomId, "sms", senderId, contextMock).shouldBeTrue()
                     coVerifyAll {
                         smsSendCommandHandlerMock wasNot Called
                         smsInviteCommandHandlerMock wasNot Called
                         contextMock.answer("toMany")
+                    }
+                }
+                it("should accept sms abort command") {
+                    coEvery { smsAbortCommandHandlerMock.handleCommand(any()) }
+                            .returns("aborted")
+                    cut.handleMessage(
+                            roomId,
+                            "sms abort",
+                            senderId,
+                            contextMock
+                    ).shouldBeTrue()
+
+                    coVerify(exactly = 1) {
+                        contextMock.answer("aborted")
                     }
                 }
             }
