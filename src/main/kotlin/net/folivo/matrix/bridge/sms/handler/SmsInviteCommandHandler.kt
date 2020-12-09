@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component
 
 @Component
 class SmsInviteCommandHandler(
-        private val roomService: MatrixRoomService,
-        private val matrixClient: MatrixClient,
-        smsBridgeProperties: SmsBridgeProperties,
+    private val roomService: MatrixRoomService,
+    private val matrixClient: MatrixClient,
+    smsBridgeProperties: SmsBridgeProperties,
 ) {
 
     private val templates: SmsBridgeTemplateProperties = smsBridgeProperties.templates
@@ -24,23 +24,22 @@ class SmsInviteCommandHandler(
     }
 
     suspend fun handleCommand(
-            sender: UserId,
-            alias: RoomAliasId
+        sender: UserId,
+        alias: RoomAliasId
     ): String {
         return try {
             val roomId = roomService.getRoomAlias(alias)?.roomId
-                         ?: matrixClient.roomsApi.getRoomAlias(alias).roomId
+                ?: matrixClient.roomsApi.getRoomAlias(alias).roomId
             matrixClient.roomsApi.inviteUser(roomId, sender)
             templates.botSmsInviteSuccess
-                    .replace("{roomAlias}", alias.full)
-                    .replace("{sender}", sender.full)
+                .replace("{roomAlias}", alias.full)
+                .replace("{sender}", sender.full)
         } catch (ex: Throwable) {
             LOG.debug("got exception")
             templates.botSmsInviteError
-                    .replace("{roomAlias}", alias.full)
-                    .replace("{sender}", sender.full)
-                    .replace("{error}", ex.message ?: "unknown")
+                .replace("{roomAlias}", alias.full)
+                .replace("{sender}", sender.full)
+                .replace("{error}", ex.message ?: "unknown")
         }
     }
-
 }

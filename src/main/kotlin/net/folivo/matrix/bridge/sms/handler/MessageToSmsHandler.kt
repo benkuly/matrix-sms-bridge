@@ -15,12 +15,12 @@ import org.springframework.stereotype.Service
 
 @Service
 class MessageToSmsHandler(
-        private val botProperties: MatrixBotProperties,
-        private val smsBridgeProperties: SmsBridgeProperties,
-        private val smsProvider: SmsProvider,
-        private val roomService: MatrixRoomService,
-        private val userService: MatrixUserService,
-        private val mappingService: MatrixSmsMappingService
+    private val botProperties: MatrixBotProperties,
+    private val smsBridgeProperties: SmsBridgeProperties,
+    private val smsProvider: SmsProvider,
+    private val roomService: MatrixRoomService,
+    private val userService: MatrixUserService,
+    private val mappingService: MatrixSmsMappingService
 ) {
 
     private val templates = smsBridgeProperties.templates
@@ -30,65 +30,65 @@ class MessageToSmsHandler(
     }
 
     suspend fun handleMessage(
-            roomId: RoomId,
-            body: String,
-            senderId: UserId,
-            context: MessageContext,
-            isTextMessage: Boolean
+        roomId: RoomId,
+        body: String,
+        senderId: UserId,
+        context: MessageContext,
+        isTextMessage: Boolean
     ) {
         userService.getUsersByRoom(roomId)
-                .filter { it.isManaged && it.id != senderId && it.id != botProperties.botUserId }
-                .map { "+" + it.id.localpart.removePrefix("sms_") to it.id }
-                .collect { (receiverNumber, receiverId) ->
-                    if (isTextMessage) {
-                        LOG.debug("send SMS from $roomId to $receiverNumber")
-                        val needsToken = !smsBridgeProperties.allowMappingWithoutToken
-                                         || !roomService.getOrCreateRoom(roomId).isManaged
-                                         && roomService.getRoomsByMembers(setOf(receiverId)).take(2).count() > 1
-                        val mappingToken = if (needsToken)
-                            mappingService.getOrCreateMapping(receiverId, roomId).mappingToken else null
+            .filter { it.isManaged && it.id != senderId && it.id != botProperties.botUserId }
+            .map { "+" + it.id.localpart.removePrefix("sms_") to it.id }
+            .collect { (receiverNumber, receiverId) ->
+                if (isTextMessage) {
+                    LOG.debug("send SMS from $roomId to $receiverNumber")
+                    val needsToken = !smsBridgeProperties.allowMappingWithoutToken
+                            || !roomService.getOrCreateRoom(roomId).isManaged
+                            && roomService.getRoomsByMembers(setOf(receiverId)).take(2).count() > 1
+                    val mappingToken = if (needsToken)
+                        mappingService.getOrCreateMapping(receiverId, roomId).mappingToken else null
 
-                        try {
-                            insertBodyAndSend(
-                                    sender = senderId,
-                                    receiverNumber = receiverNumber,
-                                    body = body,
-                                    mappingToken = mappingToken
-                            )
-                        } catch (error: Throwable) {
-                            LOG.error(
-                                    "Could not send sms from room $roomId and $senderId. " +
+                    try {
+                        insertBodyAndSend(
+                            sender = senderId,
+                            receiverNumber = receiverNumber,
+                            body = body,
+                            mappingToken = mappingToken
+                        )
+                    } catch (error: Throwable) {
+                        LOG.error(
+                            "Could not send sms from room $roomId and $senderId. " +
                                     "This should be fixed.", error
-                            )
-                            context.answer(
-                                    templates.sendSmsError.replace("{error}", error.message ?: "unknown"),
-                                    asUserId = receiverId
-                            )
-                        }
-                    } else {
-                        LOG.debug("cannot send SMS from $roomId to $receiverNumber because of incompatible message type")
-                        context.answer(templates.sendSmsIncompatibleMessage, asUserId = receiverId)
+                        )
+                        context.answer(
+                            templates.sendSmsError.replace("{error}", error.message ?: "unknown"),
+                            asUserId = receiverId
+                        )
                     }
+                } else {
+                    LOG.debug("cannot send SMS from $roomId to $receiverNumber because of incompatible message type")
+                    context.answer(templates.sendSmsIncompatibleMessage, asUserId = receiverId)
                 }
+            }
     }
 
     private suspend fun insertBodyAndSend(
-            sender: UserId,
-            receiverNumber: String,
-            body: String,
-            mappingToken: Int?
+        sender: UserId,
+        receiverNumber: String,
+        body: String,
+        mappingToken: Int?
     ) {
         val messageTemplate =
-                if (sender == botProperties.botUserId)
-                    templates.outgoingMessageFromBot
-                else templates.outgoingMessage
+            if (sender == botProperties.botUserId)
+                templates.outgoingMessageFromBot
+            else templates.outgoingMessage
         val completeTemplate =
-                if (mappingToken == null) messageTemplate
-                else messageTemplate + templates.outgoingMessageToken.replace("{token}", "#$mappingToken")
+            if (mappingToken == null) messageTemplate
+            else messageTemplate + templates.outgoingMessageToken.replace("{token}", "#$mappingToken")
 
         val templateBody = completeTemplate
-                .replace("{sender}", sender.full)
-                .replace("{body}", body)
+            .replace("{sender}", sender.full)
+            .replace("{body}", body)
 
         smsProvider.sendSms(receiver = receiverNumber, body = templateBody)
     }

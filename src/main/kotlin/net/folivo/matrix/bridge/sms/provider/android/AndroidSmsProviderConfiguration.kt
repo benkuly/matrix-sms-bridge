@@ -35,38 +35,38 @@ class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProvider
     @Bean("androidSmsProviderWebClient")
     fun androidSmsProviderWebClient(webClientBuilder: WebClient.Builder): WebClient {
         val builder = webClientBuilder
-                .baseUrl(properties.baseUrl)
-                .defaultHeader(
-                        HttpHeaders.AUTHORIZATION,
-                        "Basic " + Base64.getEncoder()
-                                .encodeToString("${properties.username}:${properties.password}".toByteArray())
-                )
-                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .filter(ExchangeFilterFunction.ofResponseProcessor { clientResponse: ClientResponse ->
-                    val statusCode = clientResponse.statusCode()
-                    if (clientResponse.statusCode().isError) {
-                        clientResponse.bodyToMono(String::class.java)
-                                .flatMap {
-                                    Mono.error(AndroidSmsProviderException(it, statusCode))
-                                }
-                    } else {
-                        Mono.just(clientResponse)
-                    }
-                })
+            .baseUrl(properties.baseUrl)
+            .defaultHeader(
+                HttpHeaders.AUTHORIZATION,
+                "Basic " + Base64.getEncoder()
+                    .encodeToString("${properties.username}:${properties.password}".toByteArray())
+            )
+            .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .filter(ExchangeFilterFunction.ofResponseProcessor { clientResponse: ClientResponse ->
+                val statusCode = clientResponse.statusCode()
+                if (clientResponse.statusCode().isError) {
+                    clientResponse.bodyToMono(String::class.java)
+                        .flatMap {
+                            Mono.error(AndroidSmsProviderException(it, statusCode))
+                        }
+                } else {
+                    Mono.just(clientResponse)
+                }
+            })
 
         val trustStoreProps = properties.trustStore
         if (trustStoreProps != null) {
             val keyStore = KeyStore.getInstance(trustStoreProps.type)
             keyStore.load(
-                    Files.newInputStream(Path.of(trustStoreProps.path)),
-                    trustStoreProps.password.toCharArray()
+                Files.newInputStream(Path.of(trustStoreProps.path)),
+                trustStoreProps.password.toCharArray()
             )
             val factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
             factory.init(keyStore)
             val sslContext = SslContextBuilder.forClient()
-                    .trustManager(factory)
-                    .build()
+                .trustManager(factory)
+                .build()
             val client = HttpClient.create().secure { spec -> spec.sslContext(sslContext) }
             builder.clientConnector(ReactorClientHttpConnector(client))
         }
@@ -76,31 +76,31 @@ class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProvider
 
     @Bean
     fun androidSmsProvider(
-            receiveSmsService: ReceiveSmsService,
-            phoneNumberService: PhoneNumberService,
-            processedRepository: AndroidSmsProcessedRepository,
-            outSmsMessageRepository: AndroidOutSmsMessageRepository,
-            @Qualifier("androidSmsProviderWebClient")
-            webClient: WebClient,
-            matrixClient: MatrixClient,
-            smsBridgeProperties: SmsBridgeProperties
+        receiveSmsService: ReceiveSmsService,
+        phoneNumberService: PhoneNumberService,
+        processedRepository: AndroidSmsProcessedRepository,
+        outSmsMessageRepository: AndroidOutSmsMessageRepository,
+        @Qualifier("androidSmsProviderWebClient")
+        webClient: WebClient,
+        matrixClient: MatrixClient,
+        smsBridgeProperties: SmsBridgeProperties
     ): AndroidSmsProvider {
         return AndroidSmsProvider(
-                receiveSmsService,
-                phoneNumberService,
-                processedRepository,
-                outSmsMessageRepository,
-                webClient,
-                matrixClient,
-                smsBridgeProperties
+            receiveSmsService,
+            phoneNumberService,
+            processedRepository,
+            outSmsMessageRepository,
+            webClient,
+            matrixClient,
+            smsBridgeProperties
         )
     }
 
     @Bean
     fun smsProviderLauncher(
-            androidSmsProvider: AndroidSmsProvider,
-            smsBridgeProperties: SmsBridgeProperties,
-            matrixClient: MatrixClient
+        androidSmsProvider: AndroidSmsProvider,
+        smsBridgeProperties: SmsBridgeProperties,
+        matrixClient: MatrixClient
     ): AndroidSmsProviderLauncher {
         return AndroidSmsProviderLauncher(androidSmsProvider, smsBridgeProperties, matrixClient)
     }

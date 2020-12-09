@@ -216,7 +216,7 @@ listeners:
     x_forwarded: true
 
     resources:
-      - names: [client, federation]
+      - names: [ client, federation ]
         compress: false
 
     # example additional_resources:
@@ -505,7 +505,7 @@ acme:
   # Again, you may want to change this if you are forwarding connections
   # through Apache/Nginx/etc.
   #
-  bind_addresses: ['::', '0.0.0.0']
+  bind_addresses: [ '::', '0.0.0.0' ]
 
   # How many days remaining on a certificate before it is renewed.
   #

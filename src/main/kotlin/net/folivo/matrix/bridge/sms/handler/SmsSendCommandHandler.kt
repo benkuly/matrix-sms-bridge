@@ -30,14 +30,14 @@ import java.time.temporal.ChronoUnit
 
 @Component
 class SmsSendCommandHandler(
-        private val userService: MatrixUserService,
-        private val roomService: MatrixRoomService,
-        private val membershipService: MatrixMembershipService,
-        private val messageService: MatrixMessageService,
-        private val appserviceHandlerHelper: AppserviceHandlerHelper,
-        private val matrixClient: MatrixClient,
-        private val botProperties: MatrixBotProperties,
-        private val smsBridgeProperties: SmsBridgeProperties,
+    private val userService: MatrixUserService,
+    private val roomService: MatrixRoomService,
+    private val membershipService: MatrixMembershipService,
+    private val messageService: MatrixMessageService,
+    private val appserviceHandlerHelper: AppserviceHandlerHelper,
+    private val matrixClient: MatrixClient,
+    private val botProperties: MatrixBotProperties,
+    private val smsBridgeProperties: SmsBridgeProperties,
 ) {
 
     private val templates: SmsBridgeTemplateProperties = smsBridgeProperties.templates
@@ -47,13 +47,13 @@ class SmsSendCommandHandler(
     }
 
     suspend fun handleCommand(
-            body: String?,
-            senderId: UserId,
-            receiverNumbers: Set<String>,
-            inviteUserIds: Set<UserId>,
-            roomName: String?,
-            sendAfterLocal: LocalDateTime?,
-            roomCreationMode: RoomCreationMode
+        body: String?,
+        senderId: UserId,
+        receiverNumbers: Set<String>,
+        inviteUserIds: Set<UserId>,
+        roomName: String?,
+        sendAfterLocal: LocalDateTime?,
+        roomCreationMode: RoomCreationMode
     ): String {
         LOG.debug("handle command")
         val requiredManagedReceiverIds = receiverNumbers.map {
@@ -61,49 +61,49 @@ class SmsSendCommandHandler(
         }.toSet()
         val membersWithoutBot = setOf(senderId, *requiredManagedReceiverIds.toTypedArray())
         val rooms = roomService.getRoomsByMembers(membersWithoutBot)
-                .take(2)
-                .map { it.id }
-                .toSet()
+            .take(2)
+            .map { it.id }
+            .toSet()
 
         try {
             val answer = when (roomCreationMode) {
-                AUTO -> {
+                AUTO   -> {
                     if (smsBridgeProperties.singleModeEnabled && receiverNumbers.size == 1) {
                         sendMessageToRoomAlias(
-                                senderId,
-                                body,
-                                roomName,
-                                requiredManagedReceiverIds.first(),
-                                inviteUserIds,
-                                sendAfterLocal
+                            senderId,
+                            body,
+                            roomName,
+                            requiredManagedReceiverIds.first(),
+                            inviteUserIds,
+                            sendAfterLocal
                         )
                     } else when (rooms.size) {
                         0    -> createRoomAndSendMessage(
-                                body,
-                                senderId,
-                                roomName,
-                                requiredManagedReceiverIds,
-                                inviteUserIds,
-                                sendAfterLocal
-                        )
-                        1    -> sendMessageToRoom(
-                                rooms.first(),
-                                senderId,
-                                body,
-                                requiredManagedReceiverIds,
-                                sendAfterLocal
-                        )
-                        else -> templates.botSmsSendTooManyRooms
-                    }
-                }
-                ALWAYS -> {
-                    createRoomAndSendMessage(
                             body,
                             senderId,
                             roomName,
                             requiredManagedReceiverIds,
                             inviteUserIds,
                             sendAfterLocal
+                        )
+                        1    -> sendMessageToRoom(
+                            rooms.first(),
+                            senderId,
+                            body,
+                            requiredManagedReceiverIds,
+                            sendAfterLocal
+                        )
+                        else -> templates.botSmsSendTooManyRooms
+                    }
+                }
+                ALWAYS -> {
+                    createRoomAndSendMessage(
+                        body,
+                        senderId,
+                        roomName,
+                        requiredManagedReceiverIds,
+                        inviteUserIds,
+                        sendAfterLocal
                     )
                 }
                 SINGLE -> {
@@ -111,26 +111,26 @@ class SmsSendCommandHandler(
                         templates.botSmsSendSingleModeDisabled
                     } else if (receiverNumbers.size == 1) {
                         sendMessageToRoomAlias(
-                                senderId,
-                                body,
-                                roomName,
-                                requiredManagedReceiverIds.first(),
-                                inviteUserIds,
-                                sendAfterLocal
+                            senderId,
+                            body,
+                            roomName,
+                            requiredManagedReceiverIds.first(),
+                            inviteUserIds,
+                            sendAfterLocal
                         )
                     } else {
                         templates.botSmsSendSingleModeOnlyOneTelephoneNumberAllowed
                     }
                 }
-                NO -> {
+                NO     -> {
                     when (rooms.size) {
                         0    -> templates.botSmsSendDisabledRoomCreation
                         1    -> sendMessageToRoom(
-                                rooms.first(),
-                                senderId,
-                                body,
-                                requiredManagedReceiverIds,
-                                sendAfterLocal
+                            rooms.first(),
+                            senderId,
+                            body,
+                            requiredManagedReceiverIds,
+                            sendAfterLocal
                         )
                         else -> templates.botSmsSendTooManyRooms
                     }
@@ -141,40 +141,40 @@ class SmsSendCommandHandler(
         } catch (error: Throwable) {
             LOG.warn("trying to create room, join room or send message failed: ${error.message}")
             return templates.botSmsSendError
-                    .replace("{error}", error.message ?: "unknown")
-                    .replace("{receiverNumbers}", receiverNumbers.joinToString())
+                .replace("{error}", error.message ?: "unknown")
+                .replace("{receiverNumbers}", receiverNumbers.joinToString())
         }
     }
 
     internal suspend fun sendMessageToRoomAlias(
-            senderId: UserId,
-            body: String?,
-            roomName: String?,
-            requiredManagedReceiverId: UserId,
-            inviteUserIds: Set<UserId>,
-            sendAfterLocal: LocalDateTime?
+        senderId: UserId,
+        body: String?,
+        roomName: String?,
+        requiredManagedReceiverId: UserId,
+        inviteUserIds: Set<UserId>,
+        sendAfterLocal: LocalDateTime?
     ): String {
         LOG.debug("send message to room alias")
         val aliasLocalpart = requiredManagedReceiverId.localpart
         val roomAliasId = RoomAliasId(aliasLocalpart, botProperties.serverName)
         val existingRoomId = roomService.getRoomAlias(roomAliasId)?.roomId
         val roomId = existingRoomId
-                     ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId
+            ?: matrixClient.roomsApi.getRoomAlias(roomAliasId).roomId
 
         if (roomName != null && (existingRoomId == null || tryGetRoomName(roomId).isNullOrEmpty())) {
             matrixClient.roomsApi.sendStateEvent(roomId, NameEventContent(roomName))
         }
         setOf(senderId, *inviteUserIds.toTypedArray())
-                .filter { !membershipService.doesRoomContainsMembers(roomId, setOf(it)) }
-                .forEach { matrixClient.roomsApi.inviteUser(roomId, it) }
-        
+            .filter { !membershipService.doesRoomContainsMembers(roomId, setOf(it)) }
+            .forEach { matrixClient.roomsApi.inviteUser(roomId, it) }
+
         return sendMessageToRoom(
-                roomId,
-                senderId,
-                body,
-                setOf(requiredManagedReceiverId),
-                sendAfterLocal,
-                denyBotInvite = true
+            roomId,
+            senderId,
+            body,
+            setOf(requiredManagedReceiverId),
+            sendAfterLocal,
+            denyBotInvite = true
         )
     }
 
@@ -187,12 +187,12 @@ class SmsSendCommandHandler(
     }
 
     internal suspend fun createRoomAndSendMessage(
-            body: String?,
-            senderId: UserId,
-            roomName: String?,
-            requiredManagedReceiverIds: Set<UserId>,
-            inviteUserIds: Set<UserId>,
-            sendAfterLocal: LocalDateTime?
+        body: String?,
+        senderId: UserId,
+        roomName: String?,
+        requiredManagedReceiverIds: Set<UserId>,
+        inviteUserIds: Set<UserId>,
+        sendAfterLocal: LocalDateTime?
     ): String {
         LOG.debug("ensure that users has already been created")
         requiredManagedReceiverIds.forEach {
@@ -203,18 +203,18 @@ class SmsSendCommandHandler(
 
         LOG.debug("create room and send message")
         val roomId = matrixClient.roomsApi.createRoom(
-                name = roomName,
-                invite = setOf(senderId, *requiredManagedReceiverIds.toTypedArray(), *inviteUserIds.toTypedArray()),
-                visibility = PRIVATE,
-                powerLevelContentOverride = PowerLevelsEventContent(
-                        invite = 0,
-                        kick = 0,
-                        events = mapOf("m.room.name" to 0, "m.room.topic" to 0),
-                        users = mapOf(
-                                botProperties.botUserId to 100,
-                                *requiredManagedReceiverIds.map { it to 100 }.toTypedArray()
-                        )
+            name = roomName,
+            invite = setOf(senderId, *requiredManagedReceiverIds.toTypedArray(), *inviteUserIds.toTypedArray()),
+            visibility = PRIVATE,
+            powerLevelContentOverride = PowerLevelsEventContent(
+                invite = 0,
+                kick = 0,
+                events = mapOf("m.room.name" to 0, "m.room.topic" to 0),
+                users = mapOf(
+                    botProperties.botUserId to 100,
+                    *requiredManagedReceiverIds.map { it to 100 }.toTypedArray()
                 )
+            )
         )
         roomService.getOrCreateRoom(roomId)
 
@@ -227,26 +227,26 @@ class SmsSendCommandHandler(
     }
 
     internal suspend fun sendMessageToRoom(
-            roomId: RoomId,
-            senderId: UserId,
-            body: String?,
-            requiredManagedReceiverIds: Set<UserId>,
-            sendAfterLocal: LocalDateTime?,
-            denyBotInvite: Boolean = false
+        roomId: RoomId,
+        senderId: UserId,
+        body: String?,
+        requiredManagedReceiverIds: Set<UserId>,
+        sendAfterLocal: LocalDateTime?,
+        denyBotInvite: Boolean = false
     ): String {
         if (body.isNullOrBlank()) {
             return templates.botSmsSendNoMessage
         } else {
             val botIsMember = denyBotInvite || membershipService.doesRoomContainsMembers(
-                    roomId,
-                    setOf(botProperties.botUserId)
+                roomId,
+                setOf(botProperties.botUserId)
             )
             if (!botIsMember) {
                 LOG.debug("try to invite sms bot user to room $roomId")
                 matrixClient.roomsApi.inviteUser(
-                        roomId = roomId,
-                        userId = botProperties.botUserId,
-                        asUserId = requiredManagedReceiverIds.first()
+                    roomId = roomId,
+                    userId = botProperties.botUserId,
+                    asUserId = requiredManagedReceiverIds.first()
                 )
             }
 
@@ -255,23 +255,23 @@ class SmsSendCommandHandler(
             if (sendAfter != null && Instant.now().until(sendAfter, ChronoUnit.SECONDS) > 15) {
                 LOG.debug("notify room $roomId that message will be send later")
                 messageService.sendRoomMessage(
-                        MatrixMessage(
-                                roomId = roomId,
-                                body = templates.botSmsSendNoticeDelayedMessage
-                                        .replace("{sendAfter}", sendAfterLocal.toString()),
-                                isNotice = true
-                        ), requiredManagedReceiverIds.toSet()
+                    MatrixMessage(
+                        roomId = roomId,
+                        body = templates.botSmsSendNoticeDelayedMessage
+                            .replace("{sendAfter}", sendAfterLocal.toString()),
+                        isNotice = true
+                    ), requiredManagedReceiverIds.toSet()
                 )
             }
             LOG.debug("send message to room $roomId")
             messageService.sendRoomMessage(
-                    MatrixMessage(
-                            roomId = roomId,
-                            body = templates.botSmsSendNewRoomMessage
-                                    .replace("{sender}", senderId.full)
-                                    .replace("{body}", body),
-                            sendAfter = sendAfter ?: Instant.now()
-                    ), requiredManagedReceiverIds.toSet()
+                MatrixMessage(
+                    roomId = roomId,
+                    body = templates.botSmsSendNewRoomMessage
+                        .replace("{sender}", senderId.full)
+                        .replace("{body}", body),
+                    sendAfter = sendAfter ?: Instant.now()
+                ), requiredManagedReceiverIds.toSet()
             )
 
             return templates.botSmsSendSendMessage

@@ -16,23 +16,23 @@ import org.springframework.stereotype.Component
 
 @Component
 class MessageToBotHandler(
-        private val smsSendCommandHandler: SmsSendCommandHandler,
-        private val smsInviteCommandHandler: SmsInviteCommandHandler,
-        private val smsAbortCommandHandler: SmsAbortCommandHandler,
-        private val phoneNumberService: PhoneNumberService,
-        private val smsBridgeProperties: SmsBridgeProperties,
-        private val userService: MatrixUserService,
-        private val membershipService: MatrixMembershipService
+    private val smsSendCommandHandler: SmsSendCommandHandler,
+    private val smsInviteCommandHandler: SmsInviteCommandHandler,
+    private val smsAbortCommandHandler: SmsAbortCommandHandler,
+    private val phoneNumberService: PhoneNumberService,
+    private val smsBridgeProperties: SmsBridgeProperties,
+    private val userService: MatrixUserService,
+    private val membershipService: MatrixMembershipService
 ) {
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)
     }
 
     suspend fun handleMessage(
-            roomId: RoomId,
-            body: String,
-            senderId: UserId,
-            context: MessageContext
+        roomId: RoomId,
+        body: String,
+        senderId: UserId,
+        context: MessageContext
     ): Boolean {
         val sender = userService.getOrCreateUser(senderId)
         val membershipSize = membershipService.getMembershipsSizeByRoomId(roomId)
@@ -55,23 +55,23 @@ class MessageToBotHandler(
                         val args = Commandline.translateCommandline(body.removePrefix("sms"))
 
                         SmsCommand().context { console = answerConsole }
-                                .subcommands(
-                                        SmsSendCommand(
-                                                senderId,
-                                                smsSendCommandHandler,
-                                                phoneNumberService,
-                                                smsBridgeProperties
-                                        ),
-                                        SmsInviteCommand(
-                                                senderId,
-                                                smsInviteCommandHandler
-                                        ),
-                                        SmsAbortCommand(
-                                                roomId,
-                                                smsAbortCommandHandler
-                                        )
+                            .subcommands(
+                                SmsSendCommand(
+                                    senderId,
+                                    smsSendCommandHandler,
+                                    phoneNumberService,
+                                    smsBridgeProperties
+                                ),
+                                SmsInviteCommand(
+                                    senderId,
+                                    smsInviteCommandHandler
+                                ),
+                                SmsAbortCommand(
+                                    roomId,
+                                    smsAbortCommandHandler
                                 )
-                                .parse(args)
+                            )
+                            .parse(args)
                     } catch (e: PrintHelpMessage) {
                         answerConsole.print(e.command.getFormattedHelp(), false)
                     } catch (e: PrintCompletionMessage) {
@@ -86,8 +86,8 @@ class MessageToBotHandler(
                         answerConsole.print("Aborted!", true)
                     } catch (error: Throwable) {
                         context.answer(
-                                smsBridgeProperties.templates.botSmsError
-                                        .replace("{error}", error.message ?: "unknown")
+                            smsBridgeProperties.templates.botSmsError
+                                .replace("{error}", error.message ?: "unknown")
                         )
                     }
                 }.join()

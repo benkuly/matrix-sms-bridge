@@ -35,12 +35,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val mappingServiceMock: MatrixSmsMappingService = mockk()
 
         val cut = MessageToSmsHandler(
-                botPropertiesMock,
-                smsBridgePropertiesMock,
-                smsProviderMock,
-                roomServiceMock,
-                userServiceMock,
-                mappingServiceMock
+            botPropertiesMock,
+            smsBridgePropertiesMock,
+            smsProviderMock,
+            roomServiceMock,
+            userServiceMock,
+            mappingServiceMock
         )
 
         val contextMock: MessageContext = mockk()
@@ -57,17 +57,17 @@ private fun testBody(): DescribeSpec.() -> Unit {
             val userId2 = UserId("sms_22222", "server")
             beforeTest {
                 coEvery { userServiceMock.getUsersByRoom(roomId) }.returns(
-                        flowOf(
-                                MatrixUser(botUserId, true),
-                                MatrixUser(senderId, false),
-                                MatrixUser(userId1, true),
-                                MatrixUser(userId2, true)
-                        )
+                    flowOf(
+                        MatrixUser(botUserId, true),
+                        MatrixUser(senderId, false),
+                        MatrixUser(userId1, true),
+                        MatrixUser(userId2, true)
+                    )
                 )
                 coEvery { mappingServiceMock.getOrCreateMapping(userId1, roomId) }
-                        .returns(MatrixSmsMapping("memId", 2))
+                    .returns(MatrixSmsMapping("memId", 2))
                 coEvery { mappingServiceMock.getOrCreateMapping(userId2, roomId) }
-                        .returns(MatrixSmsMapping("memId", 3))
+                    .returns(MatrixSmsMapping("memId", 3))
             }
             describe("mapping without token is allowed") {
                 beforeTest {
@@ -75,7 +75,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should ignore token when room is managed") {
                     coEvery { roomServiceMock.getOrCreateRoom(roomId) }
-                            .returns(MatrixRoom(roomId, true))
+                        .returns(MatrixRoom(roomId, true))
                     cut.handleMessage(roomId, "body", senderId, contextMock, true)
                     coVerify {
                         smsProviderMock.sendSms("+11111", "@sender:server wrote body")
@@ -84,9 +84,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should ignore token when room is the only room") {
                     coEvery { roomServiceMock.getOrCreateRoom(roomId) }
-                            .returns(MatrixRoom(roomId, false))
+                        .returns(MatrixRoom(roomId, false))
                     coEvery { roomServiceMock.getRoomsByMembers(any()) }
-                            .returns(flowOf(mockk()))
+                        .returns(flowOf(mockk()))
                     cut.handleMessage(roomId, "body", senderId, contextMock, true)
                     coVerifyAll {
                         smsProviderMock.sendSms("+11111", "@sender:server wrote body")
@@ -95,11 +95,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should not ignore token when room is not managed and not the only room") {
                     coEvery { roomServiceMock.getOrCreateRoom(roomId) }
-                            .returns(MatrixRoom(roomId, false))
+                        .returns(MatrixRoom(roomId, false))
                     coEvery { roomServiceMock.getRoomsByMembers(any()) }
-                            .returnsMany(flowOf(mockk(), mockk()), flowOf(mockk()))
+                        .returnsMany(flowOf(mockk(), mockk()), flowOf(mockk()))
                     coEvery { mappingServiceMock.getOrCreateMapping(any(), roomId).mappingToken }
-                            .returns(2)
+                        .returns(2)
                     cut.handleMessage(roomId, "body", senderId, contextMock, true)
                     coVerifyAll {
                         smsProviderMock.sendSms("+11111", "@sender:server wrote body with #2")
@@ -111,11 +111,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 beforeTest {
                     every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(false)
                     coEvery { roomServiceMock.getOrCreateRoom(roomId) }
-                            .returns(MatrixRoom(roomId, false))
+                        .returns(MatrixRoom(roomId, false))
                     coEvery { roomServiceMock.getRoomsByMembers(any()) }
-                            .returns(flowOf(mockk(), mockk()))
+                        .returns(flowOf(mockk(), mockk()))
                     coEvery { mappingServiceMock.getOrCreateMapping(any(), roomId).mappingToken }
-                            .returns(2)
+                        .returns(2)
                 }
                 it("should send sms") {
                     cut.handleMessage(roomId, "body", senderId, contextMock, true)
@@ -142,7 +142,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 beforeTest {
                     every { smsBridgePropertiesMock.allowMappingWithoutToken }.returns(true)
                     coEvery { roomServiceMock.getOrCreateRoom(roomId) }
-                            .returns(MatrixRoom(roomId, true))
+                        .returns(MatrixRoom(roomId, true))
                 }
                 it("when send sms fails") {
                     coEvery { smsProviderMock.sendSms("+11111", any()) }.throws(RuntimeException("reason"))
@@ -163,11 +163,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
         afterTest {
             clearMocks(
-                    roomServiceMock,
-                    userServiceMock,
-                    smsProviderMock,
-                    mappingServiceMock,
-                    contextMock
+                roomServiceMock,
+                userServiceMock,
+                smsProviderMock,
+                mappingServiceMock,
+                contextMock
             )
         }
     }

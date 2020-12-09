@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
 import net.folivo.matrix.bot.membership.MatrixMembershipService
+import net.folivo.matrix.bot.user.MatrixUserService
 import net.folivo.matrix.core.model.MatrixId.*
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.core.model.events.m.room.message.TextMessageEventContent
@@ -18,15 +19,17 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val messageRepositoryMock: MatrixMessageRepository = mockk()
         val messageReceiverRepositoryMock: MatrixMessageReceiverRepository = mockk()
         val membershipServiceMock: MatrixMembershipService = mockk()
+        val userServiceMock: MatrixUserService = mockk()
         val matrixClientMock: MatrixClient = mockk()
 
         val cut = spyk(
-                MatrixMessageService(
-                        messageRepositoryMock,
-                        messageReceiverRepositoryMock,
-                        membershipServiceMock,
-                        matrixClientMock
-                )
+            MatrixMessageService(
+                messageRepositoryMock,
+                messageReceiverRepositoryMock,
+                membershipServiceMock,
+                userServiceMock,
+                matrixClientMock
+            )
         )
 
         val roomId = RoomId("room", "server")
@@ -38,23 +41,38 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 coEvery { cut.deleteMessage(any()) } just Runs
                 coEvery { cut.saveMessageAndReceivers(any(), any()) } just Runs
             }
+            describe("check required users") {
+                beforeTest { coEvery { membershipServiceMock.doesRoomContainsMembers(any(), any()) }.returns(false) }
+                it("should use set of required users and sender when sender is given") {
+                    val message =
+                        MatrixMessage(roomId, "body", Instant.now().minusSeconds(400000), asUserId = userId1)
+                    cut.sendRoomMessage(message, setOf(userId2))
+                    coVerify { membershipServiceMock.doesRoomContainsMembers(roomId, setOf(userId1, userId2)) }
+                }
+                it("should use set of required users when sender is not given") {
+                    val message =
+                        MatrixMessage(roomId, "body", Instant.now().minusSeconds(400000))
+                    cut.sendRoomMessage(message, setOf(userId2))
+                    coVerify { membershipServiceMock.doesRoomContainsMembers(roomId, setOf(userId2)) }
+                }
+            }
             describe("message send after is after now") {
                 describe("room contains receivers") {
                     beforeTest {
                         coEvery { membershipServiceMock.doesRoomContainsMembers(any(), any()) }
-                                .returns(true)
+                            .returns(true)
                     }
                     describe("sending message fails") {
                         beforeTest {
                             coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
-                                    .throws(RuntimeException())
+                                .throws(RuntimeException())
                         }
                         describe("message is older then three days") {
                             val message = MatrixMessage(
-                                    roomId,
-                                    "body",
-                                    sendAfter = Instant.now().minusSeconds(400000),
-                                    id = 2
+                                roomId,
+                                "body",
+                                sendAfter = Instant.now().minusSeconds(400000),
+                                id = 2
                             )
                             it("should delete message") {
                                 cut.sendRoomMessage(message, setOf(userId1))
@@ -73,20 +91,20 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                     describe("message is notice") {
                         val message = MatrixMessage(
-                                roomId,
-                                "body",
-                                isNotice = true,
-                                sendAfter = Instant.now().minusSeconds(2424)
+                            roomId,
+                            "body",
+                            isNotice = true,
+                            sendAfter = Instant.now().minusSeconds(2424)
                         )
                         it("should send message and delete message from database") {
                             coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
-                                    .returns(EventId("event", "server"))
+                                .returns(EventId("event", "server"))
                             cut.sendRoomMessage(message, setOf(userId1))
                             coVerify {
                                 matrixClientMock.roomsApi.sendRoomEvent(
-                                        roomId,
-                                        match<NoticeMessageEventContent> { it.body == "body" },
-                                        txnId = any()
+                                    roomId,
+                                    match<NoticeMessageEventContent> { it.body == "body" },
+                                    txnId = any()
                                 )
                                 cut.deleteMessage(message)
                             }
@@ -94,20 +112,20 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                     describe("message is not notice") {
                         val message = MatrixMessage(
-                                roomId,
-                                "body",
-                                isNotice = false,
-                                sendAfter = Instant.now().minusSeconds(2424)
+                            roomId,
+                            "body",
+                            isNotice = false,
+                            sendAfter = Instant.now().minusSeconds(2424)
                         )
                         it("should send message and delete message from database") {
                             coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
-                                    .returns(EventId("event", "server"))
+                                .returns(EventId("event", "server"))
                             cut.sendRoomMessage(message, setOf(userId1))
                             coVerify {
                                 matrixClientMock.roomsApi.sendRoomEvent(
-                                        roomId,
-                                        match<TextMessageEventContent> { it.body == "body" },
-                                        txnId = any()
+                                    roomId,
+                                    match<TextMessageEventContent> { it.body == "body" },
+                                    txnId = any()
                                 )
                                 cut.deleteMessage(message)
                             }
@@ -117,7 +135,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 describe("room does not contain receivers") {
                     beforeTest {
                         coEvery { membershipServiceMock.doesRoomContainsMembers(any(), any()) }
-                                .returns(false)
+                            .returns(false)
                     }
                     describe("message is new") {
                         val message = MatrixMessage(roomId, "body", sendAfter = Instant.now().minusSeconds(400000))
@@ -125,21 +143,21 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             cut.sendRoomMessage(message, setOf(userId1))
                             coVerify {
                                 cut.saveMessageAndReceivers(
-                                        match {
-                                            it.body == "body"
-                                            && it.sendAfter.until(Instant.now(), ChronoUnit.MINUTES) < 24
-                                        },
-                                        setOf(userId1)
+                                    match {
+                                        it.body == "body"
+                                                && it.sendAfter.until(Instant.now(), ChronoUnit.MINUTES) < 24
+                                    },
+                                    setOf(userId1)
                                 )
                             }
                         }
                     }
                     describe("message is older then three days and not new") {
                         val message = MatrixMessage(
-                                roomId,
-                                "body",
-                                sendAfter = Instant.now().minusSeconds(400000),
-                                id = 2
+                            roomId,
+                            "body",
+                            sendAfter = Instant.now().minusSeconds(400000),
+                            id = 2
                         )
                         it("should delete message") {
                             cut.sendRoomMessage(message, setOf(userId1))
@@ -172,13 +190,18 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
         describe(MatrixMessageService::saveMessageAndReceivers.name) {
             it("should save message and its receivers") {
-                val message = MatrixMessage(roomId, "body")
+                val senderId = UserId("sender", "server")
+                val message = MatrixMessage(roomId, "body", asUserId = senderId)
                 coEvery { messageRepositoryMock.save(message) }.returns(message.copy(id = 24))
                 coEvery { messageReceiverRepositoryMock.save(any()) }.returns(mockk())
+                coEvery { userServiceMock.getOrCreateUser(any()) }.returns(mockk())
                 cut.saveMessageAndReceivers(message, setOf(userId1, userId2))
                 coVerifyAll {
                     messageReceiverRepositoryMock.save(MatrixMessageReceiver(24, userId1))
                     messageReceiverRepositoryMock.save(MatrixMessageReceiver(24, userId2))
+                    userServiceMock.getOrCreateUser(senderId)
+                    userServiceMock.getOrCreateUser(userId1)
+                    userServiceMock.getOrCreateUser(userId2)
                 }
             }
         }
@@ -201,9 +224,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 val message2 = MatrixMessage(roomId, "body", id = 2)
                 every { messageRepositoryMock.findAll() }.returns(flowOf(message1, message2))
                 every { messageReceiverRepositoryMock.findByRoomMessageId(1) }
-                        .returns(flowOf(MatrixMessageReceiver(1, userId1)))
+                    .returns(flowOf(MatrixMessageReceiver(1, userId1)))
                 every { messageReceiverRepositoryMock.findByRoomMessageId(2) }
-                        .returns(flowOf(MatrixMessageReceiver(2, userId1), MatrixMessageReceiver(2, userId2)))
+                    .returns(flowOf(MatrixMessageReceiver(2, userId1), MatrixMessageReceiver(2, userId2)))
                 coEvery { cut.sendRoomMessage(any(), any()) } just Runs
                 cut.processMessageQueue()
                 coVerify {
@@ -215,11 +238,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
 
         afterTest {
             clearMocks(
-                    cut,
-                    messageRepositoryMock,
-                    messageReceiverRepositoryMock,
-                    membershipServiceMock,
-                    matrixClientMock
+                cut,
+                messageRepositoryMock,
+                messageReceiverRepositoryMock,
+                membershipServiceMock,
+                matrixClientMock
             )
         }
     }

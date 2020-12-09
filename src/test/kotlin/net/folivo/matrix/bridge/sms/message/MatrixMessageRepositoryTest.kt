@@ -15,8 +15,8 @@ import org.springframework.data.r2dbc.core.delete
 @DataR2dbcTest
 @ImportAutoConfiguration(value = [MatrixBotDatabaseAutoconfiguration::class, SmsBridgeDatabaseConfiguration::class])
 class MatrixMessageRepositoryTest(
-        cut: MatrixMessageRepository,
-        db: R2dbcEntityTemplate
+    cut: MatrixMessageRepository,
+    db: R2dbcEntityTemplate
 ) : DescribeSpec(testBody(cut, db))
 
 private fun testBody(cut: MatrixMessageRepository, db: R2dbcEntityTemplate): DescribeSpec.() -> Unit {

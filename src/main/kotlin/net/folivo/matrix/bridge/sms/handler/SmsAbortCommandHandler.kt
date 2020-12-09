@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class SmsAbortCommandHandler(
-        private val messageService: MatrixMessageService,
-        smsBridgeProperties: SmsBridgeProperties,
+    private val messageService: MatrixMessageService,
+    smsBridgeProperties: SmsBridgeProperties,
 ) {
 
     private val templates: SmsBridgeTemplateProperties = smsBridgeProperties.templates
@@ -21,7 +21,7 @@ class SmsAbortCommandHandler(
     }
 
     suspend fun handleCommand(
-            roomId: RoomId
+        roomId: RoomId
     ): String {
         return try {
             messageService.deleteByRoomId(roomId)
@@ -29,7 +29,7 @@ class SmsAbortCommandHandler(
         } catch (ex: Throwable) {
             LOG.debug("got exception")
             templates.botSmsAbortError
-                    .replace("{error}", ex.message ?: "unknown")
+                .replace("{error}", ex.message ?: "unknown")
         }
     }
 

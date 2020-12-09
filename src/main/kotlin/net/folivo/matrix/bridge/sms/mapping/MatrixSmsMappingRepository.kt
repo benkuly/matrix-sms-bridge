@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository
 interface MatrixSmsMappingRepository : CoroutineCrudRepository<MatrixSmsMapping, String> {
 
     @Query(
-            """
+        """
         SELECT * from matrix_sms_mapping map
         JOIN matrix_membership mem ON mem.id = map.membership_id
         WHERE mem.user_id = :userId
@@ -20,7 +20,7 @@ interface MatrixSmsMappingRepository : CoroutineCrudRepository<MatrixSmsMapping,
     fun findByUserIdSortByMappingTokenDesc(userId: UserId): Flow<MatrixSmsMapping>
 
     @Query(
-            """
+        """
         SELECT * from matrix_sms_mapping map
         JOIN matrix_membership mem ON mem.id = map.membership_id
         WHERE map.mapping_token = :mappingToken AND mem.user_id = :userId

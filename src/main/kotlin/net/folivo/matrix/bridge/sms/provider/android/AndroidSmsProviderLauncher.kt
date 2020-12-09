@@ -17,9 +17,9 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 
 class AndroidSmsProviderLauncher(
-        private val androidSmsProvider: AndroidSmsProvider,
-        private val smsBridgeProperties: SmsBridgeProperties,
-        private val matrixClient: MatrixClient
+    private val androidSmsProvider: AndroidSmsProvider,
+    private val smsBridgeProperties: SmsBridgeProperties,
+    private val matrixClient: MatrixClient
 ) {
 
     companion object {
@@ -57,11 +57,11 @@ class AndroidSmsProviderLauncher(
             try {
                 if (smsBridgeProperties.defaultRoomId != null)
                     matrixClient.roomsApi.sendRoomEvent(
-                            smsBridgeProperties.defaultRoomId,
-                            NoticeMessageEventContent(
-                                    smsBridgeProperties.templates.providerReceiveError
-                                            .replace("{error}", reason.message ?: "unknown")
-                            )
+                        smsBridgeProperties.defaultRoomId,
+                        NoticeMessageEventContent(
+                            smsBridgeProperties.templates.providerReceiveError
+                                .replace("{error}", reason.message ?: "unknown")
+                        )
                     )
             } catch (error: Throwable) {
                 LOG.error("could not warn user in default room: ${error.message}")

@@ -22,31 +22,31 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
 
         val cut = SmsMatrixMembershipChangeService(
-                roomServiceMock,
-                mockk(),
-                mockk(),
-                mockk(),
-                mockk(),
-                botPropertiesMock
+            roomServiceMock,
+            mockk(),
+            mockk(),
+            mockk(),
+            mockk(),
+            botPropertiesMock
         )
 
         val roomId = RoomId("room", "server")
         describe(SmsMatrixMembershipChangeService::shouldJoinRoom.name) {
             it("user is bot") {
                 cut.shouldJoinRoom(UserId("bot", "server"), roomId)
-                        .shouldBeTrue()
+                    .shouldBeTrue()
             }
             it("alias is that from user") {
                 coEvery { roomServiceMock.getRoomAliasByRoomId(roomId) }
-                        .returns(MatrixRoomAlias(RoomAliasId("sms_111111", "server"), roomId))
+                    .returns(MatrixRoomAlias(RoomAliasId("sms_111111", "server"), roomId))
                 cut.shouldJoinRoom(UserId("sms_111111", "server"), roomId)
-                        .shouldBeTrue()
+                    .shouldBeTrue()
             }
             it("alias is not that from user") {
                 coEvery { roomServiceMock.getRoomAliasByRoomId(roomId) }
-                        .returns(MatrixRoomAlias(RoomAliasId("sms_222222", "server"), roomId))
+                    .returns(MatrixRoomAlias(RoomAliasId("sms_222222", "server"), roomId))
                 cut.shouldJoinRoom(UserId("sms_111111", "server"), roomId)
-                        .shouldBeFalse()
+                    .shouldBeFalse()
             }
         }
 

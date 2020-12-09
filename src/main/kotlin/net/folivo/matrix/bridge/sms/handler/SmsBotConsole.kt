@@ -6,7 +6,7 @@ import net.folivo.matrix.bot.event.MessageContext
 import org.slf4j.LoggerFactory
 
 class SmsBotConsole(
-        private val messageContext: MessageContext
+    private val messageContext: MessageContext
 ) : CliktConsole {
     override val lineSeparator: String = ""
 

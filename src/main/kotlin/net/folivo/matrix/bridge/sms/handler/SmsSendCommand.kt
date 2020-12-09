@@ -15,10 +15,10 @@ import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 
 class SmsSendCommand(
-        private val sender: UserId,
-        private val handler: SmsSendCommandHandler,
-        private val phoneNumberService: PhoneNumberService,
-        private val smsBridgeProperties: SmsBridgeProperties
+    private val sender: UserId,
+    private val handler: SmsSendCommandHandler,
+    private val phoneNumberService: PhoneNumberService,
+    private val smsBridgeProperties: SmsBridgeProperties
 ) : CliktCommand(name = "send") {
 
     companion object {
@@ -45,30 +45,30 @@ class SmsSendCommand(
                 LOG.debug("use group and send message")
                 echo(runBlocking {
                     handler.handleCommand(
-                            body = body,
-                            senderId = sender,
-                            receiverNumbers = receiverNumbers.toSet(),
-                            inviteUserIds = inviteUserIds,
-                            roomName = roomName,
-                            roomCreationMode = roomCreationMode,
-                            sendAfterLocal = sendAfter
+                        body = body,
+                        senderId = sender,
+                        receiverNumbers = receiverNumbers.toSet(),
+                        inviteUserIds = inviteUserIds,
+                        roomName = roomName,
+                        roomCreationMode = roomCreationMode,
+                        sendAfterLocal = sendAfter
                     )
                 })
             } else {
                 LOG.debug("use one room for each number and send message")
                 receiverNumbers.forEach { number ->
                     echo(
-                            runBlocking {
-                                handler.handleCommand(
-                                        body = body,
-                                        senderId = sender,
-                                        receiverNumbers = setOf(number),
-                                        inviteUserIds = inviteUserIds,
-                                        roomName = roomName,
-                                        roomCreationMode = roomCreationMode,
-                                        sendAfterLocal = sendAfter
-                                )
-                            })
+                        runBlocking {
+                            handler.handleCommand(
+                                body = body,
+                                senderId = sender,
+                                receiverNumbers = setOf(number),
+                                inviteUserIds = inviteUserIds,
+                                roomName = roomName,
+                                roomCreationMode = roomCreationMode,
+                                sendAfterLocal = sendAfter
+                            )
+                        })
                 }
             }
         } catch (ex: NumberParseException) {

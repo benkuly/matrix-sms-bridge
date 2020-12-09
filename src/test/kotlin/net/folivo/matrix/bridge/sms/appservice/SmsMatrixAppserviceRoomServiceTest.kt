@@ -49,13 +49,13 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 result.powerLevelContentOverride?.kick.shouldBe(0)
                 result.powerLevelContentOverride?.events.shouldNotBeNull()
                 result.powerLevelContentOverride?.events?.shouldContainExactly(
-                        mapOf("m.room.name" to 0, "m.room.topic" to 0)
+                    mapOf("m.room.name" to 0, "m.room.topic" to 0)
                 )
                 result.powerLevelContentOverride?.users.shouldBe(
-                        mapOf(
-                                botUserId to 100,
-                                userId to 100
-                        )
+                    mapOf(
+                        botUserId to 100,
+                        userId to 100
+                    )
                 )
             }
         }

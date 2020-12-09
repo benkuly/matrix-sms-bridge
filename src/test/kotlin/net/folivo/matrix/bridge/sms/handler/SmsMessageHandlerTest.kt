@@ -26,11 +26,11 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
 
         val cut = SmsMessageHandler(
-                messageToSmsHandlerMock,
-                messageToBotHandlerMock,
-                membershipServiceMock,
-                botPropertiesMock,
-                smsBridgePropertiesMock
+            messageToSmsHandlerMock,
+            messageToBotHandlerMock,
+            membershipServiceMock,
+            botPropertiesMock,
+            smsBridgePropertiesMock
         )
 
         val senderId = UserId("sender", "server")
@@ -114,9 +114,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
 
         afterTest {
             clearMocks(
-                    messageToSmsHandlerMock,
-                    messageToBotHandlerMock,
-                    membershipServiceMock
+                messageToSmsHandlerMock,
+                messageToBotHandlerMock,
+                membershipServiceMock
             )
         }
     }

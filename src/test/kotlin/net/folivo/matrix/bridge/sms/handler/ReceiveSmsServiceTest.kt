@@ -32,19 +32,19 @@ private fun testBody(): DescribeSpec.() -> Unit {
             every { templates.answerInvalidTokenWithoutDefaultRoom } returns "invalid token without default room"
         }
         val cut = ReceiveSmsService(
-                matrixClientMock,
-                mappingServiceMock,
-                messageServiceMock,
-                membershipServiceMock,
-                roomServiceMock,
-                matrixBotPropertiesMock,
-                smsBridgePropertiesMock
+            matrixClientMock,
+            mappingServiceMock,
+            messageServiceMock,
+            membershipServiceMock,
+            roomServiceMock,
+            matrixBotPropertiesMock,
+            smsBridgePropertiesMock
         )
 
         beforeTest {
             every { matrixBotPropertiesMock.serverName } returns "server"
             coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
-                    .returns(EventId("event", "server"))
+                .returns(EventId("event", "server"))
             coEvery { messageServiceMock.sendRoomMessage(any(), any()) } just Runs
         }
 
@@ -56,10 +56,10 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     cut.receiveSms("message #3", "+111111").shouldBeNull()
                     coVerify {
                         matrixClientMock.roomsApi.sendRoomEvent(
-                                roomId,
-                                match<TextMessageEventContent> { it.body == "message" },
-                                txnId = any(),
-                                asUserId = UserId("sms_111111", "server")
+                            roomId,
+                            match<TextMessageEventContent> { it.body == "message" },
+                            txnId = any(),
+                            asUserId = UserId("sms_111111", "server")
                         )
                     }
                 }
@@ -78,7 +78,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         beforeTest {
                             coEvery { membershipServiceMock.hasRoomOnlyManagedUsersLeft(any()) }.returns(false)
                             coEvery { roomServiceMock.getRoomAlias(roomAliasId)?.roomId }
-                                    .returns(null)
+                                .returns(null)
                             coEvery { matrixClientMock.roomsApi.getRoomAlias(roomAliasId).roomId }.returns(roomId)
                         }
                         it("should try create alias by using client-server-api") {
@@ -92,12 +92,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             cut.receiveSms("body #123", "+111111").shouldBeNull()
                             coVerify {
                                 messageServiceMock.sendRoomMessage(
-                                        match {
-                                            it.roomId == roomId
-                                            && it.body == "body"
-                                            && it.isNotice == false
-                                            && it.asUserId == UserId("sms_111111", "server")
-                                        }, setOf(UserId("sms_111111", "server"))
+                                    match {
+                                        it.roomId == roomId
+                                                && it.body == "body"
+                                                && it.isNotice == false
+                                                && it.asUserId == UserId("sms_111111", "server")
+                                    }
                                 )
                             }
                         }
@@ -107,15 +107,15 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         describe("default room given") {
                             beforeTest {
                                 coEvery { smsBridgePropertiesMock.defaultRoomId }
-                                        .returns(RoomId("default", "room"))
+                                    .returns(RoomId("default", "room"))
                             }
                             it("should send notification to default room") {
                                 cut.receiveSms("body #123", "+111111").shouldBe(null)
                                 coVerify {
                                     matrixClientMock.roomsApi.sendRoomEvent(
-                                            RoomId("default", "room"),
-                                            match<TextMessageEventContent> { it.body == "+111111 wrote in #sms_111111:server" },
-                                            txnId = any()
+                                        RoomId("default", "room"),
+                                        match<TextMessageEventContent> { it.body == "+111111 wrote in #sms_111111:server" },
+                                        txnId = any()
                                     )
                                 }
                             }
@@ -141,9 +141,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             cut.receiveSms("body #123", "+111111").shouldBe("invalid token with default room")
                             coVerify {
                                 matrixClientMock.roomsApi.sendRoomEvent(
-                                        RoomId("default", "room"),
-                                        match<TextMessageEventContent> { it.body == "+111111 wrote body" },
-                                        txnId = any()
+                                    RoomId("default", "room"),
+                                    match<TextMessageEventContent> { it.body == "+111111 wrote body" },
+                                    txnId = any()
                                 )
                             }
                         }
@@ -170,12 +170,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
         afterTest {
             clearMocks(
-                    matrixClientMock,
-                    mappingServiceMock,
-                    messageServiceMock,
-                    membershipServiceMock,
-                    roomServiceMock,
-                    smsBridgePropertiesMock
+                matrixClientMock,
+                mappingServiceMock,
+                messageServiceMock,
+                membershipServiceMock,
+                roomServiceMock,
+                smsBridgePropertiesMock
             )
         }
     }

@@ -10,20 +10,20 @@ import java.time.Instant
 
 @Table("matrix_message")
 data class MatrixMessage(
-        @Column("room_id")
-        val roomId: RoomId,
-        @Column("body")
-        val body: String,
-        @Column("send_after")
-        val sendAfter: Instant = Instant.now(),
-        @Column("is_notice")
-        val isNotice: Boolean = false,
-        @Column("as_user_id")
-        val asUserId: UserId? = null,
-        @Id
-        @Column("id")
-        val id: Long? = null,
-        @Version
-        @Column("version")
-        val version: Int = 0
+    @Column("room_id")
+    val roomId: RoomId,
+    @Column("body")
+    val body: String,
+    @Column("send_after")
+    val sendAfter: Instant = Instant.now(),
+    @Column("is_notice")
+    val isNotice: Boolean = false,
+    @Column("as_user_id")
+    val asUserId: UserId? = null,
+    @Id
+    @Column("id")
+    val id: Long? = null,
+    @Version
+    @Column("version")
+    val version: Int = 0
 )

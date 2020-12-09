@@ -8,8 +8,8 @@ import net.folivo.matrix.core.model.MatrixId.RoomAliasId
 import net.folivo.matrix.core.model.MatrixId.UserId
 
 class SmsInviteCommand(
-        private val sender: UserId,
-        private val handler: SmsInviteCommandHandler
+    private val sender: UserId,
+    private val handler: SmsInviteCommandHandler
 ) : CliktCommand(name = "invite") {
 
     private val alias by argument("alias").convert { RoomAliasId(it) }

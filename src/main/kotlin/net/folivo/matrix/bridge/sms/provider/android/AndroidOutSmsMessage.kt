@@ -7,14 +7,14 @@ import org.springframework.data.relational.core.mapping.Table
 
 @Table("android_out_sms_message")
 data class AndroidOutSmsMessage(
-        @Column("receiver")
-        val receiver: String,
-        @Column("body")
-        val body: String,
-        @Id
-        @Column("id")
-        val id: Long? = null,
-        @Version
-        @Column("version")
-        var version: Int = 0
+    @Column("receiver")
+    val receiver: String,
+    @Column("body")
+    val body: String,
+    @Id
+    @Column("id")
+    val id: Long? = null,
+    @Version
+    @Column("version")
+    var version: Int = 0
 )

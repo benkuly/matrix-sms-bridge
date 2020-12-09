@@ -8,14 +8,14 @@ import org.springframework.data.relational.core.mapping.Table
 
 @Table("matrix_message_receiver")
 data class MatrixMessageReceiver(
-        @Column("room_message_id")
-        val roomMessageId: Long,
-        @Column("user_id")
-        val userId: UserId,
-        @Id
-        @Column("id")
-        val id: Long? = null,
-        @Version
-        @Column("version")
-        val version: Int = 0
+    @Column("room_message_id")
+    val roomMessageId: Long,
+    @Column("user_id")
+    val userId: UserId,
+    @Id
+    @Column("id")
+    val id: Long? = null,
+    @Version
+    @Column("version")
+    val version: Int = 0
 )

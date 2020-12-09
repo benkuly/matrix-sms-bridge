@@ -11,20 +11,20 @@ import org.springframework.stereotype.Service
 
 @Service
 class MatrixSmsMappingService(
-        private val mappingRepository: MatrixSmsMappingRepository,
-        private val membershipService: MatrixMembershipService,
-        private val smsBridgeProperties: SmsBridgeProperties
+    private val mappingRepository: MatrixSmsMappingRepository,
+    private val membershipService: MatrixMembershipService,
+    private val smsBridgeProperties: SmsBridgeProperties
 ) {
 
     suspend fun getOrCreateMapping(
-            userId: UserId,
-            roomId: RoomId
+        userId: UserId,
+        roomId: RoomId
     ): MatrixSmsMapping {
         val membership = membershipService.getOrCreateMembership(userId, roomId)
         val mapping = mappingRepository.findByMembershipId(membership.id)
         return if (mapping == null) {
             val lastMappingToken = mappingRepository.findByUserIdSortByMappingTokenDesc(userId)
-                                           .firstOrNull()?.mappingToken ?: 0
+                .firstOrNull()?.mappingToken ?: 0
             mappingRepository.save(MatrixSmsMapping(membership.id, lastMappingToken + 1))
         } else mapping
     }

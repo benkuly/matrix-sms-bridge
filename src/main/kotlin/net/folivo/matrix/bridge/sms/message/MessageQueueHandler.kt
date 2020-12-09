@@ -11,7 +11,8 @@ import org.springframework.stereotype.Component
 
 @Component
 @Profile("!initialsync")
-class MessageQueueHandler(private val messageService: MatrixMessageService) : ApplicationListener<ApplicationReadyEvent> {
+class MessageQueueHandler(private val messageService: MatrixMessageService) :
+    ApplicationListener<ApplicationReadyEvent> {
 
     companion object {
         private val LOG = LoggerFactory.getLogger(this::class.java)

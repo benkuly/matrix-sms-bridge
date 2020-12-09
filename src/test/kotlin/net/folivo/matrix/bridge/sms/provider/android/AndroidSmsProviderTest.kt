@@ -36,30 +36,30 @@ import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 
 @SpringBootTest(
-        properties = [
-            "matrix.bridge.sms.provider.android.enabled=true",
-            "matrix.bridge.sms.provider.android.baseUrl=http://localhost:5100",
-            "matrix.bridge.sms.provider.android.username=username",
-            "matrix.bridge.sms.provider.android.password=password"
-        ]
+    properties = [
+        "matrix.bridge.sms.provider.android.enabled=true",
+        "matrix.bridge.sms.provider.android.baseUrl=http://localhost:5100",
+        "matrix.bridge.sms.provider.android.username=username",
+        "matrix.bridge.sms.provider.android.password=password"
+    ]
 )
 class AndroidSmsProviderTest(
-        db: R2dbcEntityTemplate,
-        @MockkBean(relaxed = true)
-        private val receiveSmsServiceMock: ReceiveSmsService,
-        @MockkBean
-        private val matrixClientMock: MatrixClient,
-        @SpykBean
-        private val smsBridgeProperties: SmsBridgeProperties,
-        cut: AndroidSmsProvider
+    db: R2dbcEntityTemplate,
+    @MockkBean(relaxed = true)
+    private val receiveSmsServiceMock: ReceiveSmsService,
+    @MockkBean
+    private val matrixClientMock: MatrixClient,
+    @SpykBean
+    private val smsBridgeProperties: SmsBridgeProperties,
+    cut: AndroidSmsProvider
 ) : DescribeSpec(testBody(cut, db, receiveSmsServiceMock, matrixClientMock, smsBridgeProperties))
 
 private fun testBody(
-        cut: AndroidSmsProvider,
-        db: R2dbcEntityTemplate,
-        receiveSmsServiceMock: ReceiveSmsService,
-        matrixClientMock: MatrixClient,
-        smsBridgeProperties: SmsBridgeProperties
+    cut: AndroidSmsProvider,
+    db: R2dbcEntityTemplate,
+    receiveSmsServiceMock: ReceiveSmsService,
+    matrixClientMock: MatrixClient,
+    smsBridgeProperties: SmsBridgeProperties
 ): DescribeSpec.() -> Unit {
     return {
 
@@ -69,21 +69,21 @@ private fun testBody(
         beforeTest {
             mockServerClient.reset()
             coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any()) }
-                    .returns(EventId("event", "server"))
+                .returns(EventId("event", "server"))
         }
 
         describe(AndroidSmsProvider::getAndProcessNewMessages.name) {
             beforeTest {
                 mockServerClient
-                        .`when`(
-                                HttpRequest.request()
-                                        .withMethod(HttpMethod.GET.name)
-                                        .withPath("/messages/in"),
-                                Times.exactly(1)
-                        ).respond(
-                                HttpResponse.response()
-                                        .withBody(
-                                                """
+                    .`when`(
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.GET.name)
+                            .withPath("/messages/in"),
+                        Times.exactly(1)
+                    ).respond(
+                        HttpResponse.response()
+                            .withBody(
+                                """
                                            {
                                                 "nextBatch":"2",
                                                 "messages":[
@@ -100,19 +100,19 @@ private fun testBody(
                                                 ]
                                             }
                                           """.trimIndent(), MediaType.APPLICATION_JSON
-                                        )
-                        )
+                            )
+                    )
                 mockServerClient
-                        .`when`(
-                                HttpRequest.request()
-                                        .withMethod(HttpMethod.GET.name)
-                                        .withPath("/messages/in")
-                                        .withQueryStringParameter("after", "2"),
-                                Times.exactly(1)
-                        ).respond(
-                                HttpResponse.response()
-                                        .withBody(
-                                                """
+                    .`when`(
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.GET.name)
+                            .withPath("/messages/in")
+                            .withQueryStringParameter("after", "2"),
+                        Times.exactly(1)
+                    ).respond(
+                        HttpResponse.response()
+                            .withBody(
+                                """
                                            {
                                                 "nextBatch":"3",
                                                 "messages":[
@@ -124,8 +124,8 @@ private fun testBody(
                                                 ]
                                             }
                                           """.trimIndent(), MediaType.APPLICATION_JSON
-                                        )
-                        )
+                            )
+                    )
             }
             it("should get new messages") {
                 cut.getAndProcessNewMessages()
@@ -138,40 +138,40 @@ private fun testBody(
                 cut.getAndProcessNewMessages()
                 cut.getAndProcessNewMessages()
                 mockServerClient
-                        .verify(
-                                HttpRequest.request()
-                                        .withMethod(HttpMethod.GET.name)
-                                        .withPath("/messages/in"),
-                                HttpRequest.request()
-                                        .withMethod(HttpMethod.GET.name)
-                                        .withPath("/messages/in")
-                                        .withQueryStringParameter("after", "2")
-                        )
+                    .verify(
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.GET.name)
+                            .withPath("/messages/in"),
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.GET.name)
+                            .withPath("/messages/in")
+                            .withQueryStringParameter("after", "2")
+                    )
             }
             it("should save last processed message") {
                 db.delete<AndroidSmsProcessed>().all().awaitFirstOrNull()
                 db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
-                        ?.shouldBeNull()
+                    ?.shouldBeNull()
                 cut.getAndProcessNewMessages()
                 db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
-                        ?.lastProcessedId.shouldBe(2)
+                    ?.lastProcessedId.shouldBe(2)
                 cut.getAndProcessNewMessages()
                 db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
-                        ?.lastProcessedId.shouldBe(3)
+                    ?.lastProcessedId.shouldBe(3)
             }
             describe("handle unparsable telephone numbers") {
                 beforeTest {
                     mockServerClient
-                            .`when`(
-                                    HttpRequest.request()
-                                            .withMethod(HttpMethod.GET.name)
-                                            .withPath("/messages/in")
-                                            .withQueryStringParameter("after", "3"),
-                                    Times.exactly(1)
-                            ).respond(
-                                    HttpResponse.response()
-                                            .withBody(
-                                                    """
+                        .`when`(
+                            HttpRequest.request()
+                                .withMethod(HttpMethod.GET.name)
+                                .withPath("/messages/in")
+                                .withQueryStringParameter("after", "3"),
+                            Times.exactly(1)
+                        ).respond(
+                            HttpResponse.response()
+                                .withBody(
+                                    """
                                            {
                                                 "nextBatch":"4",
                                                 "messages":[
@@ -183,8 +183,8 @@ private fun testBody(
                                                 ]
                                             }
                                           """.trimIndent(), MediaType.APPLICATION_JSON
-                                            )
-                            )
+                                )
+                        )
                 }
                 it("should send to default room, when present") {
                     val defaultRoomId = RoomId("default", "server")
@@ -212,48 +212,48 @@ private fun testBody(
             }
             it("should handle exceptions while processing message") {
                 coEvery { receiveSmsServiceMock.receiveSms(any(), "+4917332222222") }
-                        .throws(RuntimeException())
+                    .throws(RuntimeException())
                 shouldThrow<RuntimeException> {
                     cut.getAndProcessNewMessages()
                 }
                 db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
-                        ?.lastProcessedId.shouldBe(1)
+                    ?.lastProcessedId.shouldBe(1)
             }
         }
         describe(AndroidSmsProvider::sendSms.name) {
             it("should call android device to send message") {
                 mockServerClient.`when`(
-                        HttpRequest.request()
-                                .withMethod(HttpMethod.POST.name)
-                                .withPath("/messages/out")
+                    HttpRequest.request()
+                        .withMethod(HttpMethod.POST.name)
+                        .withPath("/messages/out")
                 ).respond(HttpResponse.response())
                 cut.sendSms("+491234567", "some body")
                 mockServerClient.verify(
-                        HttpRequest.request()
-                                .withMethod(HttpMethod.POST.name)
-                                .withPath("/messages/out")
-                                .withBody(
-                                        JsonBody.json(
-                                                """
+                    HttpRequest.request()
+                        .withMethod(HttpMethod.POST.name)
+                        .withPath("/messages/out")
+                        .withBody(
+                            JsonBody.json(
+                                """
                                     {
                                         "recipientPhoneNumber":"+491234567",
                                         "message":"some body"
                                     }
                                 """.trimIndent(), STRICT
-                                        )
-                                )
+                            )
+                        )
                 )
             }
             describe("on error BadRequest") {
                 it("should rethrow error") {
                     mockServerClient.`when`(
-                            HttpRequest.request()
-                                    .withMethod(HttpMethod.POST.name)
-                                    .withPath("/messages/out")
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.POST.name)
+                            .withPath("/messages/out")
                     ).respond(
-                            HttpResponse.response()
-                                    .withStatusCode(HttpStatus.BAD_REQUEST.value())
-                                    .withBody("wrong telephone number")
+                        HttpResponse.response()
+                            .withStatusCode(HttpStatus.BAD_REQUEST.value())
+                            .withBody("wrong telephone number")
                     )
                     try {
                         cut.sendSms("+491234567", "some body")
@@ -266,13 +266,13 @@ private fun testBody(
             describe("on other error") {
                 beforeTest {
                     mockServerClient.`when`(
-                            HttpRequest.request()
-                                    .withMethod(HttpMethod.POST.name)
-                                    .withPath("/messages/out")
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.POST.name)
+                            .withPath("/messages/out")
                     ).respond(
-                            HttpResponse.response()
-                                    .withStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                                    .withBody("no network")
+                        HttpResponse.response()
+                            .withStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .withBody("no network")
                     )
                 }
                 it("should save message to send later") {
@@ -324,38 +324,38 @@ private fun testBody(
                 }
                 it("should send all messages and delete messages") {
                     mockServerClient.`when`(
-                            HttpRequest.request()
-                                    .withMethod(HttpMethod.POST.name)
-                                    .withPath("/messages/out")
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.POST.name)
+                            .withPath("/messages/out")
                     ).respond(HttpResponse.response())
                     cut.sendOutFailedMessages()
                     mockServerClient.verify(
-                            HttpRequest.request()
-                                    .withMethod(HttpMethod.POST.name)
-                                    .withPath("/messages/out")
-                                    .withBody(
-                                            JsonBody.json(
-                                                    """
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.POST.name)
+                            .withPath("/messages/out")
+                            .withBody(
+                                JsonBody.json(
+                                    """
                                     {
                                         "recipientPhoneNumber":"+491234511",
                                         "message":"some body 1"
                                     }
                                 """.trimIndent(), STRICT
-                                            )
-                                    ),
-                            HttpRequest.request()
-                                    .withMethod(HttpMethod.POST.name)
-                                    .withPath("/messages/out")
-                                    .withBody(
-                                            JsonBody.json(
-                                                    """
+                                )
+                            ),
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.POST.name)
+                            .withPath("/messages/out")
+                            .withBody(
+                                JsonBody.json(
+                                    """
                                     {
                                         "recipientPhoneNumber":"+491234522",
                                         "message":"some body 2"
                                     }
                                 """.trimIndent(), STRICT
-                                            )
-                                    )
+                                )
+                            )
                     )
                     db.select<AndroidOutSmsMessage>().all().asFlow().count().shouldBe(0)
                 }
@@ -364,9 +364,9 @@ private fun testBody(
                     beforeTest { every { smsBridgeProperties.defaultRoomId }.returns(defaultRoomId) }
                     it("should notify about all resend messages") {
                         mockServerClient.`when`(
-                                HttpRequest.request()
-                                        .withMethod(HttpMethod.POST.name)
-                                        .withPath("/messages/out")
+                            HttpRequest.request()
+                                .withMethod(HttpMethod.POST.name)
+                                .withPath("/messages/out")
                         ).respond(HttpResponse.response())
                         cut.sendOutFailedMessages()
                         coVerify {
@@ -377,13 +377,13 @@ private fun testBody(
                     }
                     it("should not notify when sending failed") {
                         mockServerClient.`when`(
-                                HttpRequest.request()
-                                        .withMethod(HttpMethod.POST.name)
-                                        .withPath("/messages/out")
+                            HttpRequest.request()
+                                .withMethod(HttpMethod.POST.name)
+                                .withPath("/messages/out")
                         ).respond(
-                                HttpResponse.response()
-                                        .withStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                                        .withBody("no network")
+                            HttpResponse.response()
+                                .withStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                                .withBody("no network")
                         )
                         shouldThrow<AndroidSmsProviderException> {
                             cut.sendOutFailedMessages()
@@ -395,9 +395,9 @@ private fun testBody(
                     beforeTest { every { smsBridgeProperties.defaultRoomId }.returns(null) }
                     it("should not notify") {
                         mockServerClient.`when`(
-                                HttpRequest.request()
-                                        .withMethod(HttpMethod.POST.name)
-                                        .withPath("/messages/out")
+                            HttpRequest.request()
+                                .withMethod(HttpMethod.POST.name)
+                                .withPath("/messages/out")
                         ).respond(HttpResponse.response())
                         cut.sendOutFailedMessages()
                         coVerify { matrixClientMock wasNot Called }

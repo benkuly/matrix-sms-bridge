@@ -30,7 +30,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
         describe(MatrixSmsMappingService::getOrCreateMapping.name) {
             beforeTest {
                 coEvery { membershipServiceMock.getOrCreateMembership(userId, roomId) }
-                        .returns(membership)
+                    .returns(membership)
             }
             describe("mapping in database") {
                 beforeTest { coEvery { mappingRepositoryMock.findByMembershipId(membership.id) }.returns(mapping) }
@@ -44,24 +44,24 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 describe("no last mapping token found") {
                     beforeTest {
                         coEvery { mappingRepositoryMock.findByUserIdSortByMappingTokenDesc(userId) }
-                                .returns(flowOf())
+                            .returns(flowOf())
                     }
                     it("should create and save new entity and start with 1 as token") {
                         val savedMapping = MatrixSmsMapping(membership.id, 1, 2)
                         coEvery { mappingRepositoryMock.save(MatrixSmsMapping(membership.id, 1)) }
-                                .returns(savedMapping)
+                            .returns(savedMapping)
                         cut.getOrCreateMapping(userId, roomId).shouldBe(savedMapping)
                     }
                 }
                 describe("last mapping token found") {
                     beforeTest {
                         coEvery { mappingRepositoryMock.findByUserIdSortByMappingTokenDesc(userId) }
-                                .returns(flowOf(MatrixSmsMapping(membership.id, 14, 2)))
+                            .returns(flowOf(MatrixSmsMapping(membership.id, 14, 2)))
                     }
                     it("should create and save new entity and start with 1 as token") {
                         val savedMapping = MatrixSmsMapping(membership.id, 15, 2)
                         coEvery { mappingRepositoryMock.save(MatrixSmsMapping(membership.id, 15)) }
-                                .returns(savedMapping)
+                            .returns(savedMapping)
                         cut.getOrCreateMapping(userId, roomId).shouldBe(savedMapping)
                     }
                 }
@@ -81,7 +81,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         describe("user is in one room") {
                             beforeTest {
                                 coEvery { membershipServiceMock.getMembershipsByUserId(userId) }
-                                        .returns(flowOf(membership))
+                                    .returns(flowOf(membership))
                             }
                             it("should return room id") {
                                 cut.getRoomId(userId, null).shouldBe(membership.roomId)
@@ -90,7 +90,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                         describe("user is in more then one room") {
                             beforeTest {
                                 coEvery { membershipServiceMock.getMembershipsByUserId(userId) }
-                                        .returns(flowOf(mockk(), mockk()))
+                                    .returns(flowOf(mockk(), mockk()))
                             }
                             it("should return null") {
                                 cut.getRoomId(userId, null).shouldBeNull()
@@ -110,9 +110,9 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 describe("mapping token in database") {
                     beforeTest {
                         coEvery { mappingRepositoryMock.findByUserIdAndMappingToken(userId, 2) }
-                                .returns(mapping)
+                            .returns(mapping)
                         coEvery { membershipServiceMock.getMembership(mapping.membershipId) }
-                                .returns(membership)
+                            .returns(membership)
                     }
                     it("should return room id from database") {
                         cut.getRoomId(userId, 2).shouldBe(membership.roomId)
@@ -121,7 +121,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 describe("mapping token not in database") {
                     beforeTest {
                         coEvery { mappingRepositoryMock.findByUserIdAndMappingToken(userId, 2) }
-                                .returns(null)
+                            .returns(null)
                     }
                     include(testFindSingleRoomIdMapping("a"))
                 }

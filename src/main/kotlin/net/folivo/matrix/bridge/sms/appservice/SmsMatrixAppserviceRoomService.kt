@@ -16,23 +16,23 @@ import org.springframework.stereotype.Service
 
 @Service
 class SmsMatrixAppserviceRoomService(
-        roomService: MatrixRoomService,
-        helper: BotServiceHelper,
-        private val botProperties: MatrixBotProperties,
-        private val bridgeProperties: SmsBridgeProperties
+    roomService: MatrixRoomService,
+    helper: BotServiceHelper,
+    private val botProperties: MatrixBotProperties,
+    private val bridgeProperties: SmsBridgeProperties
 ) : DefaultAppserviceRoomService(roomService, helper) {
 
     override suspend fun getCreateRoomParameter(roomAlias: RoomAliasId): CreateRoomParameter {
         val invitedUser = UserId(roomAlias.localpart, botProperties.serverName)
         return CreateRoomParameter(
-                visibility = PRIVATE,
-                powerLevelContentOverride = PowerLevelsEventContent(
-                        invite = 0,
-                        kick = 0,
-                        events = mapOf("m.room.name" to 0, "m.room.topic" to 0),
-                        users = mapOf(invitedUser to 100, botProperties.botUserId to 100)
-                ),
-                invite = setOf(invitedUser)
+            visibility = PRIVATE,
+            powerLevelContentOverride = PowerLevelsEventContent(
+                invite = 0,
+                kick = 0,
+                events = mapOf("m.room.name" to 0, "m.room.topic" to 0),
+                users = mapOf(invitedUser to 100, botProperties.botUserId to 100)
+            ),
+            invite = setOf(invitedUser)
         )
     }
 

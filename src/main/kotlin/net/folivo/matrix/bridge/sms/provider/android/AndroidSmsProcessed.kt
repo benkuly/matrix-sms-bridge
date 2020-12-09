@@ -7,12 +7,12 @@ import org.springframework.data.relational.core.mapping.Table
 
 @Table("android_sms_processed")
 data class AndroidSmsProcessed(
-        @Id
-        @Column("id")
-        val id: Long,
-        @Column("last_processed_id")
-        var lastProcessedId: Int,
-        @Version
-        @Column("version")
-        var version: Int = 0
+    @Id
+    @Column("id")
+    val id: Long,
+    @Column("last_processed_id")
+    var lastProcessedId: Int,
+    @Version
+    @Column("version")
+    var version: Int = 0
 )

@@ -13,19 +13,19 @@ import org.springframework.stereotype.Service
 
 @Service
 class SmsMatrixMembershipChangeService(
-        private val roomService: MatrixRoomService,
-        membershipService: MatrixMembershipService,
-        userService: MatrixUserService,
-        membershipSyncService: MatrixMembershipSyncService,
-        matrixClient: MatrixClient,
-        private val botProperties: MatrixBotProperties
+    private val roomService: MatrixRoomService,
+    membershipService: MatrixMembershipService,
+    userService: MatrixUserService,
+    membershipSyncService: MatrixMembershipSyncService,
+    matrixClient: MatrixClient,
+    private val botProperties: MatrixBotProperties
 ) : DefaultMembershipChangeService(
-        roomService,
-        membershipService,
-        userService,
-        membershipSyncService,
-        matrixClient,
-        botProperties
+    roomService,
+    membershipService,
+    userService,
+    membershipSyncService,
+    matrixClient,
+    botProperties
 ) {
     override suspend fun shouldJoinRoom(userId: UserId, roomId: RoomId): Boolean {
         if (userId == botProperties.botUserId) return super.shouldJoinRoom(userId, roomId)

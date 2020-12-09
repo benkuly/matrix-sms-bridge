@@ -13,12 +13,12 @@ class PhoneNumberService(private val smsBridgeProperties: SmsBridgeProperties) {
 
     fun parseToInternationalNumber(raw: String): String {
         return phoneNumberUtil.parse(raw, smsBridgeProperties.defaultRegion)
-                .let {
-                    if (!phoneNumberUtil.isValidNumber(it)) throw NumberParseException(
-                            NOT_A_NUMBER,
-                            "not a valid number"
-                    )
-                    "+${it.countryCode}${it.nationalNumber}"
-                }
+            .let {
+                if (!phoneNumberUtil.isValidNumber(it)) throw NumberParseException(
+                    NOT_A_NUMBER,
+                    "not a valid number"
+                )
+                "+${it.countryCode}${it.nationalNumber}"
+            }
     }
 }

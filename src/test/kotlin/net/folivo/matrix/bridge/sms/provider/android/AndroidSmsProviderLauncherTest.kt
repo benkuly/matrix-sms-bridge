@@ -19,7 +19,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
         val matrixClientMock: MatrixClient = mockk {
             coEvery { roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
-                    .returns(EventId("event", "server"))
+                .returns(EventId("event", "server"))
         }
 
         val cut = AndroidSmsProviderLauncher(androidSmsProviderMock, smsBridgePropertiesMock, matrixClientMock)
@@ -33,12 +33,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                     it("should notify default room") {
                         coEvery { androidSmsProviderMock.getAndProcessNewMessages() }
-                                .throws(RuntimeException("meteor"))
+                            .throws(RuntimeException("meteor"))
                         val job = cut.startReceiveLoop()
                         coVerify(timeout = 100) {
                             matrixClientMock.roomsApi.sendRoomEvent(
-                                    defaultRoom, match<NoticeMessageEventContent> { it.body == "error meteor" },
-                                    any(), any(), any()
+                                defaultRoom, match<NoticeMessageEventContent> { it.body == "error meteor" },
+                                any(), any(), any()
                             )
                         }
                         job.cancelAndJoin()
@@ -50,7 +50,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                     }
                     it("should not notify default room") {
                         coEvery { androidSmsProviderMock.getAndProcessNewMessages() }
-                                .throws(RuntimeException("meteor"))
+                            .throws(RuntimeException("meteor"))
                         val job = cut.startReceiveLoop()
                         coVerify(exactly = 0, timeout = 100) {
                             matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any())

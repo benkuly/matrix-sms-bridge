@@ -17,14 +17,14 @@ repositories {
 }
 
 group = "net.folivo"
-version = "0.5.4"
+version = "0.5.5"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 tasks.withType<org.springframework.boot.gradle.tasks.bundling.BootJar>() {
     manifest {
         attributes(
-                "Implementation-Title" to "matrix-sms-bridge",
-                "Implementation-Version" to project.version
+            "Implementation-Title" to "matrix-sms-bridge",
+            "Implementation-Version" to project.version
         )
     }
 }
@@ -96,17 +96,17 @@ tasks.getByName<BootBuildImage>("bootBuildImage") {
 tasks.register<Exec>("docker-gammu") {
     group = "build"
     commandLine(
-            "docker",
-            "build",
-            "--build-arg",
-            "JAR_FILE=./build/libs/*.jar",
-            "-t",
-            "folivonet/matrix-sms-bridge:latest-gammu",
-            "-t",
-            "folivonet/matrix-sms-bridge:${project.version}-gammu",
-            "-f",
-            "./src/main/docker/gammu/Dockerfile",
-            "."
+        "docker",
+        "build",
+        "--build-arg",
+        "JAR_FILE=./build/libs/*.jar",
+        "-t",
+        "folivonet/matrix-sms-bridge:latest-gammu",
+        "-t",
+        "folivonet/matrix-sms-bridge:${project.version}-gammu",
+        "-f",
+        "./src/main/docker/gammu/Dockerfile",
+        "."
     )
     dependsOn("bootJar")
 }

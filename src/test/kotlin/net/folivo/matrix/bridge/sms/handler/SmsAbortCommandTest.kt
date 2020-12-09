@@ -27,7 +27,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 coVerify { consoleMock.print("answer", false) }
             }
         }
-        
+
         afterTest { clearMocks(consoleMock) }
     }
 }

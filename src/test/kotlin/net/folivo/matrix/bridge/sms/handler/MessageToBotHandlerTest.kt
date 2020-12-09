@@ -29,13 +29,13 @@ private fun testBody(): DescribeSpec.() -> Unit {
         val membershipServiceMock: MatrixMembershipService = mockk()
 
         val cut = MessageToBotHandler(
-                smsSendCommandHandlerMock,
-                smsInviteCommandHandlerMock,
-                smsAbortCommandHandlerMock,
-                phoneNumberServiceMock,
-                smsBridgePropertiesMock,
-                userServiceMock,
-                membershipServiceMock
+            smsSendCommandHandlerMock,
+            smsInviteCommandHandlerMock,
+            smsAbortCommandHandlerMock,
+            phoneNumberServiceMock,
+            smsBridgePropertiesMock,
+            userServiceMock,
+            membershipServiceMock
         )
 
         val contextMock: MessageContext = mockk()
@@ -73,12 +73,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should accept sms abort command") {
                     coEvery { smsAbortCommandHandlerMock.handleCommand(any()) }
-                            .returns("aborted")
+                        .returns("aborted")
                     cut.handleMessage(
-                            roomId,
-                            "sms abort",
-                            senderId,
-                            contextMock
+                        roomId,
+                        "sms abort",
+                        senderId,
+                        contextMock
                     ).shouldBeTrue()
 
                     coVerify(exactly = 1) {
@@ -93,14 +93,14 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should run sms send command") {
                     coEvery { smsSendCommandHandlerMock.handleCommand(any(), any(), any(), any(), any(), any(), any()) }
-                            .returns("message send")
+                        .returns("message send")
                     every { smsBridgePropertiesMock.defaultRegion }.returns("DE")
                     every { phoneNumberServiceMock.parseToInternationalNumber(any()) }.returns("+4917392837462")
                     cut.handleMessage(
-                            roomId,
-                            "sms send -t 017392837462 'some Text'",
-                            senderId,
-                            contextMock
+                        roomId,
+                        "sms send -t 017392837462 'some Text'",
+                        senderId,
+                        contextMock
                     ).shouldBeTrue()
 
                     coVerify(exactly = 1) {
@@ -109,12 +109,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 }
                 it("should run sms invite command") {
                     coEvery { smsInviteCommandHandlerMock.handleCommand(any(), any()) }
-                            .returns("invited")
+                        .returns("invited")
                     cut.handleMessage(
-                            roomId,
-                            "sms invite #sms_1739283746:server",
-                            senderId,
-                            contextMock
+                        roomId,
+                        "sms invite #sms_1739283746:server",
+                        senderId,
+                        contextMock
                     ).shouldBeTrue()
 
                     coVerify(exactly = 1) {
@@ -150,12 +150,12 @@ private fun testBody(): DescribeSpec.() -> Unit {
 
         afterTest {
             clearMocks(
-                    smsSendCommandHandlerMock,
-                    smsInviteCommandHandlerMock,
-                    phoneNumberServiceMock,
-                    userServiceMock,
-                    membershipServiceMock,
-                    contextMock
+                smsSendCommandHandlerMock,
+                smsInviteCommandHandlerMock,
+                phoneNumberServiceMock,
+                userServiceMock,
+                membershipServiceMock,
+                contextMock
             )
         }
     }

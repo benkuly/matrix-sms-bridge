@@ -13,11 +13,11 @@ import org.springframework.stereotype.Component
 
 @Component
 class SmsMessageHandler(
-        private val messageToSmsHandler: MessageToSmsHandler,
-        private val messageToBotHandler: MessageToBotHandler,
-        private val membershipService: MatrixMembershipService,
-        private val botProperties: MatrixBotProperties,
-        private val smsBridgeProperties: SmsBridgeProperties
+    private val messageToSmsHandler: MessageToSmsHandler,
+    private val messageToBotHandler: MessageToBotHandler,
+    private val membershipService: MatrixMembershipService,
+    private val botProperties: MatrixBotProperties,
+    private val smsBridgeProperties: SmsBridgeProperties
 ) : MatrixMessageHandler {
 
     companion object {
@@ -34,24 +34,24 @@ class SmsMessageHandler(
             return
         } else {
             val didHandleMessage =
-                    membershipService.doesRoomContainsMembers(roomId, setOf(botProperties.botUserId))
-                    && messageToBotHandler.handleMessage(
-                            roomId = roomId,
-                            body = content.body,
-                            senderId = senderId,
-                            context = context
-                    )
+                membershipService.doesRoomContainsMembers(roomId, setOf(botProperties.botUserId))
+                        && messageToBotHandler.handleMessage(
+                    roomId = roomId,
+                    body = content.body,
+                    senderId = senderId,
+                    context = context
+                )
 
             if (didHandleMessage) {
                 LOG.debug("ignored message because it was for bot or only a notice message")
                 return
             } else {
                 messageToSmsHandler.handleMessage(
-                        roomId = roomId,
-                        body = content.body,
-                        senderId = senderId,
-                        context = context,
-                        isTextMessage = content is TextMessageEventContent
+                    roomId = roomId,
+                    body = content.body,
+                    senderId = senderId,
+                    context = context,
+                    isTextMessage = content is TextMessageEventContent
                 )
             }
         }

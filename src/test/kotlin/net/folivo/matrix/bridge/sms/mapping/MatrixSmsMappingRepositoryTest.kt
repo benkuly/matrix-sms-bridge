@@ -22,8 +22,8 @@ import org.springframework.data.r2dbc.core.delete
 @DataR2dbcTest
 @ImportAutoConfiguration(value = [MatrixBotDatabaseAutoconfiguration::class, SmsBridgeDatabaseConfiguration::class])
 class MatrixSmsMappingRepositoryTest(
-        cut: MatrixSmsMappingRepository,
-        db: R2dbcEntityTemplate
+    cut: MatrixSmsMappingRepository,
+    db: R2dbcEntityTemplate
 ) : DescribeSpec(testBody(cut, db))
 
 private fun testBody(cut: MatrixSmsMappingRepository, db: R2dbcEntityTemplate): DescribeSpec.() -> Unit {
@@ -60,24 +60,24 @@ private fun testBody(cut: MatrixSmsMappingRepository, db: R2dbcEntityTemplate): 
         describe(MatrixSmsMappingRepository::findByUserIdSortByMappingTokenDesc.name) {
             it("should find and sort mapping tokens") {
                 cut.findByUserIdSortByMappingTokenDesc(user1).toList()
-                        .shouldContainInOrder(map3, map1, map4)
+                    .shouldContainInOrder(map3, map1, map4)
             }
             it("should not find and sort mapping tokens") {
                 cut.findByUserIdSortByMappingTokenDesc(user3).toList()
-                        .shouldBeEmpty()
+                    .shouldBeEmpty()
             }
         }
 
         describe(MatrixSmsMappingRepository::findByUserIdAndMappingToken.name) {
             it("should find by user id and mapping token") {
                 cut.findByUserIdAndMappingToken(user2, 1)
-                        .shouldBe(map5)
+                    .shouldBe(map5)
             }
             it("should not find by user id and mapping token") {
                 cut.findByUserIdAndMappingToken(user2, 5)
-                        .shouldBeNull()
+                    .shouldBeNull()
                 cut.findByUserIdAndMappingToken(user3, 1)
-                        .shouldBeNull()
+                    .shouldBeNull()
             }
         }
 

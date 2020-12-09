@@ -15,13 +15,13 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 
 class AndroidSmsProvider(
-        private val receiveSmsService: ReceiveSmsService,
-        private val phoneNumberService: PhoneNumberService,
-        private val processedRepository: AndroidSmsProcessedRepository,
-        private val outSmsMessageRepository: AndroidOutSmsMessageRepository,
-        private val webClient: WebClient,
-        private val matrixClient: MatrixClient,
-        private val smsBridgeProperties: SmsBridgeProperties
+    private val receiveSmsService: ReceiveSmsService,
+    private val phoneNumberService: PhoneNumberService,
+    private val processedRepository: AndroidSmsProcessedRepository,
+    private val outSmsMessageRepository: AndroidOutSmsMessageRepository,
+    private val webClient: WebClient,
+    private val matrixClient: MatrixClient,
+    private val smsBridgeProperties: SmsBridgeProperties
 ) : SmsProvider {
 
     companion object {
@@ -39,12 +39,12 @@ class AndroidSmsProvider(
                 outSmsMessageRepository.save(AndroidOutSmsMessage(receiver, body))
                 if (smsBridgeProperties.defaultRoomId != null) {
                     matrixClient.roomsApi.sendRoomEvent(
-                            smsBridgeProperties.defaultRoomId,
-                            NoticeMessageEventContent(
-                                    smsBridgeProperties.templates.providerSendError
-                                            .replace("{error}", error.message ?: "unknown")
-                                            .replace("{receiver}", receiver)
-                            )
+                        smsBridgeProperties.defaultRoomId,
+                        NoticeMessageEventContent(
+                            smsBridgeProperties.templates.providerSendError
+                                .replace("{error}", error.message ?: "unknown")
+                                .replace("{receiver}", receiver)
+                        )
                     )
                 }
             }
@@ -59,8 +59,8 @@ class AndroidSmsProvider(
             }
             if (smsBridgeProperties.defaultRoomId != null) {
                 matrixClient.roomsApi.sendRoomEvent(
-                        smsBridgeProperties.defaultRoomId,
-                        NoticeMessageEventContent(smsBridgeProperties.templates.providerResendSuccess)
+                    smsBridgeProperties.defaultRoomId,
+                    NoticeMessageEventContent(smsBridgeProperties.templates.providerResendSuccess)
                 )
             }
         }
@@ -69,7 +69,7 @@ class AndroidSmsProvider(
     private suspend fun sendOutSmsMessageRequest(message: AndroidOutSmsMessageRequest) {
         LOG.debug("start send out sms message via android")
         webClient.post().uri("/messages/out").bodyValue(message)
-                .retrieve().toBodilessEntity().awaitFirstOrNull()
+            .retrieve().toBodilessEntity().awaitFirstOrNull()
         LOG.debug("send out sms message via android was successful")
     }
 
@@ -83,29 +83,29 @@ class AndroidSmsProvider(
             }.build()
         }.retrieve().awaitBody<AndroidInSmsMessagesResponse>()
         response.messages
-                .sortedBy { it.id }
-                .fold(lastProcessed, { process, message ->
-                    try {
-                        receiveSmsService.receiveSms(
-                                message.body,
-                                phoneNumberService.parseToInternationalNumber(message.sender)
-                        )
-                    } catch (error: NumberParseException) {
-                        if (smsBridgeProperties.defaultRoomId != null)
-                            matrixClient.roomsApi.sendRoomEvent(
-                                    smsBridgeProperties.defaultRoomId,
-                                    NoticeMessageEventContent(
-                                            smsBridgeProperties.templates.defaultRoomIncomingMessage
-                                                    .replace("{sender}", message.sender)
-                                                    .replace("{body}", message.body)
-                                    )
-                            )
-                    }
-                    processedRepository.save(
-                            process?.copy(lastProcessedId = message.id)
-                            ?: AndroidSmsProcessed(1, message.id)
+            .sortedBy { it.id }
+            .fold(lastProcessed, { process, message ->
+                try {
+                    receiveSmsService.receiveSms(
+                        message.body,
+                        phoneNumberService.parseToInternationalNumber(message.sender)
                     )
-                })
+                } catch (error: NumberParseException) {
+                    if (smsBridgeProperties.defaultRoomId != null)
+                        matrixClient.roomsApi.sendRoomEvent(
+                            smsBridgeProperties.defaultRoomId,
+                            NoticeMessageEventContent(
+                                smsBridgeProperties.templates.defaultRoomIncomingMessage
+                                    .replace("{sender}", message.sender)
+                                    .replace("{body}", message.body)
+                            )
+                        )
+                }
+                processedRepository.save(
+                    process?.copy(lastProcessedId = message.id)
+                        ?: AndroidSmsProcessed(1, message.id)
+                )
+            })
         LOG.debug("processed new messages")
     }
 
