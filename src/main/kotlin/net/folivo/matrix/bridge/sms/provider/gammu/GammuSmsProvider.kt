@@ -122,13 +122,30 @@ class GammuSmsProvider(
 
     }
 
+    fun isDigits(chars: String): Boolean {
+        return chars.matches("""^\+*[0-9]*$""".toRegex())
+    }
+
     fun receiveSms(
         sender: String,
         body: String
     ): Mono<Void> {
         return mono {
-            val phoneNumber = phoneNumberService.parseToInternationalNumber(sender)
-            receiveSmsService.receiveSms(body = body, sender = phoneNumber)
+	    var phoneNumber = phoneNumberService.parseToInternationalNumber(properties.alphaFakeNumber)
+	    var messageBody = body
+	    if (properties.alphaSender == true) {
+		if (isDigits(sender)) {
+	           phoneNumber = phoneNumberService.parseToInternationalNumber(sender)
+		   }
+		else {
+		   messageBody = sender+ ":\n\n" + messageBody
+		}
+
+	}
+	    if (properties.alphaSender == false) {
+	           phoneNumber = phoneNumberService.parseToInternationalNumber(sender)
+	}
+            receiveSmsService.receiveSms(body = messageBody, sender = phoneNumber)
                 ?.also { sendSms(receiver = phoneNumber, body = it) }
         }.then()
     }
