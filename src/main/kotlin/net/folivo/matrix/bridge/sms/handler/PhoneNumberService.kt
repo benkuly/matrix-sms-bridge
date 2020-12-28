@@ -1,4 +1,4 @@
-package net.folivo.matrix.bridge.sms.provider
+package net.folivo.matrix.bridge.sms.handler
 
 import com.google.i18n.phonenumbers.NumberParseException
 import com.google.i18n.phonenumbers.NumberParseException.ErrorType.NOT_A_NUMBER
@@ -11,6 +11,8 @@ class PhoneNumberService(private val smsBridgeProperties: SmsBridgeProperties) {
 
     private val phoneNumberUtil: PhoneNumberUtil = PhoneNumberUtil.getInstance()
 
+    private val alphanumericRegex = "^(?=.*[a-zA-Z])(?=.*[a-zA-Z0-9])([a-zA-Z0-9 ]{1,11})\$".toRegex()
+
     fun parseToInternationalNumber(raw: String): String {
         return phoneNumberUtil.parse(raw, smsBridgeProperties.defaultRegion)
             .let {
@@ -20,5 +22,9 @@ class PhoneNumberService(private val smsBridgeProperties: SmsBridgeProperties) {
                 )
                 "+${it.countryCode}${it.nationalNumber}"
             }
+    }
+
+    fun isAlphanumeric(raw: String): Boolean {
+        return alphanumericRegex.matches(raw)
     }
 }

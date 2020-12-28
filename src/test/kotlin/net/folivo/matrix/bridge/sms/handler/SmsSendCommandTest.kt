@@ -13,7 +13,6 @@ import io.mockk.junit5.MockKExtension
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode.ALWAYS
 import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode.AUTO
-import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.core.model.MatrixId.UserId
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

@@ -1,11 +1,9 @@
 package net.folivo.matrix.bridge.sms.provider.android
 
-import com.google.i18n.phonenumbers.NumberParseException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
-import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.core.model.events.m.room.message.NoticeMessageEventContent
 import net.folivo.matrix.restclient.MatrixClient
@@ -16,7 +14,6 @@ import org.springframework.web.reactive.function.client.awaitBody
 
 class AndroidSmsProvider(
     private val receiveSmsService: ReceiveSmsService,
-    private val phoneNumberService: PhoneNumberService,
     private val processedRepository: AndroidSmsProcessedRepository,
     private val outSmsMessageRepository: AndroidOutSmsMessageRepository,
     private val webClient: WebClient,
@@ -85,21 +82,15 @@ class AndroidSmsProvider(
         response.messages
             .sortedBy { it.id }
             .fold(lastProcessed, { process, message ->
+                val answer = receiveSmsService.receiveSms(
+                    message.body,
+                    message.sender
+                )
                 try {
-                    receiveSmsService.receiveSms(
-                        message.body,
-                        phoneNumberService.parseToInternationalNumber(message.sender)
-                    )
-                } catch (error: NumberParseException) {
-                    if (smsBridgeProperties.defaultRoomId != null)
-                        matrixClient.roomsApi.sendRoomEvent(
-                            smsBridgeProperties.defaultRoomId,
-                            NoticeMessageEventContent(
-                                smsBridgeProperties.templates.defaultRoomIncomingMessage
-                                    .replace("{sender}", message.sender)
-                                    .replace("{body}", message.body)
-                            )
-                        )
+                    if (answer != null) sendSms(message.sender, answer)
+                } catch (error: Throwable) {
+                    LOG.error("could not answer ${message.sender} with message $answer. Reason: ${error.message}")
+                    LOG.debug("details:", error)
                 }
                 processedRepository.save(
                     process?.copy(lastProcessedId = message.id)

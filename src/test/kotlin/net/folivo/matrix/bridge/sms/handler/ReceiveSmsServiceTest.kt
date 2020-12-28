@@ -1,6 +1,7 @@
 package net.folivo.matrix.bridge.sms.handler
 
-import io.kotest.assertions.throwables.shouldThrow
+import com.google.i18n.phonenumbers.NumberParseException
+import com.google.i18n.phonenumbers.NumberParseException.ErrorType.NOT_A_NUMBER
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
@@ -19,11 +20,13 @@ class ReceiveSmsServiceTest : DescribeSpec(testBody())
 
 private fun testBody(): DescribeSpec.() -> Unit {
     return {
+        val defaultRoomId = RoomId("default", "server")
         val matrixClientMock: MatrixClient = mockk()
         val mappingServiceMock: MatrixSmsMappingService = mockk()
         val messageServiceMock: MatrixMessageService = mockk(relaxed = true)
         val membershipServiceMock: MatrixMembershipService = mockk()
         val roomServiceMock: MatrixRoomService = mockk(relaxed = true)
+        val phoneNumberServiceMock: PhoneNumberService = mockk()
         val matrixBotPropertiesMock: MatrixBotProperties = mockk()
         val smsBridgePropertiesMock: SmsBridgeProperties = mockk {
             every { templates.defaultRoomIncomingMessage } returns "{sender} wrote {body}"
@@ -37,11 +40,13 @@ private fun testBody(): DescribeSpec.() -> Unit {
             messageServiceMock,
             membershipServiceMock,
             roomServiceMock,
+            phoneNumberServiceMock,
             matrixBotPropertiesMock,
             smsBridgePropertiesMock
         )
 
         beforeTest {
+            every { smsBridgePropertiesMock.defaultRoomId } returns defaultRoomId
             every { matrixBotPropertiesMock.serverName } returns "server"
             coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any()) }
                 .returns(EventId("event", "server"))
@@ -49,72 +54,148 @@ private fun testBody(): DescribeSpec.() -> Unit {
         }
 
         describe(ReceiveSmsService::receiveSms.name) {
-            val roomId = RoomId("room", "server")
-            describe("mapping token was valid") {
-                beforeTest { coEvery { mappingServiceMock.getRoomId(any(), any()) }.returns(roomId) }
-                it("should forward message to room") {
-                    cut.receiveSms("message #3", "+111111").shouldBeNull()
+            describe("sender is alphanumeric") {
+                it("should send message to default room") {
+                    coEvery { phoneNumberServiceMock.isAlphanumeric(any()) }
+                        .returns(true)
+                    cut.receiveSms("some body", "DINODINO")
                     coVerify {
                         matrixClientMock.roomsApi.sendRoomEvent(
-                            roomId,
-                            match<TextMessageEventContent> { it.body == "message" },
+                            defaultRoomId,
+                            match<TextMessageEventContent> { it.body == "DINODINO wrote some body" },
                             txnId = any(),
-                            asUserId = UserId("sms_111111", "server")
+                            asUserId = null
                         )
                     }
                 }
             }
-            describe("mapping token was not valid") {
-                beforeTest {
-                    coEvery { mappingServiceMock.getRoomId(any(), any()) }.returns(null)
+            describe("sender is invalid") {
+                it("should send message to default room") {
+                    coEvery { phoneNumberServiceMock.isAlphanumeric(any()) }
+                        .returns(false)
+                    coEvery { phoneNumberServiceMock.parseToInternationalNumber(any()) }
+                        .throws(NumberParseException(NOT_A_NUMBER, "not a valid number"))
+                    cut.receiveSms("some body", "+4912")
+                    coVerify {
+                        matrixClientMock.roomsApi.sendRoomEvent(
+                            defaultRoomId,
+                            match<TextMessageEventContent> { it.body == "+4912 wrote some body" },
+                            txnId = any(),
+                            asUserId = null
+                        )
+                    }
                 }
-                describe("single mode enabled") {
+            }
+            describe("sender is valid") {
+                val roomId = RoomId("room", "server")
+                beforeTest {
+                    coEvery { phoneNumberServiceMock.parseToInternationalNumber("+111111") }
+                        .returns("+111111")
+                    coEvery { phoneNumberServiceMock.isAlphanumeric(any()) }
+                        .returns(false)
+                }
+                describe("mapping token was valid") {
+                    beforeTest { coEvery { mappingServiceMock.getRoomId(any(), any()) }.returns(roomId) }
+                    it("should forward message to room") {
+                        cut.receiveSms("message #3", "+111111").shouldBeNull()
+                        coVerify {
+                            matrixClientMock.roomsApi.sendRoomEvent(
+                                roomId,
+                                match<TextMessageEventContent> { it.body == "message" },
+                                txnId = any(),
+                                asUserId = UserId("sms_111111", "server")
+                            )
+                        }
+                    }
+                }
+                describe("mapping token was not valid") {
                     beforeTest {
-                        coEvery { smsBridgePropertiesMock.singleModeEnabled }.returns(true)
-                        coEvery { roomServiceMock.getRoomAlias(any())?.roomId }.returns(roomId)
+                        coEvery { mappingServiceMock.getRoomId(any(), any()) }.returns(null)
                     }
-                    describe("room alias not in database") {
-                        val roomAliasId = RoomAliasId("sms_111111", "server")
+                    describe("single mode enabled") {
                         beforeTest {
-                            coEvery { membershipServiceMock.hasRoomOnlyManagedUsersLeft(any()) }.returns(false)
-                            coEvery { roomServiceMock.getRoomAlias(roomAliasId)?.roomId }
-                                .returns(null)
-                            coEvery { matrixClientMock.roomsApi.getRoomAlias(roomAliasId).roomId }.returns(roomId)
+                            coEvery { smsBridgePropertiesMock.singleModeEnabled }.returns(true)
+                            coEvery { roomServiceMock.getRoomAlias(any())?.roomId }.returns(roomId)
                         }
-                        it("should try create alias by using client-server-api") {
-                            cut.receiveSms("body #123", "+111111").shouldBeNull()
-                            coVerify { matrixClientMock.roomsApi.getRoomAlias(roomAliasId) }
+                        describe("room alias not in database") {
+                            val roomAliasId = RoomAliasId("sms_111111", "server")
+                            beforeTest {
+                                coEvery { membershipServiceMock.hasRoomOnlyManagedUsersLeft(any()) }.returns(false)
+                                coEvery { roomServiceMock.getRoomAlias(roomAliasId)?.roomId }
+                                    .returns(null)
+                                coEvery { matrixClientMock.roomsApi.getRoomAlias(roomAliasId).roomId }.returns(roomId)
+                            }
+                            it("should try create alias by using client-server-api") {
+                                cut.receiveSms("body #123", "+111111").shouldBeNull()
+                                coVerify { matrixClientMock.roomsApi.getRoomAlias(roomAliasId) }
+                            }
                         }
-                    }
-                    describe("not only managed users in room") {
-                        beforeTest { coEvery { membershipServiceMock.hasRoomOnlyManagedUsersLeft(any()) }.returns(false) }
-                        it("should send message to alias room") {
-                            cut.receiveSms("body #123", "+111111").shouldBeNull()
-                            coVerify {
-                                messageServiceMock.sendRoomMessage(
-                                    match {
-                                        it.roomId == roomId
-                                                && it.body == "body"
-                                                && it.isNotice == false
-                                                && it.asUserId == UserId("sms_111111", "server")
-                                    }
+                        describe("not only managed users in room") {
+                            beforeTest {
+                                coEvery { membershipServiceMock.hasRoomOnlyManagedUsersLeft(any()) }.returns(
+                                    false
                                 )
                             }
+                            it("should send message to alias room") {
+                                cut.receiveSms("body #123", "+111111").shouldBeNull()
+                                coVerify {
+                                    messageServiceMock.sendRoomMessage(
+                                        match {
+                                            it.roomId == roomId
+                                                    && it.body == "body"
+                                                    && it.isNotice == false
+                                                    && it.asUserId == UserId("sms_111111", "server")
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        describe("only managed users in room") {
+                            beforeTest {
+                                coEvery { membershipServiceMock.hasRoomOnlyManagedUsersLeft(any()) }.returns(
+                                    true
+                                )
+                            }
+                            describe("default room given") {
+                                beforeTest {
+                                    coEvery { smsBridgePropertiesMock.defaultRoomId }
+                                        .returns(RoomId("default", "room"))
+                                }
+                                it("should send notification to default room") {
+                                    cut.receiveSms("body #123", "+111111").shouldBe(null)
+                                    coVerify {
+                                        matrixClientMock.roomsApi.sendRoomEvent(
+                                            RoomId("default", "room"),
+                                            match<TextMessageEventContent> { it.body == "+111111 wrote in #sms_111111:server" },
+                                            txnId = any()
+                                        )
+                                    }
+                                }
+                            }
+                            describe("default room not given") {
+                                beforeTest { coEvery { smsBridgePropertiesMock.defaultRoomId }.returns(null) }
+                                it("should answer and do nothing") {
+                                    cut.receiveSms("message #3", "+111111")
+                                        .shouldBe("invalid token without default room")
+                                    coVerify(exactly = 1) {
+                                        messageServiceMock.sendRoomMessage(any(), any())
+                                    }
+                                }
+                            }
                         }
                     }
-                    describe("only managed users in room") {
-                        beforeTest { coEvery { membershipServiceMock.hasRoomOnlyManagedUsersLeft(any()) }.returns(true) }
+                    describe("single mode not enabled") {
+                        beforeTest { coEvery { smsBridgePropertiesMock.singleModeEnabled }.returns(false) }
                         describe("default room given") {
                             beforeTest {
-                                coEvery { smsBridgePropertiesMock.defaultRoomId }
-                                    .returns(RoomId("default", "room"))
+                                coEvery { smsBridgePropertiesMock.defaultRoomId }.returns(RoomId("default", "room"))
                             }
-                            it("should send notification to default room") {
-                                cut.receiveSms("body #123", "+111111").shouldBe(null)
+                            it("should forward message to default room") {
+                                cut.receiveSms("body #123", "+111111").shouldBe("invalid token with default room")
                                 coVerify {
                                     matrixClientMock.roomsApi.sendRoomEvent(
                                         RoomId("default", "room"),
-                                        match<TextMessageEventContent> { it.body == "+111111 wrote in #sms_111111:server" },
+                                        match<TextMessageEventContent> { it.body == "+111111 wrote body" },
                                         txnId = any()
                                     )
                                 }
@@ -124,49 +205,14 @@ private fun testBody(): DescribeSpec.() -> Unit {
                             beforeTest { coEvery { smsBridgePropertiesMock.defaultRoomId }.returns(null) }
                             it("should answer and do nothing") {
                                 cut.receiveSms("message #3", "+111111").shouldBe("invalid token without default room")
-                                coVerify(exactly = 1) {
-                                    messageServiceMock.sendRoomMessage(any(), any())
+                                coVerify {
+                                    matrixClientMock wasNot Called
                                 }
                             }
                         }
                     }
                 }
-                describe("single mode not enabled") {
-                    beforeTest { coEvery { smsBridgePropertiesMock.singleModeEnabled }.returns(false) }
-                    describe("default room given") {
-                        beforeTest {
-                            coEvery { smsBridgePropertiesMock.defaultRoomId }.returns(RoomId("default", "room"))
-                        }
-                        it("should forward message to default room") {
-                            cut.receiveSms("body #123", "+111111").shouldBe("invalid token with default room")
-                            coVerify {
-                                matrixClientMock.roomsApi.sendRoomEvent(
-                                    RoomId("default", "room"),
-                                    match<TextMessageEventContent> { it.body == "+111111 wrote body" },
-                                    txnId = any()
-                                )
-                            }
-                        }
-                    }
-                    describe("default room not given") {
-                        beforeTest { coEvery { smsBridgePropertiesMock.defaultRoomId }.returns(null) }
-                        it("should answer and do nothing") {
-                            cut.receiveSms("message #3", "+111111").shouldBe("invalid token without default room")
-                            coVerify {
-                                matrixClientMock wasNot Called
-                            }
-                        }
-                    }
-                }
             }
-            describe("wrong telephone number") {
-                it("should have error") {
-                    shouldThrow<IllegalArgumentException> {
-                        cut.receiveSms("#someBody", "+0123456789 24")
-                    }
-                }
-            }
-
         }
         afterTest {
             clearMocks(
@@ -174,6 +220,7 @@ private fun testBody(): DescribeSpec.() -> Unit {
                 mappingServiceMock,
                 messageServiceMock,
                 membershipServiceMock,
+                phoneNumberServiceMock,
                 roomServiceMock,
                 smsBridgePropertiesMock
             )

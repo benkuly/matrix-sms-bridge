@@ -70,6 +70,7 @@ private fun testBody(
             mockServerClient.reset()
             coEvery { matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any()) }
                 .returns(EventId("event", "server"))
+            coEvery { receiveSmsServiceMock.receiveSms(any(), any()) }.returns(null)
         }
 
         describe(AndroidSmsProvider::getAndProcessNewMessages.name) {
@@ -159,7 +160,7 @@ private fun testBody(
                 db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
                     ?.lastProcessedId.shouldBe(3)
             }
-            describe("handle unparsable telephone numbers") {
+            describe("should sending answer") {
                 beforeTest {
                     mockServerClient
                         .`when`(
@@ -185,29 +186,27 @@ private fun testBody(
                                           """.trimIndent(), MediaType.APPLICATION_JSON
                                 )
                         )
+                    coEvery { receiveSmsServiceMock.receiveSms("wtf", "123") }.returns("answer")
                 }
-                it("should send to default room, when present") {
-                    val defaultRoomId = RoomId("default", "server")
-                    every { smsBridgeProperties.defaultRoomId }.returns(defaultRoomId)
-                    every { smsBridgeProperties.templates.defaultRoomIncomingMessage }.returns("{sender} wrote {body}")
+                it("should ignore error") {
+                    mockServerClient.`when`(
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.POST.name)
+                            .withPath("/messages/out")
+                    ).respond(HttpResponse.response().withStatusCode(500))
                     cut.getAndProcessNewMessages()
                     cut.getAndProcessNewMessages()
                     cut.getAndProcessNewMessages()
-                    coVerify {
-                        matrixClientMock.roomsApi.sendRoomEvent(defaultRoomId, match<NoticeMessageEventContent> {
-                            println(it.body)
-                            it.body == "123 wrote wtf"
-                        }, any(), any(), any())
-                    }
+                    db.select<AndroidSmsProcessed>().first().awaitFirstOrNull()
+                        ?.lastProcessedId.shouldBe(4)
                 }
-                it("should ignore when not default room") {
-                    every { smsBridgeProperties.defaultRoomId }.returns(null)
-                    cut.getAndProcessNewMessages()
-                    cut.getAndProcessNewMessages()
-                    cut.getAndProcessNewMessages()
-                    coVerify(exactly = 0) {
-                        matrixClientMock.roomsApi.sendRoomEvent(any(), any(), any(), any(), any())
-                    }
+                it("should send answer") {
+                    mockServerClient.`when`(
+                        HttpRequest.request()
+                            .withMethod(HttpMethod.POST.name)
+                            .withPath("/messages/out")
+                    ).respond(HttpResponse.response())
+
                 }
             }
             it("should handle exceptions while processing message") {

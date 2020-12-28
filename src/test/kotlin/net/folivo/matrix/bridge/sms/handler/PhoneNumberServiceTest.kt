@@ -1,6 +1,8 @@
-package net.folivo.matrix.bridge.sms.provider
+package net.folivo.matrix.bridge.sms.handler
 
 import com.google.i18n.phonenumbers.NumberParseException
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
@@ -35,5 +37,14 @@ class PhoneNumberServiceTest {
         } catch (error: NumberParseException) {
 
         }
+    }
+
+    @Test
+    fun `should detect alphanumeric numbers`() {
+        cut.isAlphanumeric("DINODINO").shouldBeTrue()
+        cut.isAlphanumeric("DINODINODINO").shouldBeFalse()
+        cut.isAlphanumeric("123-DINO").shouldBeFalse()
+        cut.isAlphanumeric("+49123456789").shouldBeFalse()
+        cut.isAlphanumeric("0123456789").shouldBeFalse()
     }
 }

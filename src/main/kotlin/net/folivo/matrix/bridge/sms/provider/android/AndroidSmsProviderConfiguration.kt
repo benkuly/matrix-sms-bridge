@@ -3,7 +3,6 @@ package net.folivo.matrix.bridge.sms.provider.android
 import io.netty.handler.ssl.SslContextBuilder
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
-import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.restclient.MatrixClient
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -77,7 +76,6 @@ class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProvider
     @Bean
     fun androidSmsProvider(
         receiveSmsService: ReceiveSmsService,
-        phoneNumberService: PhoneNumberService,
         processedRepository: AndroidSmsProcessedRepository,
         outSmsMessageRepository: AndroidOutSmsMessageRepository,
         @Qualifier("androidSmsProviderWebClient")
@@ -87,7 +85,6 @@ class AndroidSmsProviderConfiguration(private val properties: AndroidSmsProvider
     ): AndroidSmsProvider {
         return AndroidSmsProvider(
             receiveSmsService,
-            phoneNumberService,
             processedRepository,
             outSmsMessageRepository,
             webClient,

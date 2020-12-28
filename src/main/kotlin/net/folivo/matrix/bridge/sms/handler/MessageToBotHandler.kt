@@ -7,7 +7,6 @@ import net.folivo.matrix.bot.event.MessageContext
 import net.folivo.matrix.bot.membership.MatrixMembershipService
 import net.folivo.matrix.bot.user.MatrixUserService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.core.model.MatrixId.RoomId
 import net.folivo.matrix.core.model.MatrixId.UserId
 import org.apache.tools.ant.types.Commandline
