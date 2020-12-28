@@ -9,7 +9,6 @@ import com.google.i18n.phonenumbers.NumberParseException
 import kotlinx.coroutines.runBlocking
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
 import net.folivo.matrix.bridge.sms.handler.SmsSendCommand.RoomCreationMode.AUTO
-import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.core.model.MatrixId.UserId
 import org.slf4j.LoggerFactory
 import java.time.LocalDateTime

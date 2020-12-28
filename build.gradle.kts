@@ -17,7 +17,7 @@ repositories {
 }
 
 group = "net.folivo"
-version = "0.5.5"
+version = "0.5.6"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 tasks.withType<org.springframework.boot.gradle.tasks.bundling.BootJar>() {

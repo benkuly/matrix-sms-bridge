@@ -2,7 +2,6 @@ package net.folivo.matrix.bridge.sms.provider.gammu
 
 import kotlinx.coroutines.reactor.mono
 import net.folivo.matrix.bridge.sms.handler.ReceiveSmsService
-import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.bridge.sms.provider.SmsProvider
 import net.folivo.matrix.core.api.ErrorResponse
 import net.folivo.matrix.core.api.MatrixServerException
@@ -32,8 +31,7 @@ import kotlin.text.Charsets.UTF_8
 @EnableConfigurationProperties(GammuSmsProviderProperties::class)
 class GammuSmsProvider(
     private val properties: GammuSmsProviderProperties,
-    private val receiveSmsService: ReceiveSmsService,
-    private val phoneNumberService: PhoneNumberService
+    private val receiveSmsService: ReceiveSmsService
 ) : SmsProvider {
 
     companion object {
@@ -127,9 +125,8 @@ class GammuSmsProvider(
         body: String
     ): Mono<Void> {
         return mono {
-            val phoneNumber = phoneNumberService.parseToInternationalNumber(sender)
-            receiveSmsService.receiveSms(body = body, sender = phoneNumber)
-                ?.also { sendSms(receiver = phoneNumber, body = it) }
+            receiveSmsService.receiveSms(body = body, providerSender = sender)
+                ?.also { sendSms(receiver = sender, body = it) }
         }.then()
     }
 }

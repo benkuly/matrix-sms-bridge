@@ -9,7 +9,6 @@ import net.folivo.matrix.bot.membership.MatrixMembershipService
 import net.folivo.matrix.bot.user.MatrixUser
 import net.folivo.matrix.bot.user.MatrixUserService
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
-import net.folivo.matrix.bridge.sms.provider.PhoneNumberService
 import net.folivo.matrix.core.model.MatrixId.*
 
 class MessageToBotHandlerTest : DescribeSpec(testBody())
