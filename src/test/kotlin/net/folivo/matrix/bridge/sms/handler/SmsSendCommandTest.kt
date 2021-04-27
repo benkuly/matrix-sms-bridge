@@ -37,7 +37,6 @@ class SmsSendCommandTest {
 
     private val senderId = UserId("sender", "server")
 
-
     @BeforeEach
     fun beforeEach() {
         coEvery { handler.handleCommand(any(), any(), any(), any(), any(), any(), any()) }.returns("answer")

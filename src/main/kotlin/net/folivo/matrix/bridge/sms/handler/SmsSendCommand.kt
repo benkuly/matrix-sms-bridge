@@ -64,8 +64,8 @@ class SmsSendCommand(
                                 receiverNumbers = setOf(number),
                                 inviteUserIds = inviteUserIds,
                                 roomName = roomName,
-                                roomCreationMode = roomCreationMode,
-                                sendAfterLocal = sendAfter
+                                sendAfterLocal = sendAfter,
+                                roomCreationMode = roomCreationMode
                             )
                         })
                 }
