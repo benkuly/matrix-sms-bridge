@@ -67,19 +67,19 @@ The Application Service gets configured with a yaml-file:
 matrix:
   bridge:
     sms:
-      # (optional) SMS messages without a valid token a routed to this room.
+      # (optional) SMS messages without a valid token are routed to this room.
       # Note that you must invite @smsbot:yourHomeServer to this room.
       defaultRoomId: "!jNkGzAFIPWxxXLmhso:matrix-local"
       # (optional) Allows to map SMS messages without token, when there is only one room with this number. Default is true.
-      allowMappingWithoutToken: true
+      # allowMappingWithoutToken: true
       # The default region to use for telephone numbers.
       defaultRegion: DE
       # (optional) The default timezone to use for `sms send` `-a` argument
       defaultTimeZone: Europe/Berlin
       # (optional) Allows you to enable one room alias for one telephone number. Default is false.
-      singleModeEnabled: true
+      # singleModeEnabled: false
       # (optional) In this section you can override the default templates.
-      templates:
+      # templates:
         # See SmsBridgeProperties.kt for the keys.
   bot:
     # The domain-part of matrix-ids. E. g. example.org when your userIds look like @unicorn:example.org
