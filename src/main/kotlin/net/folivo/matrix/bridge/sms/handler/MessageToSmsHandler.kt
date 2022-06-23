@@ -38,7 +38,7 @@ class MessageToSmsHandler(
     ) {
         userService.getUsersByRoom(roomId)
             .filter { it.isManaged && it.id != senderId && it.id != botProperties.botUserId }
-            .map { "+" + it.id.localpart.removePrefix("sms_") to it.id }
+            .map { "+" + it.id.localpart.removePrefix(smsBridgeProperties.defaultLocalPart) to it.id }
             .collect { (receiverNumber, receiverId) ->
                 if (isTextMessage) {
                     LOG.debug("send SMS from $roomId to $receiverNumber")
