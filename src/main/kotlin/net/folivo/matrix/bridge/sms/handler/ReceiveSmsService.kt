@@ -46,7 +46,7 @@ class ReceiveSmsService(
                 return null
             }
 
-            val userIdLocalpart = "sms_${sender.removePrefix("+")}"
+            val userIdLocalpart = "${smsBridgeProperties.defaultLocalPart}${sender.removePrefix("+")}"
             val userId = UserId(userIdLocalpart, matrixBotProperties.serverName)
 
             val mappingTokenMatch = Regex("#[0-9]{1,9}").find(body)

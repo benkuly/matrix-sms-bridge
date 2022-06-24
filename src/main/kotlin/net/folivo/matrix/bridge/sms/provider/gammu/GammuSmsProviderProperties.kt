@@ -8,5 +8,6 @@ import org.springframework.boot.context.properties.ConstructorBinding
 data class GammuSmsProviderProperties(
     val enabled: Boolean = false,
     val inboxPath: String = "/data/spool/inbox",
-    val inboxProcessedPath: String = "/data/spool/inbox_processed"
+    val inboxProcessedPath: String = "/data/spool/inbox_processed",
+    val configFile: String = "/etc/gammu/gammu-smsdrc-modem1"
 )

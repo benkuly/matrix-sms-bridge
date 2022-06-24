@@ -12,6 +12,7 @@ data class SmsBridgeProperties(
     val allowMappingWithoutToken: Boolean = true,
     val singleModeEnabled: Boolean = false,
     val defaultRegion: String,
+    val defaultLocalPart: String = "sms_",
     val defaultTimeZone: String = "UTC"
 ) {
     data class SmsBridgeTemplateProperties(

@@ -57,7 +57,7 @@ class SmsSendCommandHandler(
     ): String {
         LOG.debug("handle command")
         val requiredManagedReceiverIds = receiverNumbers.map {
-            UserId("sms_${it.removePrefix("+")}", botProperties.serverName)
+            UserId("${smsBridgeProperties.defaultLocalPart}${it.removePrefix("+")}", botProperties.serverName)
         }.toSet()
         val membersWithoutBot = setOf(senderId, *requiredManagedReceiverIds.toTypedArray())
         val rooms = roomService.getRoomsByMembers(membersWithoutBot)

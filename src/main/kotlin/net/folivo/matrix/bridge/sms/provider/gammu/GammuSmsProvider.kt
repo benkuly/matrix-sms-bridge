@@ -82,6 +82,8 @@ class GammuSmsProvider(
             ProcessBuilder(
                 listOf(
                     "gammu-smsd-inject",
+		    "-c",
+		    properties.configFile,
                     "TEXT",
                     receiver,
                     "-len",
