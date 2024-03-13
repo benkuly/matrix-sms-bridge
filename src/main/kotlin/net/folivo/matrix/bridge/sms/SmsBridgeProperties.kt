@@ -13,7 +13,8 @@ data class SmsBridgeProperties(
     val singleModeEnabled: Boolean = false,
     val defaultRegion: String,
     val defaultLocalPart: String = "sms_",
-    val defaultTimeZone: String = "UTC"
+    val defaultTimeZone: String = "UTC",
+    val retryQueueDelay: Long = 30,
 ) {
     data class SmsBridgeTemplateProperties(
         val outgoingMessage: String = "{sender} wrote:\n\n{body}",

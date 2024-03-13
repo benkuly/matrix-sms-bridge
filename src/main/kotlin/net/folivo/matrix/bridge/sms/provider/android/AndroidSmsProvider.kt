@@ -1,5 +1,6 @@
 package net.folivo.matrix.bridge.sms.provider.android
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import net.folivo.matrix.bridge.sms.SmsBridgeProperties
@@ -11,6 +12,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
+import kotlin.time.ExperimentalTime
+import kotlin.time.seconds
 
 class AndroidSmsProvider(
     private val receiveSmsService: ReceiveSmsService,
@@ -53,6 +56,7 @@ class AndroidSmsProvider(
             outSmsMessageRepository.findAll().collect {
                 sendOutSmsMessageRequest(AndroidOutSmsMessageRequest(it.receiver, it.body))
                 outSmsMessageRepository.delete(it)
+                delay(smsBridgeProperties.retryQueueDelay * 1000)
             }
             if (smsBridgeProperties.defaultRoomId != null) {
                 matrixClient.roomsApi.sendRoomEvent(
