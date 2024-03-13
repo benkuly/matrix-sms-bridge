@@ -18,7 +18,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: build image
-        run: ./gradlew bootBuildImage --debug --full-stacktrace
+        run: ./gradlew docker-gammu --debug --full-stacktrace
       - name: Publish version tagged image to DockerHub
         run: docker push folivonet/matrix-sms-bridge:${GITHUB_REF:11}-gammu
       - name: Publish latest image to DockerHub
