@@ -18,7 +18,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: build image
-        run: gradle bootBuildImage
+        run: ./gradlew bootBuildImage --debug --full-stacktrace
       - name: tag to version
         run: docker tag folivonet/matrix-sms-bridge:latest folivonet/matrix-sms-bridge:${GITHUB_REF:11}
       - name: Publish version tagged image to DockerHub
