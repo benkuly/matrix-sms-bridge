@@ -67,7 +67,7 @@ class SmsSendCommandHandler(
 
         try {
             val answer = when (roomCreationMode) {
-                AUTO   -> {
+                AUTO -> {
                     if (smsBridgeProperties.singleModeEnabled && receiverNumbers.size == 1) {
                         sendMessageToRoomAlias(
                             senderId,
@@ -78,7 +78,7 @@ class SmsSendCommandHandler(
                             sendAfterLocal
                         )
                     } else when (rooms.size) {
-                        0    -> createRoomAndSendMessage(
+                        0 -> createRoomAndSendMessage(
                             body,
                             senderId,
                             roomName,
@@ -86,16 +86,19 @@ class SmsSendCommandHandler(
                             inviteUserIds,
                             sendAfterLocal
                         )
-                        1    -> sendMessageToRoom(
+
+                        1 -> sendMessageToRoom(
                             rooms.first(),
                             senderId,
                             body,
                             requiredManagedReceiverIds,
                             sendAfterLocal
                         )
+
                         else -> templates.botSmsSendTooManyRooms
                     }
                 }
+
                 ALWAYS -> {
                     createRoomAndSendMessage(
                         body,
@@ -106,6 +109,7 @@ class SmsSendCommandHandler(
                         sendAfterLocal
                     )
                 }
+
                 SINGLE -> {
                     if (!smsBridgeProperties.singleModeEnabled) {
                         templates.botSmsSendSingleModeDisabled
@@ -122,16 +126,18 @@ class SmsSendCommandHandler(
                         templates.botSmsSendSingleModeOnlyOneTelephoneNumberAllowed
                     }
                 }
-                NO     -> {
+
+                NO -> {
                     when (rooms.size) {
-                        0    -> templates.botSmsSendDisabledRoomCreation
-                        1    -> sendMessageToRoom(
+                        0 -> templates.botSmsSendDisabledRoomCreation
+                        1 -> sendMessageToRoom(
                             rooms.first(),
                             senderId,
                             body,
                             requiredManagedReceiverIds,
                             sendAfterLocal
                         )
+
                         else -> templates.botSmsSendTooManyRooms
                     }
                 }
@@ -211,7 +217,6 @@ class SmsSendCommandHandler(
                 kick = 0,
                 events = mapOf("m.room.name" to 0, "m.room.topic" to 0),
                 users = mapOf(
-                    botProperties.botUserId to 100,
                     *requiredManagedReceiverIds.map { it to 100 }.toTypedArray()
                 )
             )

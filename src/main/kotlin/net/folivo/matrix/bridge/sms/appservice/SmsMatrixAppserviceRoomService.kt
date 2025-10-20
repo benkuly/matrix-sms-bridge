@@ -30,7 +30,7 @@ class SmsMatrixAppserviceRoomService(
                 invite = 0,
                 kick = 0,
                 events = mapOf("m.room.name" to 0, "m.room.topic" to 0),
-                users = mapOf(invitedUser to 100, botProperties.botUserId to 100)
+                users = mapOf(invitedUser to 100)
             ),
             invite = setOf(invitedUser)
         )
