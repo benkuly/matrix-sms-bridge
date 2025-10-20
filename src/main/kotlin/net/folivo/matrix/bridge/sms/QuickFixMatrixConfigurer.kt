@@ -2,6 +2,7 @@ package net.folivo.matrix.bridge.sms
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import net.folivo.matrix.core.annotation.MatrixEvent
+import net.folivo.matrix.core.config.DefaultMatrixConfigurer
 import net.folivo.matrix.core.config.MatrixConfiguration
 import net.folivo.matrix.core.config.MatrixConfigurer
 import net.folivo.matrix.core.model.MatrixId.*
@@ -9,11 +10,20 @@ import net.folivo.matrix.core.model.events.StandardStateEvent
 import net.folivo.matrix.core.model.events.StateEventContent
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.Ordered
+import org.springframework.core.annotation.Order
 
 @Configuration
 class QuickFixConfiguration {
 
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    fun defaultMatrixConfigurer(): DefaultMatrixConfigurer {
+        return DefaultMatrixConfigurer()
+    }
+
+    @Bean
+    @Order(Ordered.LOWEST_PRECEDENCE)
     fun quickFixMatrixConfigurer(): QuickFixMatrixConfigurer {
         return QuickFixMatrixConfigurer()
     }
